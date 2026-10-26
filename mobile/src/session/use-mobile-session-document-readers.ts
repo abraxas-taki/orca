@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { RpcFailure } from '../transport/types'
 import { resolveMobileFileTabDoc } from '../files/mobile-file-tab-doc'
 import { shouldIgnoreTrimWhitespace } from '../../../src/shared/diff-whitespace'
@@ -26,6 +26,23 @@ export function useMobileSessionDocumentReaders(scope: MobileSessionTabApplicati
   const { worktreeId, client, connState, markdownDocsRef, setMarkdownDocs, setFileDocs } = scope
   const { diffShowWhitespace } = useMobileSourceControlSettings(client, connState)
   const markdownReadSeqRef = useRef(new Map<string, number>())
+  // Diffs built under the old whitespace choice are dropped so the open tab reads them again.
+  const builtWhitespaceRef = useRef(diffShowWhitespace)
+  useEffect(() => {
+    if (builtWhitespaceRef.current === diffShowWhitespace) {
+      return
+    }
+    builtWhitespaceRef.current = diffShowWhitespace
+    setFileDocs((prev) => {
+      const next = new Map(prev)
+      for (const [tabId, doc] of prev) {
+        if (doc.status === 'ready' && doc.kind === 'diff') {
+          next.delete(tabId)
+        }
+      }
+      return next
+    })
+  }, [diffShowWhitespace, setFileDocs])
   const fileReadSeqRef = useRef(new Map<string, number>())
   const readMarkdownTab = useCallback(
     async (tab: Extract<MobileSessionTab, { type: 'markdown' }>) => {

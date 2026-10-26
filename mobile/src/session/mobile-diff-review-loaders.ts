@@ -18,7 +18,10 @@ import {
   canOpenMobileBranchCompareDiff,
   type MobileGitBranchCompareResult
 } from '../source-control/mobile-branch-compare'
-import { resolveMobileBranchCompareBaseRef } from '../source-control/mobile-branch-base-ref'
+import {
+  resolveMobileBranchCompareBaseRef,
+  type MobileBranchCompareTarget
+} from '../source-control/mobile-branch-base-ref'
 import { gitStatusProjectionRead } from '../source-control/mobile-git-read-operations'
 import { isMobileGitUnavailable } from '../source-control/mobile-git-status'
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
@@ -48,10 +51,11 @@ type PendingFileDiff = {
 
 export async function loadMobileDiffReviewBranchCompare(
   client: RpcClient,
-  worktreeId: string
+  worktreeId: string,
+  compare?: MobileBranchCompareTarget
 ): Promise<BranchCompareLoadResult> {
   try {
-    const baseRef = await resolveMobileBranchCompareBaseRef(client, worktreeId)
+    const baseRef = await resolveMobileBranchCompareBaseRef(client, worktreeId, compare)
     if (!baseRef) {
       return { result: null }
     }
@@ -79,7 +83,9 @@ export async function loadMobileDiffReviewBranchCompare(
 
 export async function loadMobileDiffReviewSnapshot(
   client: RpcClient,
-  worktreeId: string
+  worktreeId: string,
+  // Compare against the same base the Changes list just showed.
+  policy?: { compareAgainstUpstream: boolean }
 ): Promise<ReviewScreenState> {
   const statusReply = await gitStatusProjectionRead.request(client, {
     worktree: `id:${worktreeId}`
@@ -102,7 +108,14 @@ export async function loadMobileDiffReviewSnapshot(
 
   // Interpret after both reads settle so worktree refusal cannot preempt the compare failure.
   const [branch, worktreeReply] = await Promise.all([
-    loadMobileDiffReviewBranchCompare(client, worktreeId),
+    loadMobileDiffReviewBranchCompare(
+      client,
+      worktreeId,
+      policy && {
+        compareAgainstUpstream: policy.compareAgainstUpstream,
+        upstreamName: status.upstreamStatus?.upstreamName
+      }
+    ),
     reviewWorktreeMetadataRead.request(client, { worktree: `id:${worktreeId}` })
   ])
   let metadata

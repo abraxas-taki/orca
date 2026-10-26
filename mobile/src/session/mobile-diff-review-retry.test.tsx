@@ -126,6 +126,6 @@ describe('the review Retry while the host is unreachable', () => {
         createElement(ReviewWhileUnreachable, { onReconnect: null, client, connState: 'connected' })
       )
     })
-    expect(loadSnapshot.mock.calls).toEqual([[client, 'wt-1']])
+    expect(loadSnapshot.mock.calls).toEqual([[client, 'wt-1', { compareAgainstUpstream: false }]])
   })
 })
