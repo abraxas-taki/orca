@@ -16,6 +16,7 @@ import {
   summarizePRChecks
 } from './pr-checks-presentation'
 import { sortChecksBySeverity } from '../../../../src/shared/pr-check-severity-order'
+import { getBrokenChecks } from '../../../../src/shared/pr-checks-fix-prompt'
 import { getCheckStatusLabel } from '../../../../src/shared/pr-check-status-label'
 import { statusColor } from './pr-sidebar-status-color'
 import { PRSection } from './PRSection'
@@ -59,6 +60,8 @@ export function PRChecksSection({
   triage
 }: Props) {
   const sorted = sortChecksBySeverity(checks)
+  // Desktop gates Fix and Rerun on the checks the host reruns and the prompt lists.
+  const brokenCount = getBrokenChecks(checks).length
   const summary = summarizePRChecks(checks)
   const rerunBusy = actions?.isBusy({ kind: 'rerun' }) ?? false
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -157,7 +160,7 @@ export function PRChecksSection({
             {prChecksSummaryLabel(summary, checksError)}
           </Text>
           {/* Rerun is offered only when something failed; spinner-in-place while in-flight. */}
-          {actions && summary.failed > 0 ? (
+          {actions && brokenCount > 0 ? (
             <Pressable
               style={styles.iconButton}
               onPress={() => actions.rerunFailingChecks()}
@@ -176,11 +179,11 @@ export function PRChecksSection({
       }
     >
       {/* Lead with desktop-style failing summary and Fix action so actionable state comes first. */}
-      {triage && summary.failed > 0 ? (
+      {triage && brokenCount > 0 ? (
         <View style={triageStyles.triageStrip}>
           <View style={triageStyles.triageStripText}>
             <Text style={triageStyles.triageStripTitle} numberOfLines={1}>
-              {summary.failed} failing check{summary.failed === 1 ? '' : 's'}
+              {brokenCount} failing check{brokenCount === 1 ? '' : 's'}
             </Text>
             <Text style={triageStyles.triageStripSubtitle} numberOfLines={1}>
               Inspect details or start an AI fix pass.

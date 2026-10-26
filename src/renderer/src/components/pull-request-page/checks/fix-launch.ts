@@ -2,7 +2,7 @@ import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 import { startFixChecksAgent } from '@/lib/fix-checks-agent-launch'
 import { launchWorkItemDirect } from '@/lib/launch-work-item-direct'
-import { buildFixBrokenChecksPrompt } from '@/components/pr-checks-fix-prompt'
+import { buildFixBrokenChecksPrompt } from '../../../../../shared/pr-checks-fix-prompt'
 import {
   saveSourceControlActionRecipe,
   type SourceControlAiWriteTarget

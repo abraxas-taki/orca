@@ -1,17 +1,10 @@
 import {
   buildFixBrokenChecksPrompt,
-  collectFixChecksPromptDetails,
-  getBrokenChecks
+  collectFixChecksPromptDetails
 } from '../../../src/shared/pr-checks-fix-prompt'
 import { splitWorktreeIdForFilesystem } from '../../../src/shared/worktree/id'
 import { buildResolvePullRequestConflictsPrompt } from '../../../src/shared/source-control-conflict-prompts'
 import type { PRCheckDetail, PRCheckRunDetails } from '../../../src/shared/github/check-types'
-
-export { getBrokenChecks }
-
-export function hasBrokenChecks(checks: PRCheckDetail[]): boolean {
-  return getBrokenChecks(checks).length > 0
-}
 
 // Like desktop, the agent gets the failing steps' log tails, not just check names.
 export async function buildFixChecksPrompt(input: {
