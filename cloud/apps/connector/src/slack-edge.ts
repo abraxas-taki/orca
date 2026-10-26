@@ -1,71 +1,69 @@
 import type { CloudDatabase } from '@orca-cloud/cloud-database'
-import {
-  CONNECTOR_PATHS,
-  ConnectorReplyRequestSchema,
-  type ConnectorEvent,
-  type ConnectorReplyResponse
-} from '@orca-cloud/connector-contract'
-import type { Hono, MiddlewareHandler } from 'hono'
+import type { Context, Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { every } from './connector-background.js'
-import type { ConnectorInbox, ExpiredThread } from './connector-inbox.js'
+import type { ConnectorAdapter } from './connector-adapter.js'
+import type { ConnectorCore } from './connector-core.js'
 import type { MachineEnv } from './machine-auth.js'
+import { readSlackClick } from './slack-clicks.js'
 import type { SlackConfig } from './slack-config.js'
-import { readSlackEnvelope } from './slack-events.js'
+import { inboundSlackMessage, readSlackEnvelope } from './slack-events.js'
 import { SlackInstalls } from './slack-installs.js'
 import { SlackMembers } from './slack-members.js'
-import { SlackPostWorker } from './slack-post-worker.js'
-import { SlackPosts } from './slack-posts.js'
-import { routeSlackMessage, type QueueInTransaction } from './slack-routing.js'
+import { slackNotice } from './slack-notices.js'
+import { SlackPostSender } from './slack-post-sender.js'
+import { isOpenSlackCard, settledSlackCard, slackCard } from './slack-prompt-cards.js'
 import { verifySlackSignature } from './slack-signature.js'
-import { SlackThreadStarts } from './slack-thread-start.js'
-import { queueAgentReply, queueTurnFallback, refreshSlackStatus } from './slack-thread-posts.js'
+import { statusText } from './connector-copy.js'
+import { escapeSlackText, slackText } from './slack-text.js'
+import { SlackThreadHistory } from './slack-thread-history.js'
 import { createSlackWebApi, type SlackWebApi } from './slack-web-api.js'
 
 // Slack's payloads can carry blocks and files well past the machine API's limit.
 const MAX_SLACK_BODY_BYTES = 1024 * 1024
-const POST_INTERVAL_MS = 1_000
 const MEMBER_CHECK_INTERVAL_MS = 5_000
-const RETENTION_INTERVAL_MS = 60_000
-const SEEN_RETENTION_MS = 7 * 24 * 60 * 60_000
-const CONTEXT_RETENTION_MS = 24 * 60 * 60_000
-// As long as Slack's own retries and the inbox's settled rows: a post id that outlives them keeps
-// a retried reply from posting twice.
-const POST_RETENTION_MS = 7 * 24 * 60 * 60_000
 
 export type SlackEdge = ReturnType<typeof createSlackEdge>
 
-// Slack in and out: event ingress, starts that carry their thread, the agent's replies, and the post
-// queue that turns thread state into a reaction, one edited status message (offline included), the
-// fallback posts and replies only the writer sees.
+// Slack in and out: signed ingress for events and answer presses, and the adapter that formats and
+// sends the shared core's posts, reads threads and checks members.
 export function createSlackEdge(deps: {
   config: SlackConfig
   database: CloudDatabase
-  inbox: ConnectorInbox
-  queue: QueueInTransaction
   now: () => number
   api?: SlackWebApi
 }) {
   const { config, database, now } = deps
   const installs = new SlackInstalls(config.tokenKey)
-  const posts = new SlackPosts(database, now)
   const api = deps.api ?? createSlackWebApi()
-  const worker = new SlackPostWorker({ database, posts, installs, api })
   const members = new SlackMembers({ database, installs, api, now })
-  const starts = new SlackThreadStarts({ database, inbox: deps.inbox, installs, members, api, now })
-  const refresh = async (
-    transaction: CloudDatabase,
-    hostId: string,
-    externalIds: Iterable<string>
-  ) => {
-    for (const externalId of new Set(externalIds)) {
-      await refreshSlackStatus(transaction, posts, hostId, externalId)
-    }
+  const history = new SlackThreadHistory({ database, installs, members, api })
+  const sender = new SlackPostSender({ database, installs, api })
+
+  const adapter: ConnectorAdapter = {
+    source: 'slack',
+    agentText: (text) => ({ text: escapeSlackText(text) }),
+    notice: slackNotice,
+    seen: (_place, messageId) => ({ name: 'eyes', timestamp: messageId }),
+    status: (view) => ({ text: statusText(slackText, view) }),
+    card: slackCard,
+    isOpenCard: isOpenSlackCard,
+    settledCard: settledSlackCard,
+    teammateContext: slackText.teammateContext,
+    send: (post) => sender.send(post),
+    heldStartPrompt: (start) => history.heldStartPrompt(start),
+    trustedNames: (transaction, teamId, userIds) =>
+      members.trustedNames(transaction, teamId, userIds)
   }
 
-  function registerRoutes(app: Hono<MachineEnv>, limitMachineBody: MiddlewareHandler): void {
+  // Slack's own requests: signed over the raw body, size-capped.
+  const fromSlack = (
+    app: Hono<MachineEnv>,
+    path: string,
+    handle: (context: Context<MachineEnv>, rawBody: string) => Promise<Response>
+  ) =>
     app.post(
-      '/slack/events',
+      path,
       bodyLimit({
         maxSize: MAX_SLACK_BODY_BYTES,
         onError: (context) => context.json({ error: 'request_too_large' }, 413)
@@ -79,132 +77,71 @@ export function createSlackEdge(deps: {
           rawBody,
           nowMs: now()
         })
-        if (!verified) {
-          return context.json({ error: 'invalid_signature' }, 401)
-        }
-        let payload: unknown
-        try {
-          payload = JSON.parse(rawBody)
-        } catch {
-          return context.json({ error: 'invalid_request' }, 400)
-        }
-        const envelope = readSlackEnvelope(payload)
-        if (envelope.kind === 'invalid') {
-          return context.json({ error: 'invalid_request' }, 400)
-        }
-        if (envelope.kind === 'url_verification') {
-          return context.json({ challenge: envelope.challenge })
-        }
-        // Answered before any Slack call; a database failure is a 500, so Slack retries.
-        if (envelope.kind === 'message' && config.teamIds.has(envelope.message.teamId)) {
-          await routeSlackMessage(
-            { config, database, installs, posts, queue: deps.queue, now },
-            envelope.message
-          )
-        }
-        return context.body(null, 200)
+        return verified
+          ? await handle(context, rawBody)
+          : context.json({ error: 'invalid_signature' }, 401)
       }
     )
 
-    app.post(CONNECTOR_PATHS.replies, limitMachineBody, async (context) => {
-      const body = ConnectorReplyRequestSchema.safeParse(await context.req.json().catch(() => null))
-      if (!body.success) {
+  function registerRoutes(
+    app: Hono<MachineEnv>,
+    core: Pick<ConnectorCore, 'route' | 'answerCard' | 'notify'>
+  ) {
+    fromSlack(app, '/slack/events', async (context, rawBody) => {
+      let payload: unknown
+      try {
+        payload = JSON.parse(rawBody)
+      } catch {
         return context.json({ error: 'invalid_request' }, 400)
       }
-      const { hostId } = context.get('host')
-      const { replyId, conversation, turnId, text } = body.data
-      const sent = await database.transaction((transaction) =>
-        queueAgentReply(transaction, posts, hostId, {
-          replyId,
-          externalId: conversation.externalId,
-          turnId,
-          text
-        })
-      )
-      if (!sent) {
-        return context.json({ error: 'not_this_hosts_thread' }, 403)
+      const envelope = readSlackEnvelope(payload)
+      if (envelope.kind === 'invalid') {
+        return context.json({ error: 'invalid_request' }, 400)
       }
-      const response: ConnectorReplyResponse =
-        sent.state === 'posted' && sent.slackTs !== null
-          ? { status: 'posted', messageTs: sent.slackTs }
-          : { status: 'queued' }
-      return context.json(response)
+      if (envelope.kind === 'url_verification') {
+        return context.json({ challenge: envelope.challenge })
+      }
+      // Answered before any Slack call; a database failure is a 500, so Slack retries.
+      if (envelope.kind === 'message' && config.teamIds.has(envelope.message.teamId)) {
+        const install = await installs.find(database, envelope.message.teamId)
+        if (install && envelope.message.userId !== install.botUserId) {
+          await core.route(inboundSlackMessage(envelope.message, install, config.paused))
+        }
+      }
+      return context.body(null, 200)
+    })
+
+    // Answer presses on prompt cards; answered before any Slack call, like events.
+    fromSlack(app, '/slack/interactivity', async (context, rawBody) => {
+      const click = readSlackClick(rawBody)
+      if (click === 'invalid') {
+        return context.json({ error: 'invalid_request' }, 400)
+      }
+      if (click !== 'ignored' && config.teamIds.has(click.teamId)) {
+        const install = await installs.find(database, click.teamId)
+        if (install) {
+          const reply = await core.answerCard('slack', {
+            workspaceId: click.teamId,
+            channelId: click.channelId,
+            messageRef: click.messageTs,
+            userId: click.userId,
+            optionId: click.optionId,
+            paused: config.paused || install.paused
+          })
+          if (reply) {
+            await core.notify('slack', reply)
+          }
+        }
+      }
+      return context.body(null, 200)
     })
   }
 
   return {
-    registerRoutes,
-    worker,
+    adapter,
     members,
-    starts,
-    // In the transaction that applied a machine's events batch; posts go out on the next pass.
-    onEvents: async (transaction: CloudDatabase, hostId: string, events: ConnectorEvent[]) => {
-      const externalIds = events.flatMap((event) =>
-        event.kind === 'snapshot'
-          ? event.conversations.map((entry) => entry.conversation.externalId)
-          : [event.conversation.externalId]
-      )
-      // A snapshot can mark threads it doesn't list unverifiable.
-      const unverifiable = events.some((event) => event.kind === 'snapshot')
-        ? await transaction.query(
-            `SELECT external_id FROM connector_threads
-             WHERE host_id = ? AND turn_state = 'unverifiable'`,
-            [hostId]
-          )
-        : []
-      await refresh(transaction, hostId, [
-        ...externalIds,
-        ...unverifiable.map((row) => String(row.external_id))
-      ])
-      for (const event of events) {
-        if (event.kind === 'turn-ended' && event.lastAssistantMessage !== undefined) {
-          await queueTurnFallback(transaction, posts, hostId, {
-            externalId: event.conversation.externalId,
-            turnId: event.turnId,
-            lastAssistantMessage: event.lastAssistantMessage
-          })
-        }
-      }
-    },
-    // In the transaction that recorded a machine's confirmations.
-    onAcks: async (transaction: CloudDatabase, hostId: string, deliveryIds: string[]) => {
-      const rows = await transaction.query(
-        `SELECT DISTINCT external_id FROM connector_inbox
-         WHERE host_id = ? AND delivery_id IN (${deliveryIds.map(() => '?').join(', ')})`,
-        [hostId, ...deliveryIds]
-      )
-      await refresh(
-        transaction,
-        hostId,
-        rows.map((row) => String(row.external_id))
-      )
-    },
-    // In the expiry sweep's transaction, with the threads it hit.
-    onExpired: async (transaction: CloudDatabase, threads: ExpiredThread[]) => {
-      for (const { hostId, externalId } of threads) {
-        await refreshSlackStatus(transaction, posts, hostId, externalId)
-      }
-    },
-    startBackground: (): (() => void) => {
-      const stops = [
-        every('slack_posts', POST_INTERVAL_MS, () => worker.sendDue()),
-        every('slack_thread_starts', POST_INTERVAL_MS, () => starts.buildDue()),
-        every('slack_members', MEMBER_CHECK_INTERVAL_MS, () => members.checkContextAuthors()),
-        every('slack_retention', RETENTION_INTERVAL_MS, async () => {
-          await database.query('DELETE FROM connector_slack_seen WHERE seen_at < ?', [
-            now() - SEEN_RETENTION_MS
-          ])
-          await database.query('DELETE FROM connector_thread_context WHERE created_at < ?', [
-            now() - CONTEXT_RETENTION_MS
-          ])
-          await posts.pruneFinished(POST_RETENTION_MS)
-        })
-      ]
-      return () => {
-        for (const stop of stops) {
-          stop()
-        }
-      }
-    }
+    registerRoutes,
+    startBackground: () =>
+      every('slack_members', MEMBER_CHECK_INTERVAL_MS, () => members.checkContextAuthors())
   }
 }

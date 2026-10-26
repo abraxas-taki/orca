@@ -213,7 +213,24 @@ describe('ExternalConversationSeam watch', () => {
     expect(seen.map((event) => event.kind)).toEqual(['turn-started', 'prompt', 'turn-ended'])
     expect(seen[0]).toMatchObject({ conversation: KEY, at: 100 })
     expect(seen[1]).toMatchObject({ prompt: { kind: 'approval' } })
-    expect(seen[2]).toMatchObject({ stopReason: 'success', lastAssistantMessage: 'Done.', at: 300 })
+    expect(seen[2]).toMatchObject({
+      stopReason: 'success',
+      lastAssistantMessage: 'Done.',
+      at: 300,
+      turnId: 100
+    })
+  })
+
+  it('names the turn a reply belongs to as turn events do, only while watched and linked', async () => {
+    const { seam, host, hookRows, paneChange } = await linked()
+    expect(seam.replyTarget(PANE)).toBeNull()
+    seam.watch(host, () => {})
+    expect(seam.replyTarget('tab-9:other')).toBeNull()
+    hookRows.set(PANE, hookRow({ state: 'working', stateStartedAt: 120 }))
+    paneChange(moved('rest', 'working', 'prompt-submitted'))
+    // The start recorded the turn; the row's later state changes cannot move it.
+    hookRows.set(PANE, hookRow({ state: 'working', stateStartedAt: 180 }))
+    expect(seam.replyTarget(PANE)).toEqual({ key: KEY, turnId: 120 })
   })
 
   it('ends a turn the user stopped with its recorded verdict, never the caller’s', async () => {

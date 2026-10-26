@@ -6,74 +6,24 @@ import {
   CHANNEL,
   createSlackHarness,
   OWNER,
+  conversation,
+  EXTERNAL_ID,
   project,
-  TEAM
+  startedThread,
+  TEAM,
+  THREAD,
+  TURN,
+  turnEnded,
+  turnStarted
 } from './slack-harness.test-fixture.js'
 import type { CloudDatabase } from '@orca-cloud/cloud-database'
-import { SlackInstalls } from './slack-installs.js'
-import { SlackPostWorker } from './slack-post-worker.js'
-import { SlackPosts } from './slack-posts.js'
-import { createSlackWebApi } from './slack-web-api.js'
+import { ConnectorPosts } from './connector-posts.js'
+import { PostWorker } from './post-worker.js'
 
 afterEach(async () => {
   await cleanupConnectorHarnesses()
   vi.unstubAllGlobals()
 })
-
-const THREAD = '1800000000.000100'
-const EXTERNAL_ID = `${TEAM}:${CHANNEL}:${THREAD}:${OWNER}`
-const conversation = { source: 'slack', externalId: EXTERNAL_ID }
-const TURN = 1_800_000_001_000
-
-async function startedThread() {
-  const harness = await createSlackHarness()
-  await harness.operator(
-    'link',
-    '--team',
-    TEAM,
-    '--user',
-    OWNER,
-    '--account',
-    'user-1',
-    '--default-project',
-    'orca'
-  )
-  const machine = await harness.machineWith('user-1', [project('orca')])
-  await harness.message({ text: `<@${BOT}> fix it`, ts: THREAD })
-  const [start] = ConnectorPollResponseSchema.parse((await machine.poll()).body).deliveries
-  let seq = 0
-  const events = async (...batch: unknown[]) => {
-    const response = await machine.call(CONNECTOR_PATHS.events, {
-      v: 1,
-      helloRev: 1,
-      seq: ++seq,
-      events: batch
-    })
-    expect(response.status).toBe(204)
-  }
-  const status = async () => {
-    const [row] = await harness.database.query(
-      'SELECT body FROM connector_slack_posts WHERE post_id = ?',
-      [`status:${EXTERNAL_ID}`]
-    )
-    return JSON.parse(String(row?.body)).text
-  }
-  const reply = (replyId: string, text: string, by = machine) =>
-    by.call(CONNECTOR_PATHS.replies, { v: 1, replyId, conversation, turnId: TURN, text })
-  const pass = () => harness.edge.worker.sendDue()
-  return { ...harness, machine, start, events, status, reply, pass }
-}
-
-const turnStarted = { kind: 'turn-started', conversation, paneKey: 'pane-1', at: TURN }
-const turnEnded = {
-  kind: 'turn-ended',
-  conversation,
-  paneKey: 'pane-1',
-  turnId: TURN,
-  at: TURN + 5_000,
-  stopReason: 'end_turn',
-  lastAssistantMessage: 'Fixed <!channel> & done'
-}
 
 describe('Slack thread status and posts', () => {
   it('edits one status message as the turn moves, and posts the last message when the agent didn’t reply', async () => {
@@ -92,7 +42,7 @@ describe('Slack thread status and posts', () => {
     await harness.events(turnEnded)
     expect(await harness.status()).toBe('Done on build-box.')
     const [fallback] = await harness.database.query(
-      'SELECT body, next_at FROM connector_slack_posts WHERE post_id = ?',
+      'SELECT body, next_at FROM connector_posts WHERE post_id = ?',
       [`fallback:${EXTERNAL_ID}:${TURN}`]
     )
     expect(JSON.parse(String(fallback?.body)).text).toBe('Fixed &lt;!channel&gt; &amp; done')
@@ -117,8 +67,18 @@ describe('Slack thread status and posts', () => {
     await harness.pass()
     expect(await (await harness.reply('r1', 'Here you go')).json()).toEqual({
       status: 'posted',
-      messageTs: expect.any(String)
+      messageId: expect.any(String)
     })
+  })
+
+  it("never posts another source's output to a Slack thread with the same id", async () => {
+    const harness = await startedThread()
+    const other = { source: 'discord', externalId: EXTERNAL_ID }
+    await harness.events(turnStarted, { ...turnEnded, conversation: other })
+    const reply = { v: 1, replyId: 'r1', conversation: other, turnId: TURN, text: 'hi' }
+    expect((await harness.machine.call(CONNECTOR_PATHS.replies, reply)).status).toBe(403)
+    expect((await harness.posts()).filter((post) => post.kind === 'message')).toEqual([])
+    expect(await harness.status()).toBe('Working on build-box…')
   })
 
   it('shows a refused start', async () => {
@@ -130,9 +90,25 @@ describe('Slack thread status and posts', () => {
         result: { outcome: 'refused', reason: 'no_such_project' }
       }
     ])
-    expect(await harness.status()).toBe(
-      'Your Orca on build-box couldn’t take this (no_such_project).'
-    )
+    // A code with no line of its own reads generically; the code itself stays out of the channel.
+    expect(await harness.status()).toBe('Your Orca on build-box couldn’t take this.')
+  })
+
+  it('records a refusal whose code is an inherited property name, and reads it generically', async () => {
+    for (const reason of ['__proto__', 'toString']) {
+      const harness = await startedThread()
+      const response = await harness.machine.ack([
+        {
+          deliveryId: harness.start?.deliveryId,
+          step: 'done',
+          result: { outcome: 'refused', reason }
+        }
+      ])
+      expect(response.status).toBe(204)
+      const [row] = await harness.database.query('SELECT state FROM connector_inbox')
+      expect(row?.state).toBe('done')
+      expect(await harness.status()).toBe('Your Orca on build-box couldn’t take this.')
+    }
   })
 
   it('shows a turn the machine can no longer vouch for', async () => {
@@ -168,7 +144,11 @@ describe('Slack thread status and posts', () => {
     expect(harness.fake.take()).toEqual([
       {
         method: 'chat.update',
-        args: { channel: CHANNEL, ts: expect.any(String), text: 'Working on build-box…' }
+        args: {
+          channel: CHANNEL,
+          ts: expect.any(String),
+          text: 'Working on build-box…'
+        }
       }
     ])
   })
@@ -176,7 +156,7 @@ describe('Slack thread status and posts', () => {
   it('a status changed while it was sending gets one more edit', async () => {
     const harness = await startedThread()
     await harness.pass()
-    const posts = new SlackPosts(harness.database, harness.now)
+    const posts = new ConnectorPosts(harness.database, harness.now, 'slack')
     const [claimed] = await posts.claim()
     await harness.events(turnStarted)
     expect(claimed).toBeDefined()
@@ -184,7 +164,7 @@ describe('Slack thread status and posts', () => {
       await posts.posted(claimed, '1800000100.000001')
     }
     const status = (await harness.posts()).find((post) => post.post_id === `status:${EXTERNAL_ID}`)
-    expect(status).toMatchObject({ state: 'queued', slack_ts: '1800000100.000001' })
+    expect(status).toMatchObject({ state: 'queued', message_ref: '1800000100.000001' })
   })
 
   it('waits out Slack’s rate limit for the whole channel, posts queued later included', async () => {
@@ -301,7 +281,7 @@ describe('Slack thread status and posts', () => {
 
   it('a sender whose lease ran out changes nothing', async () => {
     const harness = await startedThread()
-    const posts = new SlackPosts(harness.database, harness.now)
+    const posts = new ConnectorPosts(harness.database, harness.now, 'slack')
     const [first] = await posts.claim()
     harness.advance(120_000)
     const [second] = await posts.claim()
@@ -342,7 +322,7 @@ describe('Slack thread status and posts', () => {
 
   it('an old claim can’t finish a newer claim of the same post, and sent text is dropped', async () => {
     const harness = await startedThread()
-    const posts = new SlackPosts(harness.database, harness.now)
+    const posts = new ConnectorPosts(harness.database, harness.now, 'slack')
     await harness.pass()
     const [first] = await posts.claim()
     harness.advance(120_000)
@@ -388,12 +368,10 @@ describe('Slack thread status and posts', () => {
       tryLockSharedScope: (key) => inner.tryLockSharedScope(key),
       close: () => inner.close()
     }
-    const worker = new SlackPostWorker({
-      database: harness.database,
-      posts: new SlackPosts(flaky, harness.now),
-      installs: new SlackInstalls(harness.tokenKey),
-      api: createSlackWebApi()
-    })
+    const worker = new PostWorker(
+      new ConnectorPosts(flaky, harness.now, 'slack'),
+      harness.edge.adapter
+    )
     await expect(worker.sendDue()).rejects.toThrow('connection lost')
     expect(
       (await harness.posts()).find((post) => String(post.post_id).startsWith('eyes:'))?.state
@@ -434,8 +412,8 @@ describe('Slack thread status and posts', () => {
       'chat.postEphemeral',
       Response.json({ ok: false, error: 'user_not_in_channel' })
     )
-    await harness.edge.worker.sendDue()
-    await harness.edge.worker.sendDue()
+    await harness.core.sendDue()
+    await harness.core.sendDue()
     expect(harness.fake.take()).toEqual([
       {
         method: 'chat.postEphemeral',
@@ -470,7 +448,7 @@ describe('Slack thread status and posts', () => {
     harness.fake.take()
     await harness.message({ text: 'still there?', ts: '1800000000.000200', thread_ts: THREAD })
     harness.advance(5 * 60_000 + 1)
-    await harness.runtime.inbox.expireDue(harness.edge.onExpired)
+    await harness.runtime.inbox.expireDue(harness.core.onExpired)
     await harness.pass()
     await harness.pass()
     expect(harness.fake.take().filter((call) => call.method === 'chat.update')).toEqual([

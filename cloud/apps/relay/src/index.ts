@@ -15,6 +15,7 @@ import {
 } from './cell-flags.js'
 import { startControlFlagChannel } from './relay-control-flag-channel.js'
 import { readCloudRunInstanceZone } from './cloud-run-instance-zone.js'
+import { readSandboxTcpCounters } from './sandbox-tcp-counters.js'
 import {
   reconcileCellAdmissionAtStartup,
   roleOwnsAssignmentMaintenance
@@ -81,6 +82,7 @@ const {
 // Cloud Run sets K_SERVICE; GCE cells and local runs skip the metadata read.
 if (process.env.K_SERVICE) {
   void readCloudRunInstanceZone().then((zone) => observability.setInstanceZone(zone))
+  observability.setTcpCounterReader(() => readSandboxTcpCounters())
 }
 // Only assignment-maintenance owner reaps credentials; readers already enforce expiry, so cell-wide copies multiplied scans without changing answers.
 const cleanupTimer = roleOwnsAssignmentMaintenance(config.role)

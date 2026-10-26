@@ -32,6 +32,8 @@ export const ConnectorHelloRequestSchema = z.object({
   agents: CapabilityList,
   promptKinds: CapabilityList,
   features: CapabilityList,
+  // The cloud sends a conversation only to a machine that lists its source.
+  sources: CapabilityList,
   projects: z.array(ConnectorProjectSchema).max(CONNECTOR_LIMITS.maxHelloProjects)
 })
 

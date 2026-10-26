@@ -95,7 +95,7 @@ export const ConnectorReplyRequestSchema = z.object({
 })
 
 export const ConnectorReplyResponseSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('posted'), messageTs: z.string().min(1) }),
+  z.object({ status: z.literal('posted'), messageId: z.string().min(1) }),
   z.object({ status: z.literal('queued') })
 ])
 

@@ -48,7 +48,7 @@ describe('poll response', () => {
       { ...base, kind: 'rewind' },
       { ...start, prompt: '' },
       { deliveryId: base.deliveryId },
-      { ...base, conversation: { source: 'linear', externalId: 'L1' }, kind: 'cancel' }
+      { ...base, conversation: { source: 'github', externalId: 'G1' }, kind: 'cancel' }
     ]) {
       expect(ConnectorDeliverySchema.safeParse(delivery).success).toBe(false)
     }
@@ -183,11 +183,13 @@ describe('hello and replies', () => {
       agents: ['claude', 'future-agent'],
       promptKinds: ['approval'],
       features: ['answer', 'future-feature'],
+      sources: ['slack', 'future-source'],
       projects: [
         { placeId: 'pl_1', name: 'orca', kind: 'git', where: { kind: 'ssh', label: 'openclaw' } }
       ]
     })
     expect(hello.features).toEqual(['answer', 'future-feature'])
+    expect(hello.sources).toEqual(['slack', 'future-source'])
   })
 
   it('caps a hello at maxHelloProjects projects with short display strings', () => {
@@ -208,6 +210,7 @@ describe('hello and replies', () => {
         agents: ['claude'],
         promptKinds: [],
         features: [],
+        sources: ['slack'],
         projects
       }).success
     const longest = 'x'.repeat(CONNECTOR_LIMITS.maxDisplayTextLength)
@@ -225,5 +228,23 @@ describe('hello and replies', () => {
 
   it('reads a reply as posted or queued', () => {
     expect(ConnectorReplyResponseSchema.parse({ status: 'queued' })).toEqual({ status: 'queued' })
+    expect(
+      ConnectorReplyResponseSchema.parse({ status: 'posted', messageId: '1793.0001' })
+    ).toEqual({
+      status: 'posted',
+      messageId: '1793.0001'
+    })
+  })
+
+  it('carries a conversation from any connected platform', () => {
+    for (const source of ['slack', 'discord', 'linear']) {
+      expect(
+        ConnectorDeliverySchema.safeParse({
+          ...base,
+          conversation: { source, externalId: 'x1' },
+          kind: 'cancel'
+        }).success
+      ).toBe(true)
+    }
   })
 })

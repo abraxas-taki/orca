@@ -1194,10 +1194,6 @@
 1 test-timeout-needs-reason:src/main/browser/agent-browser-bridge-raw-process.test.ts
 1 test-timeout-needs-reason:src/main/browser/browser-client-page-renderer-lifecycle.electron.test.ts
 1 test-timeout-needs-reason:src/main/browser/browser-find-frame-traversal.electron.test.ts
-1 test-timeout-needs-reason:src/main/browser/browser-route-dns-prefetch.electron.test.ts
-1 test-timeout-needs-reason:src/main/browser/browser-route-h3-egress.electron.test.ts
-1 test-timeout-needs-reason:src/main/browser/browser-route-persisted-worker-egress.electron.test.ts
-1 test-timeout-needs-reason:src/main/browser/browser-route-tcp-egress.electron.test.ts
 1 test-timeout-needs-reason:src/main/browser/browser-route-webrtc-egress.electron.test.ts
 1 test-timeout-needs-reason:src/main/browser/browser-session-ua-cloudflare-live.electron.test.ts
 2 test-timeout-needs-reason:src/main/browser/browser-session-ua-wire-identity-cross-context.electron.test.ts
@@ -1270,7 +1266,6 @@
 1 test-timeout-needs-reason:src/main/native-chat/agent-session-wire/structured-agent-session-interrupted-continuation.test.ts
 1 test-timeout-needs-reason:src/main/native-chat/agent-session-wire/structured-agent-session-status-feed-children.test.ts
 1 test-timeout-needs-reason:src/main/notebook/notebook-kernel.test.ts
-1 test-timeout-needs-reason:src/main/opencode/opencode-launch-model-context.test.ts
 1 test-timeout-needs-reason:src/main/orcad/orcad-bundle-native-load-order.test.ts
 1 test-timeout-needs-reason:src/main/orcad/orcad-packaged-node-pty.integration.test.ts
 1 test-timeout-needs-reason:src/main/orcad/orcad-packaged-structured-chat.integration.test.ts

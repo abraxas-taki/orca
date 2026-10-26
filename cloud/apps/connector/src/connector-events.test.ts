@@ -179,6 +179,34 @@ describe('connector turn events', () => {
     expect(await thread()).toMatchObject({ pending_prompt: null })
   })
 
+  it("leaves a Slack thread alone when another source's conversation has its id", async () => {
+    const { machine, enqueue, events, thread } = await setup()
+    await enqueue(machine.hostId)
+    await events([{ conversation, paneKey: 'slack-pane', kind: 'linked', agent: 'claude' }])
+    const other = { source: 'discord', externalId: conversation.externalId }
+    await events([{ conversation: other, paneKey: 'discord-pane', kind: 'linked', agent: 'codex' }])
+    const prompt = { kind: 'approval', promptId: 'p1', tool: 'Bash', options: [] }
+    await events([
+      {
+        kind: 'snapshot',
+        conversations: [
+          {
+            conversation: { ...other, source: 'linear' },
+            paneKey: 'linear-pane',
+            agent: 'codex',
+            working: true,
+            prompt
+          }
+        ]
+      }
+    ])
+    expect(await thread()).toMatchObject({
+      pane_key: 'slack-pane',
+      agent: 'claude',
+      pending_prompt: null
+    })
+  })
+
   it('reads an open turn missing from the snapshot as unverifiable', async () => {
     const { machine, enqueue, events, thread } = await setup()
     await enqueue(machine.hostId)

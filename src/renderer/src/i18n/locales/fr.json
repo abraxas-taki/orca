@@ -1,4 +1,11 @@
 {
+  "agentLaunch": {
+    "opencode": {
+      "updateRequired": "Cette version d’OpenCode ne peut pas démarrer de façon sûre avec le modèle choisi. Mettez OpenCode à jour vers une version compatible ou ne précisez pas de modèle.",
+      "invalidConfig": "OpenCode n’a pas pu appliquer ce modèle à la configuration de lancement. Vérifiez la configuration de lancement d’OpenCode et réessayez, ou ne précisez pas de modèle.",
+      "unsupportedLaunch": "OpenCode ne peut pas appliquer ce modèle à ce lancement. Ouvrez un nouveau terminal local avec des arguments de lancement compatibles ou ne précisez pas de modèle."
+    }
+  },
   "app": {
     "saving": {
       "delayedTitle": "Le stockage du profil prend plus de temps que d’habitude",
@@ -13013,6 +13020,8 @@
           "behindMigrating": "Exécute le serveur Orca, qui se mettra à jour une fois le déplacement de ses projets terminé.",
           "behindCheckFailed": "Exécute le serveur Orca ; Orca n’a pas pu vérifier s’il est en retard sur cette app.",
           "refusedBlockedReason": "Orca n’est pas encore configuré sur cet hôte. {{reason}}",
+          "refusedLeaveBehind": "Certains éléments enregistrés pour cet hôte ne peuvent pas être déplacés vers son serveur Orca : {{items}}. « Déplacer quand même » connecte l’hôte et les conserve sur cet ordinateur.",
+          "refusedLeaveBehindUnnamed": "Certains éléments enregistrés pour cet hôte ne peuvent pas être déplacés vers son serveur Orca. « Déplacer quand même » connecte l’hôte et les conserve sur cet ordinateur.",
           "runtimeNoexec": "Cet hôte n'autorise pas l'exécution de programmes à partir de ~/.orca-remote, donc Orca ne peut pas y démarrer son serveur. Cela signifie généralement que le dossier personnel est monté avec noexec. Demandez à l’administrateur de l’hôte d’autoriser l’exécution de programmes là-bas, puis reconnectez-vous.",
           "setupContactLost": "Orca a perdu le contact avec cet hôte lors de la configuration de son serveur. Rien sur l'hôte n'a été arrêté. Reconnectez-vous pour continuer."
         },
@@ -13296,6 +13305,16 @@
           "searchPlaceholder": "Rechercher des versions…",
           "searchLabel": "Rechercher des versions",
           "noMatches": "Aucune version correspondante."
+        },
+        "notification": {
+          "settings": {
+            "copy": {
+              "macFailureTitle": "macOS n'a pas affiché la notification",
+              "macFailureDescription": "Activez Autoriser les notifications pour Orca dans Réglages Système.",
+              "windowsFailureTitle": "Windows n'a pas affiché la notification",
+              "windowsFailureDescription": "Activez les notifications pour Orca dans les Paramètres Windows."
+            }
+          }
         }
       },
       "right": {
@@ -15854,6 +15873,9 @@
             "0d6efe9cf4": "Recommandé sur macOS quand les projets ou les worktrees se trouvent dans des dossiers protégés.",
             "dac08ec03e": "Ouverture...",
             "6e3d62b816": "Ouvrir l'accès complet au disque"
+          },
+          "FeatureWallTourSurface": {
+            "reopenHint": "Rouvrez-le à tout moment depuis Aide > Découvrir Orca."
           }
         },
         "tips": {
@@ -15880,7 +15902,8 @@
             "53905bd076": "Aperçu de développement : ouverture du terminal de configuration des skills.",
             "1da82af45b": "L'Orca CLI requiert votre attention",
             "ce13a742d0": "`orca` enregistré dans le PATH.",
-            "d1a86c7eb5": "Ouvrez les paramètres pour terminer la configuration du CLI."
+            "d1a86c7eb5": "Ouvrez les paramètres pour terminer la configuration du CLI.",
+            "cliInstallFailed": "Impossible d'installer le CLI Orca."
           },
           "CmdJPaletteFeatureTipVisual": {
             "ab94e16d44": "Créer le worktree « {{value0}} »",
@@ -16885,6 +16908,17 @@
           },
           "copy": {
             "copyFailed": "Impossible de copier les détails du rapport de plantage."
+          },
+          "CrashReportDialogSurface": {
+            "reportTitle": "Signaler un plantage",
+            "uiErrorTitle": "Orca a rencontré une erreur d'interface récupérable",
+            "closedTitle": "Orca s'est fermé de manière inattendue",
+            "reportDescription": "Envoyez un rapport de plantage respectueux de la vie privée. Les journaux de diagnostic récents, expurgés, sont inclus lorsqu'ils sont disponibles.",
+            "uiErrorDescription": "Envoyez un rapport de diagnostic respectueux de la vie privée pour nous aider à comprendre la partie de l'interface qui a échoué.",
+            "closedDescription": "Envoyez un rapport de diagnostic respectueux de la vie privée pour nous aider à comprendre ce qui s'est passé.",
+            "reportNotesPlaceholder": "Facultatif : que s'est-il passé ?",
+            "uiErrorNotesPlaceholder": "Facultatif : que faisiez-vous avant cette erreur d'interface ?",
+            "closedNotesPlaceholder": "Facultatif : que faisiez-vous avant qu'Orca se ferme ?"
           }
         }
       },
@@ -19405,9 +19439,9 @@
           "unverifiableCount": "{{value0}} au statut indisponible"
         },
         "startedOne": "A lancé 1 sous-agent",
-        "startedN": "Lancement des sous-agents {{value0}}",
+        "startedN": "A lancé {{value0}} sous-agents",
         "ranOne": "A exécuté 1 sous-agent",
-        "ranN": "Ran les sous-agents {{value0}}",
+        "ranN": "A exécuté {{value0}} sous-agents",
         "tokens": "Jetons {{value0}}",
         "unnamed": "Sous-agent"
       },
@@ -20639,7 +20673,6 @@
       "signInLinkCopied": "Lien de connexion copié. Ouvrez-le dans une fenêtre privée pour vous connecter avec un autre compte.",
       "signInLinkCopyFailed": "Impossible de copier le lien.",
       "switchSessions": {
-        "selectAll": "Tout sélectionner",
         "busy": "En activité",
         "idle": "Inactif",
         "keyword": {
@@ -20655,17 +20688,27 @@
         "bodyOther": "{{count}} sessions Claude sont toujours en cours d’exécution sur {{previous}}. Le redémarrage poursuit chaque conversation sur {{next}}. Les sessions occupées attendent d’être inactives avant de redémarrer.",
         "restartOne": "Redémarrer la session",
         "restartOther": "Redémarrer {{count}} sessions",
-        "selectAllSessions": "Sélectionner toutes les sessions",
         "session": "Session Claude",
         "settingTitle": "Lorsque vous changez de compte alors que Claude est en cours d'exécution",
-        "selectedCount": "{{selected}} sur {{total}} sélectionnées",
-        "selectWorkspace": "Sélectionner toutes les sessions dans {{workspace}}",
         "listLabel": "Sessions Claude à redémarrer",
         "settingRestart": "Toujours redémarrer",
         "settingKeep": "Ne jamais redémarrer",
         "settingDescription": "Le redémarrage continue chaque conversation en cours sur le nouveau compte.",
         "restartingOne": "Redémarrage d’une session Claude sur {{account}}",
-        "restartingOther": "Redémarrage de {{count}} sessions Claude sur {{account}}"
+        "restartingOther": "Redémarrage de {{count}} sessions Claude sur {{account}}",
+        "groupOnAccount": "En cours sur {{account}}",
+        "groupElsewhere": "Pas sur {{account}}",
+        "groupCantMove": "Impossible à déplacer",
+        "selectGroup": "Sélectionner toutes les sessions de {{group}}",
+        "reasonWsl": "Terminal WSL",
+        "reasonOwnFolder": "Utilise votre propre dossier Claude",
+        "reasonUnknownAccount": "Compte inconnu",
+        "reasonNoSession": "Reprise impossible",
+        "reviewBodyOne": "1 autre session Claude n'a pas été déplacée vers {{next}}.",
+        "reviewBodyOther": "{{count}} autres sessions Claude n'ont pas été déplacées vers {{next}}.",
+        "notMovedOne": "1 autre session n'a pas été déplacée.",
+        "notMovedOther": "{{count}} autres sessions n'ont pas été déplacées.",
+        "review": "Vérifier"
       }
     },
     "hostSignIn": {

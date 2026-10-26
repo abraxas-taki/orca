@@ -5,6 +5,12 @@ import type { ConnectorThreads, NewThread } from './connector-threads.js'
 
 export type QueueResult = EnqueueResult | 'unknown_host' | 'not_this_hosts_thread'
 
+// queueDelivery inside a caller's transaction.
+export type QueueInTransaction = (
+  transaction: CloudDatabase,
+  input: Parameters<typeof queueDelivery>[1]
+) => ReturnType<typeof queueDelivery>
+
 // One host-locked transaction finds the host, binds the thread and queues, so per-host seq is
 // assigned in order.
 export async function queueDelivery(
@@ -17,11 +23,12 @@ export async function queueDelivery(
   input: {
     thread: Omit<NewThread, 'accountId'>
     deliveryId: string
+    messageId?: string
     body: DeliveryBody
     held?: boolean
   }
 ): Promise<QueueResult> {
-  const { hostId, externalId } = input.thread
+  const { hostId, conversation } = input.thread
   return await deps.database.transaction(async (transaction) => {
     await lockConnectorHost(transaction, hostId)
     const accountId = await deps.hosts.accountOf(transaction, hostId)
@@ -33,8 +40,9 @@ export async function queueDelivery(
     }
     return await deps.inbox.enqueue(transaction, {
       hostId,
-      externalId,
+      conversation,
       deliveryId: input.deliveryId,
+      messageId: input.messageId,
       body: input.body,
       held: input.held ?? false
     })
