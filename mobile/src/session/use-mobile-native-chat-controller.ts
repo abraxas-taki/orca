@@ -134,9 +134,8 @@ export function useMobileNativeChatController(args: {
   )
   const {
     permission: legacyNativeChatPermission,
-    question: legacyQuestion,
-    detectedAsk: nativeChatDetectedAsk,
     ask: nativeChatAskPrompt,
+    waitStartedAt: nativeChatPromptStartedAt,
     structuredAnswer
   } = useMobileNativeChatPrompts({
     enabled: activeChatStructured || activeChatResolution != null,
@@ -152,10 +151,10 @@ export function useMobileNativeChatController(args: {
   const promptScopeKey = mobileNativeChatScopeKey(hostId, worktreeId, activeSessionTabId)
   const askDismissal = useMobileNativeChatAskDismiss({
     ask: nativeChatAskPrompt,
-    detectedAsk: nativeChatDetectedAsk,
+    startedAt: nativeChatPromptStartedAt,
     scopeKey: promptScopeKey,
     sessionKey: activeChatSessionId,
-    observing: showNativeChat && (nativeChatDetectedAsk != null || nativeChatTranscriptSettled)
+    observing: showNativeChat && (nativeChatAskPrompt != null || nativeChatTranscriptSettled)
   })
 
   // Require both input lease and live connection; remembered-only agents may now be shells and must never receive chat writes.
@@ -187,7 +186,6 @@ export function useMobileNativeChatController(args: {
   const {
     send: handleNativeChatSend,
     sendWithOutcome: handleNativeChatSendWithOutcome,
-    answerQuestion: legacyHandleNativeChatQuestionAnswer,
     dispatchCommand: handleNativeChatDispatchCommand
   } = useMobileNativeChatMessageSend({
     client,
@@ -247,13 +245,11 @@ export function useMobileNativeChatController(args: {
   const promptCards = useMobileNativeChatPromptCards({
     terminal: {
       permission: legacyNativeChatPermission,
-      question: legacyQuestion,
-      waitStartedAt: nativeChatStatus?.stateStartedAt ?? null,
+      waitStartedAt: nativeChatPromptStartedAt,
       scopeKey: promptScopeKey,
       sessionKey: streamIdentity,
       observing: showNativeChat && !activeChatStructured && nativeChatStatus != null,
-      respondPermission: legacyHandleNativeChatRespondPermission,
-      answerQuestion: legacyHandleNativeChatQuestionAnswer
+      respondPermission: legacyHandleNativeChatRespondPermission
     },
     structured: activeChatStructured ? structuredNativeChat : null,
     onSendResolved

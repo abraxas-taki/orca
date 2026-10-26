@@ -3,6 +3,7 @@ import {
   agentSessionPromptQuestions,
   type AgentSessionQuestionAnswer
 } from '../../../src/shared/agent-session-question-answer'
+import { chatApprovalFromJournal } from '../../../src/shared/native-chat-interactive-prompt'
 import type { MobileChatPermission } from './mobile-native-chat-permission'
 import type { MobileChatQuestion } from './mobile-native-chat-question'
 import {
@@ -53,18 +54,6 @@ type PromptTokenPayload =
     }
 
 const STRUCTURED_PROMPT_TOKEN_PREFIX = 'structured-agent-prompt:'
-
-export function pendingStructuredApproval(
-  item: AgentJournalRenderItem
-): item is StructuredApprovalItem {
-  return item.body.kind === 'approval' && item.body.resolution.state === 'pending'
-}
-
-export function pendingStructuredQuestion(
-  item: AgentJournalRenderItem
-): item is StructuredQuestionItem {
-  return item.body.kind === 'question' && item.body.resolution.state === 'pending'
-}
 
 function encodePromptToken(payload: PromptTokenPayload): string {
   return `${STRUCTURED_PROMPT_TOKEN_PREFIX}${encodeURIComponent(JSON.stringify(payload))}`
@@ -144,22 +133,17 @@ export function projectStructuredPermission(
   if (prompt?.body.kind !== 'approval') {
     return null
   }
+  const approval = chatApprovalFromJournal(prompt.body)
   return {
-    title: prompt.body.title,
+    ...approval,
     prompt: { itemId: prompt.itemId, expectedRevision: prompt.revision },
-    ...(prompt.body.displayName ? { displayName: prompt.body.displayName } : {}),
-    ...(prompt.body.description ? { description: prompt.body.description } : {}),
-    ...(prompt.body.decisionReason ? { decisionReason: prompt.body.decisionReason } : {}),
-    ...(prompt.body.blockedPath ? { blockedPath: prompt.body.blockedPath } : {}),
-    ...(prompt.body.subject ? { subject: prompt.body.subject } : {}),
-    ...(prompt.body.detail ? { detail: prompt.body.detail } : {}),
-    options: prompt.body.options.map((option) => ({
+    options: approval.options.map((option) => ({
       label: option.label,
       send: encodePromptToken({
         kind: 'approval',
         itemId: prompt.itemId,
         revision: prompt.revision,
-        optionId: option.id
+        optionId: option.send
       })
     }))
   }

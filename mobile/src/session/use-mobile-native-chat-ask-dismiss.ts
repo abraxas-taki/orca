@@ -5,7 +5,8 @@ import { useMobileNativeChatPromptDismiss } from './use-mobile-native-chat-promp
 // Keep answered/collapsed asks across view toggles and remounts until an observed prompt supersedes them.
 export function useMobileNativeChatAskDismiss(args: {
   ask: AskPrompt | null
-  detectedAsk: AskPrompt | null
+  /** The host wait's start for a status-backed ask; null for a transcript-only one. */
+  startedAt: number | null
   scopeKey: string | null
   sessionKey: string | null
   observing: boolean
@@ -18,16 +19,7 @@ export function useMobileNativeChatAskDismiss(args: {
   collapseAsk: () => void
 } {
   const askKey = useMemo(() => nativeChatAskDismissKey(args.ask), [args.ask])
-  const detectedPromptKey = useMemo(
-    () => nativeChatAskDismissKey(args.detectedAsk),
-    [args.detectedAsk]
-  )
-  const dismiss = useMobileNativeChatPromptDismiss({
-    ...args,
-    kind: 'ask',
-    promptKey: askKey,
-    detectedPromptKey
-  })
+  const dismiss = useMobileNativeChatPromptDismiss({ ...args, kind: 'ask', content: askKey })
   return {
     askKey,
     showAsk: dismiss.showPrompt,

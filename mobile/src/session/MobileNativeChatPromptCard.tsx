@@ -8,7 +8,7 @@ import { MobileNativeChatQuestion } from './MobileNativeChatQuestion'
 import { mobileChatQuestionKey, type MobileChatQuestion } from './mobile-native-chat-question'
 import { MobileNativeChatPromptStrip } from './MobileNativeChatPromptStrip'
 
-// Keep dismissal in the controller across chat/terminal toggles; structured asks take precedence over heuristic prompts.
+// Keep dismissal in the controller across chat/terminal toggles; the shared resolver already chose the terminal card.
 export function MobileNativeChatPromptCard({
   ask,
   askKey,
