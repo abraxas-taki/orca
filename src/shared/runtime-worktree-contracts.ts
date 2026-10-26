@@ -15,6 +15,7 @@ import type {
 import type { RuntimeListingHostScope } from './runtime-listing-host-scope'
 import type { GitWorktreeInfo, Worktree } from './worktree/types'
 import type { WorkspaceStatusWarning } from './workspace-status-warning'
+import type { WorktreeStatus } from './worktree-status-rollup'
 
 export type RuntimeWorktreeSetResult = {
   worktree: RuntimeWorktreeRecord
@@ -81,7 +82,7 @@ export type RuntimeWorktreePsSummary = {
   createdAt?: number
   creatorProvenance?: Worktree['creatorProvenance']
   linkedIssue: number | null
-  /** Host-cached PR, else linked number with unknown state; old hosts omit title/url/checks. */
+  /** The cached PR the desktop's PR lanes read; older hosts also sent a bare linked number as state 'unknown'. */
   linkedPR: {
     number: number
     state: string
@@ -106,6 +107,8 @@ export type RuntimeWorktreePsSummary = {
   status: RuntimeWorktreeStatus
   /** Optional discriminator for a working workspace; older clients fall back to ordinary working. */
   workingMode?: AgentWorkingMode
+  /** The desktop sidebar dot, including failed/interrupted/unconfirmed; older hosts omit it. */
+  sidebarStatus?: WorktreeStatus
   agents: RuntimeWorktreeAgentRow[]
   /** See `Worktree.removing`; sent only to clients that advertise background removal. */
   removing?: true

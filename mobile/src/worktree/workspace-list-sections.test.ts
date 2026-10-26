@@ -12,6 +12,7 @@ import {
 } from './workspace-list-sections'
 import { DEFAULT_WORKSPACE_STATUSES } from '../../../src/shared/workspace-statuses'
 import { getMobileWorkspaceLineageGroupKey } from './mobile-workspace-lineage'
+import { getWorktreeDotStatus } from './workspace-list-ordering'
 
 function worktree(overrides: Partial<Worktree> = {}): Worktree {
   const worktreePath = join('/tmp', 'orca', 'worktrees', 'feature')
@@ -250,6 +251,16 @@ describe('getWorktreeStatus', () => {
         })
       )
     ).toBe('active')
+  })
+})
+
+describe('getWorktreeDotStatus', () => {
+  it('shows the host’s agent verdict and keeps the phone rule for activity and unknown states', () => {
+    const row = worktree({ status: 'active', hasHostSidebarActivity: true })
+    expect(getWorktreeDotStatus({ ...row, sidebarStatus: 'failed' })).toBe('failed')
+    expect(getWorktreeDotStatus({ ...row, sidebarStatus: 'inactive' })).toBe('active')
+    expect(getWorktreeDotStatus({ ...row, sidebarStatus: 'from-a-newer-host' })).toBe('active')
+    expect(getWorktreeDotStatus(row)).toBe('active')
   })
 })
 

@@ -26,17 +26,19 @@ export const WorkspaceReviewFactsSnapshotSchema = z.object({
 export type WorkspaceReviewFact = z.infer<typeof WorkspaceReviewFactSchema>
 export type WorkspaceReviewFactsSnapshot = z.infer<typeof WorkspaceReviewFactsSnapshotSchema>
 
+type CachedPR = { number?: number; state?: string }
+
 /** The window's PR cache, or main's persisted copy of it. */
-export type PRCacheView = Readonly<
-  Record<string, { data: { number?: number; state?: string } | null } | undefined>
+export type PRCacheView<T extends CachedPR = CachedPR> = Readonly<
+  Record<string, { data: T | null } | undefined>
 >
 
-/** Cached PR excluding one the user unlinked. */
-export function readWorkspaceReviewFact(
+/** Cached PR for the workspace branch, excluding one the user unlinked. */
+export function readWorkspaceReviewPR<T extends CachedPR>(
   worktree: Pick<Worktree, 'branch' | 'linkedPR' | 'suppressedGitHubPR'>,
   repo: Pick<Repo, 'id' | 'path' | 'connectionId' | 'executionHostId'> | undefined,
-  prCache: PRCacheView
-): WorkspaceReviewFact | null {
+  prCache: PRCacheView<T>
+): T | null {
   const branch = worktree.branch.replace(/^refs\/heads\//, '')
   if (!repo || !branch) {
     return null
@@ -49,7 +51,16 @@ export function readWorkspaceReviewFact(
   if (!pr || (typeof pr.number === 'number' && isGitHubPRSuppressed(worktree, pr.number))) {
     return null
   }
-  return { provider: 'github', reviewState: pr.state ?? '' }
+  return pr
+}
+
+export function readWorkspaceReviewFact(
+  worktree: Pick<Worktree, 'branch' | 'linkedPR' | 'suppressedGitHubPR'>,
+  repo: Pick<Repo, 'id' | 'path' | 'connectionId' | 'executionHostId'> | undefined,
+  prCache: PRCacheView
+): WorkspaceReviewFact | null {
+  const pr = readWorkspaceReviewPR(worktree, repo, prCache)
+  return pr ? { provider: 'github', reviewState: pr.state ?? '' } : null
 }
 
 export function prGroupOfReviewFact(fact: WorkspaceReviewFact | null | undefined): PRGroupKey {
