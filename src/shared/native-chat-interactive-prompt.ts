@@ -51,7 +51,7 @@ export type NativeChatApprovalSay = (
   values?: { value0: string }
 ) => string
 
-export const sayNativeChatApprovalEnglish: NativeChatApprovalSay = (id, values) =>
+const sayNativeChatApprovalEnglish: NativeChatApprovalSay = (id, values) =>
   values
     ? NATIVE_CHAT_APPROVAL_COPY[id].replace('{{value0}}', values.value0)
     : NATIVE_CHAT_APPROVAL_COPY[id]

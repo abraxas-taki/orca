@@ -59,12 +59,12 @@ export function useMobileNativeChatPrompts(args: {
       structuredAnswer: structuredAsk.answer
     }
   }
-  const ask = enabled && card?.kind === 'question' ? card.prompt : null
-  const permission = card?.kind === 'approval' ? card.approval : null
+  // An approval needs no resolved chat; an ask waits for one.
+  const shown = enabled || card?.kind === 'approval' ? card : null
   return {
     structuredAnswer: null,
-    permission,
-    ask,
-    waitStartedAt: nativeChatPromptWaitStartedAt(permission || ask ? card : null, status)
+    permission: shown?.kind === 'approval' ? shown.approval : null,
+    ask: shown?.kind === 'question' ? shown.prompt : null,
+    waitStartedAt: nativeChatPromptWaitStartedAt(shown, status)
   }
 }

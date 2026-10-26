@@ -23,9 +23,9 @@ export function nativeChatPromptWaitStartedAt(
 /** Identifies one prompt occurrence; a new one remounts the card with fresh state. */
 export function nativeChatPromptOccurrenceKey(
   card: InteractivePromptCard,
+  content: string | null,
   startedAt: number | null
 ): string | null {
-  const content = nativeChatCardDismissKey(card)
   return content === null || card?.kind !== 'approval' ? content : `${content}@${startedAt}`
 }
 

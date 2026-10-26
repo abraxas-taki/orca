@@ -30,6 +30,8 @@ export function useMobileNativeChatPromptDismiss({
   sessionKey: string | null
   observing: boolean
 }): {
+  content: string | null
+  occurrenceKey: string | null
   showPrompt: boolean
   collapsed: boolean
   dismissPrompt: () => void
@@ -37,9 +39,9 @@ export function useMobileNativeChatPromptDismiss({
   expandPrompt: () => void
 } {
   const storeKey = JSON.stringify([kind, scopeKey])
-  const content = nativeChatCardDismissKey(card)
+  const content = useMemo(() => nativeChatCardDismissKey(card), [card])
   // A question keeps its occurrence across the status-to-transcript handoff; an approval's ends with its wait.
-  const occurrenceKey = nativeChatPromptOccurrenceKey(card, startedAt)
+  const occurrenceKey = nativeChatPromptOccurrenceKey(card, content, startedAt)
   const detectedByScopeRef = useRef(new Map<string | null, DetectedPrompt>())
   const observation = useMemo(() => {
     const previous = detectedByScopeRef.current.get(scopeKey)
@@ -68,6 +70,8 @@ export function useMobileNativeChatPromptDismiss({
   }
 
   return {
+    content,
+    occurrenceKey,
     showPrompt: content !== null && !matches,
     collapsed: matches && dismissed?.state === 'collapsed',
     dismissPrompt: () => record('answered'),

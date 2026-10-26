@@ -133,17 +133,16 @@ export function projectStructuredPermission(
   if (prompt?.body.kind !== 'approval') {
     return null
   }
-  const approval = chatApprovalFromJournal(prompt.body)
   return {
-    ...approval,
+    ...chatApprovalFromJournal(prompt.body),
     prompt: { itemId: prompt.itemId, expectedRevision: prompt.revision },
-    options: approval.options.map((option) => ({
+    options: prompt.body.options.map((option) => ({
       label: option.label,
       send: encodePromptToken({
         kind: 'approval',
         itemId: prompt.itemId,
         revision: prompt.revision,
-        optionId: option.send
+        optionId: option.id
       })
     }))
   }

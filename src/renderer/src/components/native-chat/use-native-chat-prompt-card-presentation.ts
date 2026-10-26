@@ -45,7 +45,7 @@ export function useNativeChatPromptCardPresentation({
     nativeChatPromptWaitStartedAt(card, s.agentStatusByPaneKey[paneKey])
   )
   const content = nativeChatCardDismissKey(card)
-  const promptKey = nativeChatPromptOccurrenceKey(card, startedAt)
+  const promptKey = nativeChatPromptOccurrenceKey(card, content, startedAt)
   const scopeKey = JSON.stringify([paneKey, targetPtyId])
   const occurrenceKey = promptKey === null ? null : `${scopeKey}:${promptKey}`
   const occurrence = useMemo(() => ({ occurrenceKey, canSend }), [occurrenceKey, canSend])

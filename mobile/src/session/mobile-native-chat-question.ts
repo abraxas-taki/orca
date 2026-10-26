@@ -8,7 +8,7 @@ export type MobileChatQuestion = {
   multiSelect: boolean
   /** Structured questions hide the free-text row when the provider does not accept it. */
   allowOther?: boolean
-  // Preserve listed number/letter tokens for exact TUI responses; bullets have no token.
+  // The answer each option sends; a null token sends its label.
   optionTokens: (string | null)[]
   optionDescriptions?: (string | undefined)[]
   /** Opaque prefix used when free-text answers must target a specific prompt. */

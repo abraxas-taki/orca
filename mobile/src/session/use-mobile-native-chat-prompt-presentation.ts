@@ -1,5 +1,4 @@
-import { useCallback } from 'react'
-import { nativeChatPromptOccurrenceKey } from '../../../src/shared/native-chat-prompt-dismiss-key'
+import { useCallback, useMemo } from 'react'
 import type { MobileChatPermission } from './mobile-native-chat-permission'
 import { useMobileNativeChatPromptDismiss } from './use-mobile-native-chat-prompt-dismiss'
 
@@ -20,17 +19,25 @@ export function useMobileNativeChatPromptPresentation({
   observing: boolean
   respondPermission: (send: string) => Promise<boolean>
 }) {
-  const card = permission ? { kind: 'approval' as const, approval: permission } : null
-  const promptKey = nativeChatPromptOccurrenceKey(card, waitStartedAt)
-  const { showPrompt, collapsed, dismissPrompt, collapsePrompt, expandPrompt } =
-    useMobileNativeChatPromptDismiss({
-      kind: 'prompt',
-      card,
-      startedAt: waitStartedAt,
-      scopeKey,
-      sessionKey,
-      observing
-    })
+  const card = useMemo(
+    () => (permission ? { kind: 'approval' as const, approval: permission } : null),
+    [permission]
+  )
+  const {
+    occurrenceKey: promptKey,
+    showPrompt,
+    collapsed,
+    dismissPrompt,
+    collapsePrompt,
+    expandPrompt
+  } = useMobileNativeChatPromptDismiss({
+    kind: 'prompt',
+    card,
+    startedAt: waitStartedAt,
+    scopeKey,
+    sessionKey,
+    observing
+  })
   const respond = useCallback(
     async (send: string): Promise<boolean> => {
       const accepted = await respondPermission(send)

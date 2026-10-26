@@ -92,7 +92,6 @@ export function MobileNativeChatPromptCard({
         question={question}
         onAnswer={async (text) => (await onAnswerQuestion?.(text)) ?? false}
         onCancel={onCancelPrompt}
-        onCollapse={onCollapsePrompt}
       />
     ) : null
   // Hide without remounting so a collapsed prompt keeps partial selections.
