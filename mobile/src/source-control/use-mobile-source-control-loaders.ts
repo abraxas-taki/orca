@@ -59,7 +59,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
   const { client, connState, statusIdentityKey, worktreeId, setActionError, onStatusLoadSuccess } =
     params
   // Desktop's settings decide the compare base here and the list order and diffs upstream.
-  const settings = useMobileSourceControlSettings(client, connState)
+  const { settings, reload: reloadSettings } = useMobileSourceControlSettings(client, connState)
   const compareAgainstUpstream = settings.compareAgainstUpstream
   // The compare base can be the branch's upstream, so it follows the latest status read.
   const upstreamNameRef = useRef<string | undefined>(undefined)
@@ -137,6 +137,9 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
 
   const loadStatus = useCallback(
     async (options?: LoadStatusOptions) => {
+      if (options?.rereadSettings) {
+        reloadSettings()
+      }
       const loadKey = statusIdentityKey
       const inFlight = statusLoadInFlightRef.current
       if (inFlight && !options?.force && inFlight.key === loadKey && inFlight.client === client) {
@@ -242,6 +245,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
       connState,
       loadBranchCompare,
       onStatusLoadSuccess,
+      reloadSettings,
       statusIdentityKey,
       worktreeId,
       setActionError

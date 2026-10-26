@@ -20,7 +20,7 @@ type DiffLoadingInput = {
 export function useMobileDiffReviewDiffLoading(input: DiffLoadingInput): ReviewDiffState {
   const { client, connState, worktreeId, currentItem, screenState, setActiveHunkIndex } = input
   const [diffState, setDiffState] = useState<ReviewDiffState>({ kind: 'idle' })
-  const { diffShowWhitespace } = useMobileSourceControlSettings(client, connState)
+  const { diffShowWhitespace } = useMobileSourceControlSettings(client, connState).settings
   const hunkResetKeyRef = useRef<string | null>(null)
   // Depend on fields read, not screen-state identity, to avoid duplicate diff requests.
   const screenReady = screenState.kind === 'ready'
