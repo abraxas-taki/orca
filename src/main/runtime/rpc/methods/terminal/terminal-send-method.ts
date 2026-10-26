@@ -19,10 +19,7 @@ import {
   ensureUnsupportedTerminalPromptReceipt,
   observeReplayedTerminalPrompt
 } from './terminal-prompt-receipt'
-import {
-  captureQuestionAnsweredBaseline,
-  inferQuestionAnsweredAfterWrite
-} from './terminal-send-question-answered'
+import { observeQuestionAnswerSend } from './terminal-send-question-answered'
 
 export const TERMINAL_SEND_METHODS = [
   defineMethod({
@@ -218,16 +215,7 @@ export const TERMINAL_SEND_METHODS = [
               mobileFloorClaim.current = claim
             }
           : undefined
-      // Desktop renderers infer answers from their own input; other writers rely on the host.
-      const questionBaseline =
-        params.inputKind === 'query-reply' ||
-        params.interrupt === true ||
-        params.client?.type === 'desktop'
-          ? null
-          : captureQuestionAnsweredBaseline(
-              `${params.text ?? ''}${params.enter === true ? '\r' : ''}`,
-              () => runtime.getLiveTerminalPaneKey(params.terminal)
-            )
+      const answered = observeQuestionAnswerSend(params, runtime)
       let result
       let acceptedPromptCheckpoint: unknown
       try {
@@ -296,8 +284,6 @@ export const TERMINAL_SEND_METHODS = [
       }
       if (result.accepted !== true) {
         mobileFloorClaim.current?.rollback()
-      } else {
-        inferQuestionAnsweredAfterWrite(questionBaseline)
       }
       if (
         result.accepted === true &&
@@ -316,7 +302,7 @@ export const TERMINAL_SEND_METHODS = [
         )
       }
       // Deliberate mobile input claims its driver floor; clientless sends use the current mobile driver.
-      return { send: result }
+      return { send: answered(result) }
     }
   })
 ]

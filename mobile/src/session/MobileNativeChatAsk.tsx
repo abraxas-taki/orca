@@ -4,8 +4,10 @@ import { Check } from 'lucide-react-native'
 import type { AskAnswerSelection, AskPrompt } from '../../../src/shared/native-chat-ask'
 import type { AgentJournalFreeTextInput } from '../../../src/shared/agent-session-journal-types'
 import {
+  askAcceptsEmptyAnswer,
   askConfirmAction,
   askConfirmLabel,
+  askTypedText,
   toggleAskOption
 } from '../../../src/shared/native-chat-ask-card-rules'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
@@ -52,7 +54,7 @@ export function MobileNativeChatAsk({
   const typesOnly = (qi: number): boolean =>
     allowOther?.[qi] !== false && prompt.questions[qi]?.options.length === 0
   const acceptsEmpty = (qi: number): boolean =>
-    typesOnly(qi) && freeTextInputs?.[qi]?.allowEmpty === true
+    askAcceptsEmptyAnswer(prompt.questions[qi], freeTextInputs?.[qi])
 
   // Delay single-select advance to show the choice; Other still needs text.
   const toggle = (qi: number, optIndex: number, multi: boolean): void => {
@@ -82,8 +84,7 @@ export function MobileNativeChatAsk({
   const selectionFor = (qi: number, sel = selections): AskAnswerSelection => {
     const picked = (sel[qi] ?? []).filter((i) => i !== OTHER)
     const typed = typesOnly(qi) || (sel[qi] ?? []).includes(OTHER)
-    const raw = otherText[qi] ?? ''
-    const other = typed ? (freeTextInputs?.[qi]?.allowEmpty ? raw : raw.trim()) : ''
+    const other = typed ? askTypedText(otherText[qi] ?? '', freeTextInputs?.[qi]) : ''
     return other || acceptsEmpty(qi) ? { indices: picked, other } : { indices: picked }
   }
 
@@ -138,7 +139,7 @@ export function MobileNativeChatAsk({
     const action = askConfirmAction({ isLast, anyAnswered: anyAnswered() })
     if (action === 'cancel') {
       void cancel()
-    } else if (action !== 'stay') {
+    } else if (action === 'proceed') {
       void advance()
     }
   }

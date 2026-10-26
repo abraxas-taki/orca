@@ -1,4 +1,7 @@
+import type { z } from 'zod'
 import { agentHookServer } from '../../../../agent-hooks/server'
+import type { OrcaRuntimeService } from '../../../orca-runtime'
+import type { TerminalSend } from '../../../../../shared/rpc-contract/terminal-unary-params'
 import {
   isPotentialQuestionAnsweredSubmitInput,
   isQuestionAnsweredSubmitInput,
@@ -6,7 +9,7 @@ import {
 } from '../../../../../shared/agent-question-answered-intent'
 
 /** Snapshot before the write so a hook racing the answer wins over inference, as on desktop. */
-export function captureQuestionAnsweredBaseline(
+function captureQuestionAnsweredBaseline(
   input: string,
   getPaneKey: () => string | null
 ): AgentQuestionAnsweredInferenceRequest | null {
@@ -31,11 +34,25 @@ export function captureQuestionAnsweredBaseline(
   }
 }
 
-/** Claude sends no hook once a question is answered; clear the wait the answer just ended. */
-export function inferQuestionAnsweredAfterWrite(
-  baseline: AgentQuestionAnsweredInferenceRequest | null
-): void {
-  if (baseline) {
-    agentHookServer.inferQuestionAnswered(baseline)
+/** Claude sends no hook once a question is answered, so an accepted send of its submit key clears the wait. */
+export function observeQuestionAnswerSend(
+  params: z.infer<typeof TerminalSend>,
+  runtime: Pick<OrcaRuntimeService, 'getLiveTerminalPaneKey'>
+): <T extends { accepted?: boolean }>(result: T) => T {
+  // Desktop renderers infer answers from their own input; other writers rely on the host.
+  const baseline =
+    params.inputKind === 'query-reply' ||
+    params.interrupt === true ||
+    params.client?.type === 'desktop'
+      ? null
+      : captureQuestionAnsweredBaseline(
+          `${params.text ?? ''}${params.enter === true ? '\r' : ''}`,
+          () => runtime.getLiveTerminalPaneKey(params.terminal)
+        )
+  return (result) => {
+    if (baseline && result.accepted === true) {
+      agentHookServer.inferQuestionAnswered(baseline)
+    }
+    return result
   }
 }

@@ -12,8 +12,10 @@ import { useNativeChatQuestionKeys } from './use-native-chat-question-keys'
 import { isEditableTarget } from '@/lib/editable-target'
 import type { AgentJournalFreeTextInput } from '../../../../shared/agent-session-journal-types'
 import {
+  askAcceptsEmptyAnswer,
   askConfirmAction,
   askConfirmLabel,
+  askTypedText,
   toggleAskOption
 } from '../../../../shared/native-chat-ask-card-rules'
 
@@ -78,9 +80,9 @@ export function NativeChatQuestionCard({
     freeTextInput?.placeholder ??
     translate('components.native-chat.question.otherPlaceholder', 'Type your answer')
   const acceptsEmpty = (qi: number): boolean =>
-    freeTextInputs?.[qi]?.allowEmpty === true && prompt.questions[qi]?.options.length === 0
+    askAcceptsEmptyAnswer(prompt.questions[qi], freeTextInputs?.[qi])
   const typedText = (qi: number, oth = otherText): string =>
-    freeTextInputs?.[qi]?.allowEmpty ? (oth[qi] ?? '') : (oth[qi] ?? '').trim()
+    askTypedText(oth[qi] ?? '', freeTextInputs?.[qi])
 
   // Picking an option deselects typed text without erasing it from the field.
   const typedAnswerChosen = (qi: number, sel = selections, oth = otherText): boolean =>
@@ -166,7 +168,7 @@ export function NativeChatQuestionCard({
     autoAdvance.cancel()
     const anyAnswered = prompt.questions.some((_, i) => answerFor(i).length > 0 || acceptsEmpty(i))
     const action = askConfirmAction({ isLast, anyAnswered, fromKeyboard })
-    if (action === 'advance' || action === 'submit') {
+    if (action === 'proceed') {
       advanceOrSubmit(selections, otherText)
     } else if (action === 'cancel') {
       onCancel()

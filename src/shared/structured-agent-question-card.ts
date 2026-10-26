@@ -2,9 +2,10 @@ import type { AgentJournalFreeTextInput, AgentJournalQuestion } from './agent-se
 import type { AgentSessionQuestionAnswer } from './agent-session-question-answer'
 import type { AskAnswerSelection } from './native-chat-ask-answer'
 import type { AskPrompt } from './native-chat-ask-types'
+import { askTypedText } from './native-chat-ask-card-rules'
 
 /** A structured prompt drawn with the same stepped card as a terminal ask. */
-export type StructuredQuestionCard = {
+type StructuredQuestionCard = {
   prompt: AskPrompt
   allowOther: boolean[]
   freeTextInputs: (AgentJournalFreeTextInput | undefined)[]
@@ -37,7 +38,10 @@ export function structuredQuestionAnswers(
 ): AgentSessionQuestionAnswer[] | null {
   const answers = questions.map((question, index) => {
     const selection = selections[index]
-    const other = question.freeTextInput?.allowEmpty ? selection?.other : selection?.other?.trim()
+    const other =
+      selection?.other === undefined
+        ? undefined
+        : askTypedText(selection.other, question.freeTextInput)
     return {
       questionId: question.id,
       optionIds: (selection?.indices ?? []).flatMap((optionIndex) => {
