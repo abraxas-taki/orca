@@ -7,10 +7,14 @@ import { filesystemPathToFileUri } from '../../../src/shared/file-uri-path'
 import { createMobileFilePreviewHref } from '../files/mobile-file-preview-route'
 import { classifyMobileArtifact } from './mobile-artifact-kind'
 import { fileTapOpenRun, fileTapPathResolve } from './mobile-session-launch-operations'
+import { mapWithConcurrency } from '../../../src/shared/map-with-concurrency'
 import { shouldActivateOpenedMobileSessionTab } from './opened-mobile-session-tab'
 import { isRendererUnavailableReply } from '../transport/renderer-unavailable-reply'
 import type { RpcOperationSender } from '../transport/rpc-operation-sender'
 import type { RpcResponse } from '../transport/types'
+
+// Hard-wrap guesses can number in the hundreds; stay far below the page bridge's 64 pending requests.
+const FILE_TAP_RESOLVE_CONCURRENCY = 8
 
 export type FileTapSessionTab = {
   id: string
@@ -112,9 +116,9 @@ async function openMobileFileTapAsync<T extends FileTapSessionTab>(
   const targets: readonly ParsedFileLinkLocation[] = options.candidates?.length
     ? options.candidates
     : [options]
-  const responses = await Promise.all(
+  const responses = await mapWithConcurrency(targets, FILE_TAP_RESOLVE_CONCURRENCY, (target) =>
     // Why: a reading the host cannot answer must not hide a sibling.
-    targets.map((target) => requestFileTapResolution(options, target.pathText).catch(() => null))
+    requestFileTapResolution(options, target.pathText).catch(() => null)
   )
   const resolutions = responses.map(existingFileTapResolution)
   let foundIndex = -1

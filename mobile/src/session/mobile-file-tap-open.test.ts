@@ -156,13 +156,20 @@ describe('openMobileFileTap', () => {
     expect(switchSessionTab).toHaveBeenCalledWith(openedTab)
   })
 
-  it('opens the longest terminal reading that exists, as desktop does', async () => {
-    const existing = new Set(['src/index.ts', 'src/index.ts.map'])
+  // Answers like the mobile page bridge, which refuses past 64 pending requests.
+  async function openTerminalReadings(readings: string[], existing: Set<string>) {
+    let pending = 0
     const client = {
       sendRequest: vi.fn<SendRequest>(async (method, params) => {
         if (method === 'files.open') {
           return ok({ opened: true })
         }
+        if (pending >= 64) {
+          throw new Error('too many pending requests')
+        }
+        pending += 1
+        await Promise.resolve()
+        pending -= 1
         const pathText =
           typeof params === 'object' && params !== null && 'pathText' in params
             ? String(params.pathText)
@@ -176,19 +183,14 @@ describe('openMobileFileTap', () => {
         })
       })
     }
-
     openMobileFileTap({
       client,
       hostId: 'host-1',
       worktreeId: 'wt-1',
-      pathText: 'src/index.ts',
+      pathText: readings[0]!,
       line: null,
       column: null,
-      candidates: ['src/index.ts', 'src/index.ts.map', 'src/index.ts.map.bak'].map((pathText) => ({
-        pathText,
-        line: null,
-        column: null
-      })),
+      candidates: readings.map((pathText) => ({ pathText, line: null, column: null })),
       pushPreviewRoute: vi.fn(),
       openBrowser: vi.fn(),
       triggerOpenFeedback: vi.fn(),
@@ -200,12 +202,26 @@ describe('openMobileFileTap', () => {
       scheduleDelayedAction: vi.fn()
     })
     await vi.advanceTimersByTimeAsync(0)
+    return client.sendRequest.mock.calls
+      .filter(([method]) => method === 'files.open')
+      .map(([, params]) => params)
+  }
 
-    expect(client.sendRequest).toHaveBeenCalledWith(
-      'files.open',
-      { worktree: 'id:wt-1', relativePath: 'src/index.ts.map' },
-      { timeoutMs: 15_000 }
+  it('opens the longest terminal reading that exists, as desktop does', async () => {
+    const opened = await openTerminalReadings(
+      ['src/index.ts', 'src/index.ts.map', 'src/index.ts.map.bak'],
+      new Set(['src/index.ts', 'src/index.ts.map'])
     )
+    expect(opened).toEqual([{ worktree: 'id:wt-1', relativePath: 'src/index.ts.map' }])
+  })
+
+  it('still checks the real path behind hundreds of hard-wrap guesses', async () => {
+    const guesses = Array.from({ length: 210 }, (_, index) => `src/file${index}.tssrc/next.ts`)
+    const opened = await openTerminalReadings(
+      [...guesses, 'src/file19.ts'],
+      new Set(['src/file19.ts'])
+    )
+    expect(opened).toEqual([{ worktree: 'id:wt-1', relativePath: 'src/file19.ts' }])
   })
 
   it('opens a sibling terminal path through the resolved owning worktree', async () => {
