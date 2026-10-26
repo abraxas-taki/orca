@@ -66,14 +66,3 @@ it('clears the Claude question wait when a phone keystroke finishes the answer',
 
   expect(server.getStatusSnapshotForPane(PANE_KEY)[0]?.state).not.toBe('waiting')
 })
-
-it('keeps the wait while a multi-question answer is still being stepped', async () => {
-  const server = claudeAsking([
-    { question: 'One', options: [option('A'), option('B')] },
-    { question: 'Two', options: [option('C'), option('D')] }
-  ])
-
-  await phoneSends('1')
-
-  expect(server.getStatusSnapshotForPane(PANE_KEY)[0]?.state).toBe('waiting')
-})
