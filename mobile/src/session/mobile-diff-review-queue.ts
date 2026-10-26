@@ -1,3 +1,4 @@
+import { compareFileNames } from '../../../src/shared/file-name-sort'
 import type {
   DiffComment,
   DiffReviewScope,
@@ -259,15 +260,12 @@ export function buildMobileDiffReviewQueue(
       branchEntryToQueueItem(entry, input, commentsByPath.get(entry.path) ?? [])
     )
   ]
-  if (queue.length > 1) {
-    const collator = new Intl.Collator(undefined, { numeric: true })
-    queue.sort(
-      (first, second) =>
-        SCOPE_SORT_ORDER[first.scope] - SCOPE_SORT_ORDER[second.scope] ||
-        Number(first.isGeneratedOrLockFile) - Number(second.isGeneratedOrLockFile) ||
-        collator.compare(first.filePath, second.filePath)
-    )
-  }
+  queue.sort(
+    (first, second) =>
+      SCOPE_SORT_ORDER[first.scope] - SCOPE_SORT_ORDER[second.scope] ||
+      Number(first.isGeneratedOrLockFile) - Number(second.isGeneratedOrLockFile) ||
+      compareFileNames(first.filePath, second.filePath)
+  )
   return queue
 }
 

@@ -7,6 +7,7 @@ import { useMobileGitRequests } from './use-mobile-git-requests'
 import { useMobileSourceControlLoaders } from './use-mobile-source-control-loaders'
 import { useMobileSourceControlOpeners } from './use-mobile-source-control-openers'
 import type { MobileSourceControlPrimaryActionArgs } from './mobile-source-control-primary-action'
+import { useMobileSourceControlSections } from './mobile-source-control-sections'
 import { useMobileSourceControlRunners } from './use-mobile-source-control-runners'
 import { useMobileSourceControlCreatePrAction } from './use-mobile-source-control-create-pr-action'
 import { useMobileSourceControlKeyboardLift } from './use-mobile-source-control-keyboard-lift'
@@ -18,7 +19,6 @@ import {
 } from './mobile-branch-compare'
 
 import {
-  buildMobileSourceControlSections,
   countStagedEntries,
   countUnstagedEntries,
   getStageablePaths,
@@ -118,7 +118,7 @@ export function useMobileSourceControlState(params: MobileSourceControlStatePara
   const status = screenState.kind === 'ready' ? screenState.status : null
   const entries = status?.entries ?? []
   const derivedEntries = useMemo(() => buildMobileGitStatusEntryViews(entries), [entries])
-  const sections = useMemo(() => buildMobileSourceControlSections(derivedEntries), [derivedEntries])
+  const sections = useMobileSourceControlSections(client, connState, derivedEntries)
   const branchCompareResult = branchCompareState.kind === 'ready' ? branchCompareState.result : null
   const branchCompareSection = useMemo(
     () => buildMobileBranchCompareSection(branchCompareResult?.entries ?? []),

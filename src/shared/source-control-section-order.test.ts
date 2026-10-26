@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { GitStatusEntry } from '../../../../shared/git-status-types'
+import type { GitStatusEntry } from './git-status-types'
 import {
   buildSourceControlDisplaySections,
   getConflictReviewEntries,
@@ -7,7 +7,7 @@ import {
   resolveSourceControlGroupOrder,
   splitPinnedSourceControlConflicts,
   type SourceControlEntryGroups
-} from './source-control/listing/section-order'
+} from './source-control-section-order'
 
 function entry(partial: Partial<GitStatusEntry> & { path: string }): GitStatusEntry {
   return {

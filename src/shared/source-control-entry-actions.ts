@@ -1,5 +1,5 @@
-import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
-import { isStageableStatusEntry } from '../commit/discard-all-sequence'
+import type { GitStatusEntry } from './git-status-types'
+import { isStageableStatusEntry } from './source-control-discard-all-sequence'
 
 /** Share row/bulk eligibility; submodule-internal rows are read-only because parent Git cannot mutate their working tree. */
 

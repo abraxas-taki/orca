@@ -30,6 +30,16 @@ const gitStatusEntrySchema = z.looseObject({
   conflictKind: openEnum(GIT_CONFLICT_KIND, undefined).optional(),
   conflictStatus: openEnum(GIT_CONFLICT_STATUS, undefined).optional(),
   conflictStatusSource: openEnum(GIT_CONFLICT_SOURCE, undefined).optional(),
+  // Desktop's stage/discard rules refuse submodule-internal rows and gitlink-only dirtiness.
+  submodule: salvagedOptional(
+    'submodule',
+    z.looseObject({
+      commitChanged: z.boolean(),
+      trackedChanges: z.boolean().catch(false),
+      untrackedChanges: z.boolean().catch(false)
+    })
+  ),
+  submoduleRoot: salvagedOptional('submoduleRoot', z.string()),
   added: z.number().optional(),
   removed: z.number().optional()
 })

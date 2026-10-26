@@ -6,8 +6,8 @@ import {
   isStageableStatusEntry,
   isSubmoduleWorktreeOnlyChange,
   runDiscardAllForArea
-} from './source-control/commit/discard-all-sequence'
-import type { GitStatusEntry } from '../../../../shared/git-status-types'
+} from './source-control-discard-all-sequence'
+import type { GitStatusEntry } from './git-status-types'
 
 function entry(partial: Partial<GitStatusEntry> & { path: string }): GitStatusEntry {
   return {

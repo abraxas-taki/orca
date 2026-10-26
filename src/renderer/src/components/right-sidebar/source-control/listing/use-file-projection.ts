@@ -3,7 +3,7 @@ import type { GitBranchChangeEntry } from '../../../../../../shared/git-diff-com
 import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
 import type { SourceControlViewMode } from '../../../../../../shared/ui-chrome-types'
 import { compareFileNames } from '../../../../../../shared/file-name-sort'
-import { compareGitStatusEntries } from '../../source-control-status-sort'
+import { compareGitStatusEntries } from '../../../../../../shared/git-status-sort'
 import {
   filterSourceControlPathEntries,
   getSourceControlFileFilterState,
@@ -25,7 +25,7 @@ import {
   type SourceControlDisplaySectionId,
   type SourceControlEntryGroups,
   type SourceControlDisplaySectionArea
-} from './section-order'
+} from '../../../../../../shared/source-control-section-order'
 import {
   collectListSelectionEntries,
   injectExpandedSubmoduleEntries,

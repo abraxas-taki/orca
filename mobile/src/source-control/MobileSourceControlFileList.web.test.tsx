@@ -44,6 +44,7 @@ function fileListState(count: number, dirty: boolean): FileListState {
     sections: dirty
       ? [
           {
+            id: 'unstaged',
             area: 'unstaged',
             title: 'Changes',
             data: [

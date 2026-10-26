@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { GitStatusEntry } from '../../../../shared/git-status-types'
+import type { GitStatusEntry } from './git-status-types'
 import {
   canDiscardStatusEntry,
   canStageStatusEntry,
   canUnstageStatusEntry
-} from './source-control/listing/entry-actions'
+} from './source-control-entry-actions'
 
 function entry(overrides: Partial<GitStatusEntry>): GitStatusEntry {
   return {

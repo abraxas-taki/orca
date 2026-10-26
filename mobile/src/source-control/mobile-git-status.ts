@@ -1,4 +1,18 @@
 import type { GitFileStatus, GitStagingArea } from '../../../src/shared/git-status-types'
+import { compareGitStatusEntries } from '../../../src/shared/git-status-sort'
+import {
+  buildSourceControlDisplaySections,
+  resolveSourceControlGroupOrder,
+  type SourceControlDisplaySectionArea,
+  type SourceControlDisplaySectionId,
+  type SourceControlEntryGroups
+} from '../../../src/shared/source-control-section-order'
+import {
+  getUnstageAllPaths,
+  isStageableStatusEntry
+} from '../../../src/shared/source-control-discard-all-sequence'
+import { canDiscardStatusEntry } from '../../../src/shared/source-control-entry-actions'
+import type { SourceControlGroupOrder } from '../../../src/shared/ui-chrome-types'
 import type { RpcResponse } from '../transport/types'
 import type {
   MobileGitStatusEntry,
@@ -12,59 +26,68 @@ export type { MobileGitStatusEntry, MobileGitUpstreamStatus }
 
 export type MobileGitStatusResult = MobileGitStatusHostPayload
 
+type KnownAreaEntry<TEntry extends MobileGitStatusEntry> = TEntry & { area: MobileGitStagingArea }
+
+// Rows of an area this build does not know stay listed nowhere and get no row actions.
+function hasKnownArea<TEntry extends MobileGitStatusEntry>(
+  entry: TEntry
+): entry is KnownAreaEntry<TEntry> {
+  return entry.area !== undefined
+}
+
 export type MobileSourceControlSection<TEntry extends MobileGitStatusEntry = MobileGitStatusEntry> =
   {
-    area: Exclude<MobileGitStagingArea, 'untracked'>
+    id: SourceControlDisplaySectionId
+    area: SourceControlDisplaySectionArea
     title: string
     data: TEntry[]
   }
 
-const AREA_ORDER = ['unstaged', 'staged'] as const
-
-const AREA_TITLES: Record<MobileSourceControlSection['area'], string> = {
+const SECTION_TITLES: Record<SourceControlDisplaySectionId, string> = {
+  conflicts: 'Conflicts',
   unstaged: 'Changes',
   staged: 'Staged Changes'
 }
 
-export const MOBILE_GIT_STATUS_LABELS: Record<MobileGitFileStatus, string> = {
-  modified: 'M',
-  added: 'A',
-  deleted: 'D',
-  renamed: 'R',
-  untracked: 'U',
-  copied: 'C'
+export const MOBILE_CONFLICT_KIND_LABELS: Record<
+  NonNullable<MobileGitStatusEntry['conflictKind']>,
+  string
+> = {
+  both_modified: 'both modified',
+  both_added: 'both added',
+  deleted_by_us: 'deleted by us',
+  deleted_by_them: 'deleted by them',
+  added_by_us: 'added by us',
+  added_by_them: 'added by them',
+  both_deleted: 'both deleted'
 }
 
-function getConflictSortRank(entry: MobileGitStatusEntry): number {
-  if (entry.conflictStatus === 'unresolved') {
-    return 0
-  }
-  if (entry.conflictStatus === 'resolved_locally') {
-    return 1
-  }
-  return 2
-}
-
+// Desktop's sections: conflicts pinned on top, then the user's group order, sorted like desktop.
 export function buildMobileSourceControlSections<TEntry extends MobileGitStatusEntry>(
-  entries: readonly TEntry[]
+  entries: readonly TEntry[],
+  groupOrder?: SourceControlGroupOrder | null
 ): MobileSourceControlSection<TEntry>[] {
-  const sections = AREA_ORDER.map((area) => ({
-    area,
-    title: AREA_TITLES[area],
-    data: entries.filter(
-      (entry) => entry.area === area || (area === 'unstaged' && entry.area === 'untracked')
-    )
-  })).filter((section) => section.data.length > 0)
-  if (sections.some((section) => section.data.length > 1)) {
-    const collator = new Intl.Collator(undefined, { numeric: true })
-    for (const section of sections) {
-      section.data.sort(
-        (a, b) =>
-          getConflictSortRank(a) - getConflictSortRank(b) || collator.compare(a.path, b.path)
-      )
+  const groups: SourceControlEntryGroups<KnownAreaEntry<TEntry>> = {
+    staged: [],
+    unstaged: [],
+    untracked: []
+  }
+  for (const entry of entries) {
+    if (hasKnownArea(entry)) {
+      groups[entry.area].push(entry)
     }
   }
-  return sections
+  for (const group of Object.values(groups)) {
+    group.sort(compareGitStatusEntries)
+  }
+  return buildSourceControlDisplaySections(groups, resolveSourceControlGroupOrder(groupOrder)).map(
+    (section) => ({
+      id: section.id,
+      area: section.area,
+      title: SECTION_TITLES[section.id],
+      data: section.items
+    })
+  )
 }
 
 export function countStagedEntries(entries: readonly MobileGitStatusEntry[]): number {
@@ -80,18 +103,15 @@ export function getStageablePaths(entries: readonly MobileGitStatusEntry[]): str
 }
 
 export function getUnstageablePaths(entries: readonly MobileGitStatusEntry[]): string[] {
-  return entries.filter((entry) => entry.area === 'staged').map((entry) => entry.path)
+  return getUnstageAllPaths(entries.filter(hasKnownArea))
 }
 
 export function isMobileGitStageableEntry(entry: MobileGitStatusEntry): boolean {
-  return (
-    (entry.area === 'unstaged' || entry.area === 'untracked') &&
-    entry.conflictStatus !== 'unresolved'
-  )
+  return hasKnownArea(entry) && isStageableStatusEntry(entry)
 }
 
 export function isMobileGitDiscardableEntry(entry: MobileGitStatusEntry): boolean {
-  return entry.conflictStatus !== 'unresolved' && entry.conflictStatus !== 'resolved_locally'
+  return hasKnownArea(entry) && canDiscardStatusEntry(entry)
 }
 
 // Unresolved conflicts cannot open as stable files; deletions can still show their pre-delete diff.

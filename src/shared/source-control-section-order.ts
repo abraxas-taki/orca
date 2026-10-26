@@ -1,19 +1,22 @@
-import { compareGitStatusEntries } from '../../source-control-status-sort'
-import { normalizeSourceControlGroupOrder } from '../../../../../../shared/source-control-group-order'
-import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
-import type { SourceControlGroupOrder } from '../../../../../../shared/ui-chrome-types'
+import { compareGitStatusEntries } from './git-status-sort'
+import { normalizeSourceControlGroupOrder } from './source-control-group-order'
+import type { GitStatusEntry } from './git-status-types'
+import type { SourceControlGroupOrder } from './ui-chrome-types'
 
 export const SOURCE_CONTROL_AREAS = ['unstaged', 'staged', 'untracked'] as const
 export type SourceControlSectionArea = (typeof SOURCE_CONTROL_AREAS)[number]
 export type SourceControlDisplaySectionArea = Exclude<SourceControlSectionArea, 'untracked'>
 export type SourceControlDisplaySectionId = SourceControlDisplaySectionArea | 'conflicts'
 
-export type SourceControlEntryGroups = Record<SourceControlSectionArea, GitStatusEntry[]>
+export type SourceControlEntryGroups<T extends GitStatusEntry = GitStatusEntry> = Record<
+  SourceControlSectionArea,
+  T[]
+>
 
-export type SourceControlDisplaySection = {
+export type SourceControlDisplaySection<T extends GitStatusEntry = GitStatusEntry> = {
   id: SourceControlDisplaySectionId
   area: SourceControlDisplaySectionArea
-  items: GitStatusEntry[]
+  items: T[]
 }
 
 export type SourceControlConflictReviewEntry = {
@@ -76,14 +79,14 @@ export function getSourceControlSectionViewAction(
   return { kind: 'combined-diff', area: section.area, entries: section.items }
 }
 
-export type SplitSourceControlGroups = {
-  pinnedConflicts: GitStatusEntry[]
-  normalGroups: SourceControlEntryGroups
+export type SplitSourceControlGroups<T extends GitStatusEntry = GitStatusEntry> = {
+  pinnedConflicts: T[]
+  normalGroups: SourceControlEntryGroups<T>
 }
 
-export function splitPinnedSourceControlConflicts(
-  groups: SourceControlEntryGroups
-): SplitSourceControlGroups {
+export function splitPinnedSourceControlConflicts<T extends GitStatusEntry>(
+  groups: SourceControlEntryGroups<T>
+): SplitSourceControlGroups<T> {
   const pinnedConflicts = SOURCE_CONTROL_AREAS.flatMap((area) =>
     groups[area].filter(isPinnedConflictEntry)
   )
@@ -101,12 +104,12 @@ export function splitPinnedSourceControlConflicts(
   }
 }
 
-export function buildSourceControlDisplaySectionsFromSplit(
-  split: SplitSourceControlGroups,
+export function buildSourceControlDisplaySectionsFromSplit<T extends GitStatusEntry>(
+  split: SplitSourceControlGroups<T>,
   order: readonly SourceControlDisplaySectionArea[]
-): SourceControlDisplaySection[] {
+): SourceControlDisplaySection<T>[] {
   const { pinnedConflicts, normalGroups } = split
-  const sections: SourceControlDisplaySection[] = []
+  const sections: SourceControlDisplaySection<T>[] = []
 
   if (pinnedConflicts.length > 0) {
     sections.push({ id: 'conflicts', area: 'unstaged', items: pinnedConflicts })
@@ -125,10 +128,10 @@ export function buildSourceControlDisplaySectionsFromSplit(
   return sections
 }
 
-export function buildSourceControlDisplaySections(
-  groups: SourceControlEntryGroups,
+export function buildSourceControlDisplaySections<T extends GitStatusEntry>(
+  groups: SourceControlEntryGroups<T>,
   order: readonly SourceControlDisplaySectionArea[]
-): SourceControlDisplaySection[] {
+): SourceControlDisplaySection<T>[] {
   return buildSourceControlDisplaySectionsFromSplit(
     splitPinnedSourceControlConflicts(groups),
     order

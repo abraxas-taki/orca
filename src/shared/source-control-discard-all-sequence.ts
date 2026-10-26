@@ -1,4 +1,4 @@
-import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
+import type { GitStatusEntry } from './git-status-types'
 
 export type DiscardAllArea = 'staged' | 'unstaged' | 'untracked'
 

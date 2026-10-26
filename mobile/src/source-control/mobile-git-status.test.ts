@@ -81,7 +81,7 @@ describe('mobile source control status helpers', () => {
     ).toBe(true)
   })
 
-  it('sorts entries by desktop-compatible conflict rank, then path', () => {
+  it('pins conflicts into their own section ahead of changes, like desktop', () => {
     const sections = buildMobileSourceControlSections([
       { path: 'zeta.ts', status: 'modified', area: 'unstaged' },
       {
@@ -99,11 +99,11 @@ describe('mobile source control status helpers', () => {
       { path: 'aardvark.ts', status: 'added', area: 'unstaged' }
     ])
 
-    expect(sections[0].data.map((entry) => entry.path)).toEqual([
-      'alpha.ts',
-      'beta.ts',
-      'aardvark.ts',
-      'zeta.ts'
+    expect(
+      sections.map((section) => [section.title, section.data.map((entry) => entry.path)])
+    ).toEqual([
+      ['Conflicts', ['alpha.ts', 'beta.ts']],
+      ['Changes', ['aardvark.ts', 'zeta.ts']]
     ])
   })
 
