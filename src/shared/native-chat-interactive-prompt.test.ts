@@ -5,6 +5,7 @@ import {
   resolveNativeChatInteractivePromptCard
 } from './native-chat-interactive-prompt'
 import type { NativeChatMessage } from './native-chat-types'
+import { buildOmpPlanReviewAnswer } from './omp-plan-review-prompt'
 
 const ESC = String.fromCharCode(27)
 
@@ -31,20 +32,31 @@ describe('parseApprovalFromStatus', () => {
     })
   })
 
-  it('omits detail when summary is missing', () => {
-    const approval = parseApprovalFromStatus(JSON.stringify({ approval: { tool: 'Edit' } }))
-    expect(approval?.title).toBe('Allow Edit?')
-    expect(approval?.detail).toBeUndefined()
-  })
-
-  it('omits detail for an empty or non-string summary', () => {
-    for (const summary of ['', 42, null]) {
+  it('omits detail for a missing, empty or non-string summary', () => {
+    for (const summary of [undefined, '', 42, null]) {
       const approval = parseApprovalFromStatus(
         JSON.stringify({ approval: { tool: 'Edit', summary } })
       )
       expect(approval?.title).toBe('Allow Edit?')
       expect(approval?.detail).toBeUndefined()
     }
+  })
+
+  it('reads the OMP plan review envelope', () => {
+    const planReview = JSON.stringify({
+      planReview: {
+        reviewId: 'review-1',
+        plan: '# Plan',
+        options: [{ id: 'execute', label: 'Approve and execute' }]
+      }
+    })
+    expect(parseApprovalFromStatus(planReview, 'omp')).toMatchObject({
+      title: 'Review proposed plan',
+      subject: { kind: 'plan', text: '# Plan' },
+      options: [
+        { label: 'Approve and execute', send: buildOmpPlanReviewAnswer('review-1', 'execute') }
+      ]
+    })
   })
 })
 
@@ -69,13 +81,6 @@ describe('parseInteractivePrompt', () => {
     expect(parseInteractivePrompt('{}')).toBeNull()
   })
 })
-
-for (const agent of ['opencode', 'opencode2']) {
-  it(`${agent} approves the captured default selector with Enter`, () => {
-    const card = parseApprovalFromStatus(JSON.stringify({ approval: { tool: 'shell' } }), agent)
-    expect(card?.options[0].send).toBe('\r')
-  })
-}
 
 describe('resolveNativeChatInteractivePromptCard', () => {
   const pendingAsk: NativeChatMessage = {

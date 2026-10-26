@@ -3,7 +3,6 @@ import TestRenderer, { type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AgentStatusEntry } from '../../../src/shared/agent-status-types'
 import type { NativeChatMessage } from '../../../src/shared/native-chat-types'
-import { buildOmpPlanReviewAnswer } from '../../../src/shared/omp-plan-review-prompt'
 import { useMobileNativeChatPrompts } from './use-mobile-native-chat-prompts'
 
 const renderers: ReactTestRenderer[] = []
@@ -62,24 +61,6 @@ const askMessages: NativeChatMessage[] = [
 ]
 
 describe('useMobileNativeChatPrompts terminal cards', () => {
-  it('reads the OMP plan review envelope', () => {
-    const planReview = JSON.stringify({
-      planReview: {
-        reviewId: 'review-1',
-        plan: '# Plan',
-        options: [{ id: 'execute', label: 'Approve and execute' }]
-      }
-    })
-    expect(
-      promptsFor({ state: 'blocked', agentType: 'omp', interactivePrompt: planReview }).permission
-    ).toMatchObject({
-      subject: { kind: 'plan', text: '# Plan' },
-      options: [
-        { label: 'Approve and execute', send: buildOmpPlanReviewAnswer('review-1', 'execute') }
-      ]
-    })
-  })
-
   it('never guesses a card from assistant prose', () => {
     const prompts = promptsFor({
       state: 'waiting',
