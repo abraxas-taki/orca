@@ -98,28 +98,29 @@ describe('orchestration CLI/runtime boundary', () => {
     const store = partialRuntimeStore({
       getSettings: () => ({ orchestrationHeartbeatsEnabled: false })
     })
-    const state = h.setup(true, store)
-    ;({ db, ctx } = state)
-    const { runtime } = state
+    ;({ db, ctx } = h.setup(true, store))
+    const { runtime } = ctx
     process.env.ORCA_TERMINAL_HANDLE = 'term_coord'
     vi.stubEnv('ORCA_PAIRING_CODE', '')
     vi.stubEnv('ORCA_ENVIRONMENT', '')
     vi.stubEnv('ORCA_AGENT_SESSION_ID', '')
     vi.doMock('../../../../../cli/runtime-client', async (importOriginal) => ({
       ...(await importOriginal<Record<string, unknown>>()),
-      RuntimeClient: class {
-        isRemote = false
-        call = client().call
-      }
+      RuntimeClient: client
     }))
     const output = vi.fn()
     vi.doMock('../../../../../cli/format', () => ({ printResult: output }))
     vi.spyOn(runtime, 'getOrchestrationDispatchAuthority').mockImplementation((handle) =>
       handle === 'term_worker'
         ? {
+            runtimeId: runtime.getRuntimeId(),
+            terminalHandle: handle,
+            ptyId: 'pty_worker',
+            worktreeId: 'wt_worker',
             paneKey: 'tab_worker:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
             processIncarnation: 'worker:1',
-            launchTokenHash: null
+            launchTokenHash: null,
+            hostScope: { kind: 'local', hostId: 'local' }
           }
         : null
     )
@@ -128,7 +129,8 @@ describe('orchestration CLI/runtime boundary', () => {
       .spyOn(runtime, 'sendTerminalAgentPrompt')
       .mockResolvedValue({ handle: 'term_worker', accepted: true, bytesWritten: 1 })
     const task = db.createTask({ spec: 'complete work and report the outcome' })
-    const { main } = await import('../../../../../cli/index')
+    const cliPath = '../../../../../cli/index'
+    const { main }: { main(argv: string[]): Promise<void> } = await import(cliPath)
     await main([
       'orchestration',
       'dispatch',
