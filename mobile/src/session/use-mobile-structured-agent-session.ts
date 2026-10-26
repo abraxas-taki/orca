@@ -93,6 +93,7 @@ export function useMobileStructuredAgentSession(
     sessionId,
     enabled: enabled && connected && hostSupport?.statusFeed === true
   })
+  const turnId = runningStructuredAgentSessionTurnId(state)
   const options = useMobileStructuredAgentOptions({
     agent,
     client,
@@ -101,6 +102,7 @@ export function useMobileStructuredAgentSession(
     fence: state.fence,
     mutate,
     optionStamp,
+    turnId,
     hostSupport
   })
   const { conversationCommands, invokeStructuredOption, optionSnapshot, setStructuredOption } =
@@ -146,7 +148,6 @@ export function useMobileStructuredAgentSession(
       ),
     [transcriptItems, sends.optimistic, state.submissions]
   )
-  const turnId = runningStructuredAgentSessionTurnId(state)
   const turnTiming = useMobileStructuredAgentTurnTiming(
     { ...state, items: transcriptItems },
     turnId
