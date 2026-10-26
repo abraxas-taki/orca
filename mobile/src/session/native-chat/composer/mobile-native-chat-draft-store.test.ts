@@ -7,6 +7,7 @@ import {
   editMobileNativeChatDraft,
   readMobileNativeChatSkillOrigin,
   recordMobileNativeChatSkillPick,
+  restoreMobileNativeChatPickedSkills,
   resetMobileNativeChatDraftStoreForTests,
   setMobileNativeChatDraftText
 } from './mobile-native-chat-draft-store'
@@ -135,5 +136,19 @@ describe('picked skills', () => {
     expect(readMobileNativeChatSkillOrigin('draft')).toBe('/triage')
     editMobileNativeChatDraft('draft', 'the flaky test')
     expect(readMobileNativeChatSkillOrigin('draft')).toBeNull()
+  })
+
+  it('replaces the file a re-picked token named, and gives a rejected draft its files back', () => {
+    const first = { name: 'review', path: '/a/review/SKILL.md' }
+    const second = { name: 'review', path: '/b/review/SKILL.md' }
+    editMobileNativeChatDraft('draft', '$review ')
+    recordMobileNativeChatSkillPick('draft', { token: '$review', path: first.path })
+    recordMobileNativeChatSkillPick('draft', { token: '$review', path: second.path })
+    expect(readMobileNativeChatPickedSkills('draft')).toEqual([second])
+
+    editMobileNativeChatDraft('draft', 'something else')
+    setMobileNativeChatDraftText('draft', '$review ')
+    restoreMobileNativeChatPickedSkills('draft', [second])
+    expect(readMobileNativeChatPickedSkills('draft')).toEqual([second])
   })
 })

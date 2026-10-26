@@ -27,10 +27,27 @@ export function recordMobileNativeChatSkillPick(
   skill: { token: string; path?: string }
 ): void {
   const current = drafts.get(draftKey) ?? { text: '', editGeneration: 0 }
-  const skills = skill.path
-    ? [...(current.skills ?? []), { name: skill.token.slice(1), path: skill.path }]
-    : current.skills
-  drafts.set(draftKey, { ...current, skillOrigin: skill.token, ...(skills ? { skills } : {}) })
+  const name = skill.token.slice(1)
+  // A pick replaces whatever file its token named before, like re-picking a desktop chip.
+  const kept = (current.skills ?? []).filter((held) => held.name !== name)
+  const skills = skill.path ? [...kept, { name, path: skill.path }] : kept
+  drafts.set(draftKey, { ...current, skillOrigin: skill.token, skills })
+}
+
+// A rejected send's restored text gets back the files it named, even if newer edits dropped them.
+export function restoreMobileNativeChatPickedSkills(
+  draftKey: string,
+  skills: readonly AgentJournalSkillRef[]
+): void {
+  const current = drafts.get(draftKey)
+  if (!current || skills.length === 0) {
+    return
+  }
+  const paths = new Set((current.skills ?? []).map((skill) => skill.path))
+  drafts.set(draftKey, {
+    ...current,
+    skills: [...(current.skills ?? []), ...skills.filter((skill) => !paths.has(skill.path))]
+  })
 }
 
 export function readMobileNativeChatSkillOrigin(draftKey: string): string | null {
