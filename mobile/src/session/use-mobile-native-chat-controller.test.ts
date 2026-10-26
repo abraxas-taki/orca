@@ -167,7 +167,6 @@ const ORIGIN = {
   draftEditGeneration: 0,
   pendingKey: 'h\0w\0tab-1\0session-1',
   normalizedText: 'look',
-  baselineTailMessageId: null,
   boundary: { afterMessageId: null },
   sentAt: 0
 }

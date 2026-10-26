@@ -20,7 +20,6 @@ export type MobileNativeChatSendOrigin = {
   draftEditGeneration: number
   pendingKey: string | null
   normalizedText: string
-  baselineTailMessageId: string | null
   boundary: Pick<
     NativeChatPendingSend,
     'afterMessageId' | 'afterMessageTimestamp' | 'afterEmptyTranscriptSessionId'

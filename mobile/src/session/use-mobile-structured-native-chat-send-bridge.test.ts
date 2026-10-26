@@ -11,7 +11,6 @@ const ORIGIN: MobileNativeChatSendOrigin = {
   draftEditGeneration: 0,
   pendingKey: 'pending',
   normalizedText: 'command',
-  baselineTailMessageId: null,
   boundary: { afterMessageId: null },
   sentAt: 0
 }
