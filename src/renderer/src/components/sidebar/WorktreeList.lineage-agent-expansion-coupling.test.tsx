@@ -350,6 +350,8 @@ function setAgentLineageState(options: {
     dismissRetainedAgent: vi.fn(),
     sendPromptToSidebarAgentTarget: vi.fn(),
     tabsByWorktree: { parent: [makeParentTab()] },
+    unifiedTabsByWorktree: {},
+    structuredChatSleptAtByPaneKey: {},
     agentStatusByPaneKey
   }
 }

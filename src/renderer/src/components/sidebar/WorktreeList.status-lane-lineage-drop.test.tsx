@@ -295,6 +295,8 @@ function setStatusLaneState(): void {
     sshConnectionStates: new Map(),
     sshTargetLabels: new Map(),
     tabsByWorktree: {},
+    unifiedTabsByWorktree: {},
+    structuredChatSleptAtByPaneKey: {},
     terminalLayoutsByTabId: {},
     toggleCollapsedGroup: vi.fn(),
     updateRepo: vi.fn(),
