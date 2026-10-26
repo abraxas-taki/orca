@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
@@ -41,7 +41,7 @@ export function NativeChatToolOutput({
   const loading = current?.loading === true
   const failed = current?.failed === true
   const clipped = isNativeChatToolOutputClipped(body, { expanded, fullLoaded: Boolean(full) })
-  const partial = full ? nativeChatToolOutputPartialSizes(full) : null
+  const partial = useMemo(() => (full ? nativeChatToolOutputPartialSizes(full) : null), [full])
 
   const showFull = async (): Promise<void> => {
     const itemId = body.fullOutputItemId

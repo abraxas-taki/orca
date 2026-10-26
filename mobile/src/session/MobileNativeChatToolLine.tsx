@@ -159,7 +159,7 @@ export function MobileNativeChatToolLine({
   onOpenFile?: (path: string) => void
 }): React.JSX.Element {
   const [expanded, setExpanded] = useMobileNativeChatDisclosure(disclosureKey, false)
-  const { call, label, body, failed, results, hasDetail } = useMemo(
+  const { call, label, body, resultPreview, failed, results, hasDetail } = useMemo(
     () => nativeChatToolLineView(block, result),
     [block, result]
   )
@@ -172,7 +172,7 @@ export function MobileNativeChatToolLine({
       ? `${mcp.server} / ${mcp.tool}`
       : call.name
     : NATIVE_CHAT_TOOL_ACTIVITY_COPY.result
-  const target = label ? label.target : (body?.output.split('\n')[0]?.slice(0, 80) ?? '')
+  const target = label ? label.target : resultPreview
   const filePath = label?.filePath ?? null
   const type = toolType(fontScale)
   const iconSize = 15 * fontScale

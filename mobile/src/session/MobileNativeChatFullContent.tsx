@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { Pressable, Text, View, type TextStyle } from 'react-native'
 import { truncateToolDetail } from '../../../src/shared/native-chat/tools/native-chat-tool-summary'
 import {
@@ -85,7 +85,7 @@ export function MobileNativeChatToolOutput({
       : null
   const full = current?.full
   const clipped = isNativeChatToolOutputClipped(body, { expanded, fullLoaded: Boolean(full) })
-  const partial = full ? nativeChatToolOutputPartialSizes(full) : null
+  const partial = useMemo(() => (full ? nativeChatToolOutputPartialSizes(full) : null), [full])
   const showFull = (): void => {
     if (fullOutputItemId === undefined || source === null) {
       setExpanded(true)

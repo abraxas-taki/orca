@@ -1,4 +1,5 @@
 import type { CommentMarkdownLinkClickHandler } from '@/components/sidebar/CommentMarkdown'
+import { useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
@@ -92,24 +93,21 @@ export function NativeChatToolLine({
 }): React.JSX.Element | null {
   const { open: expanded, setOpen: setExpanded } = useNativeChatDisclosure(disclosureKey, false)
 
-  let name: string
-  let resultPreview = ''
+  const view = useMemo(
+    () =>
+      isToolCallBlock(block) || isToolResultBlock(block)
+        ? nativeChatToolLineView(block, result)
+        : null,
+    [block, result]
+  )
   const isCall = isToolCallBlock(block)
-  if (isCall) {
-    name = block.name
-  } else if (isToolResultBlock(block)) {
-    name = translate('components.native-chat.tool.result', NATIVE_CHAT_TOOL_ACTIVITY_COPY.result)
-    resultPreview = block.output.split('\n')[0]?.slice(0, 80) ?? ''
-  } else {
+  if (!view) {
     return null
   }
-  const {
-    label: sharedLabel,
-    body,
-    failed,
-    results,
-    hasDetail
-  } = nativeChatToolLineView(block, result)
+  const name = isCall
+    ? block.name
+    : translate('components.native-chat.tool.result', NATIVE_CHAT_TOOL_ACTIVITY_COPY.result)
+  const { label: sharedLabel, body, resultPreview, failed, results, hasDetail } = view
   const label = sharedLabel && {
     ...sharedLabel,
     verb: sharedLabel.verb === null ? null : nativeChatToolRowVerb(sharedLabel.verb)
