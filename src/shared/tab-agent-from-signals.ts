@@ -148,9 +148,6 @@ export function resolveTabAgentFromSignals(args: {
     processShellForeground: args.processShellForeground
   })
   const activeLaunchAgent = launchedAgentExited ? null : launchAgent
-  // Exit evidence retires sleeping occupancy too; stale records must not restore agent icons after local shell return.
-  const activeSleepingSessionAgent =
-    launchedAgentExited || processProvesShell ? null : sleepingSessionAgent
   // Why: re-own the foreground process within its title-identity group so OMP's nested pi (shell → omp → pi) can't flip an OMP-owned tab's icon.
   const processAgent = resolveSignalAgentForLaunchOwner(args.processAgent, owner, ownerIsLaunch)
   return (
@@ -158,7 +155,7 @@ export function resolveTabAgentFromSignals(args: {
     processAgent ??
     titleAgent ??
     idleFocusedIdentity ??
-    activeSleepingSessionAgent ??
+    sleepingSessionAgent ??
     activeLaunchAgent ??
     liveSiblingIdentity ??
     idleSiblingIdentity

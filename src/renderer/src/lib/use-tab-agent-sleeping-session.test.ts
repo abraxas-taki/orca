@@ -110,7 +110,7 @@ describe('resolveTabAgentFromSignals sleeping-session precedence', () => {
     ).toBe('codex')
   })
 
-  it('suppresses stale sleeping identity after local shell exit evidence', () => {
+  it('keeps a hibernating pane on its wake record while the kill shows the shell', () => {
     expect(
       resolveTabAgentFromSignals({
         hasObservedAgentSignal: true,
@@ -121,7 +121,7 @@ describe('resolveTabAgentFromSignals sleeping-session precedence', () => {
         sleepingSessionAgent: 'codex',
         launchAgent: 'codex'
       })
-    ).toBeNull()
+    ).toBe('codex')
   })
 
   it('retains sleeping identity for remote panes without local shell evidence', () => {
@@ -144,7 +144,6 @@ describe('resolveTabAgentFromSignals sleeping-session precedence', () => {
         isRemote: false,
         title: shell,
         hookAgent: null,
-        sleepingSessionAgent: 'codex',
         launchAgent: 'codex'
       })
     ).toBeNull()

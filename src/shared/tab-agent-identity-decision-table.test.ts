@@ -134,24 +134,24 @@ describe('renderer ladder decision table', () => {
     )
     // Re-derived against resolveTabAgentFromSignals (not a hand-written model).
     expect(proofFree).toEqual({
-      disagreements: 2_634,
+      disagreements: 2_622,
       flipped: 1_872,
       breakdown: {
-        launch: 1_890,
-        'completed-hook': 480,
-        'sleeping-session': 148,
+        launch: 1_884,
+        'completed-hook': 478,
+        'sleeping-session': 144,
         process: 0,
         sibling: 54,
         title: 6
       }
     })
     expect(freshProof).toEqual({
-      disagreements: 670,
+      disagreements: 658,
       flipped: 0,
       breakdown: {
-        launch: 594,
-        'completed-hook': 48,
-        'sleeping-session': 4,
+        launch: 588,
+        'completed-hook': 46,
+        'sleeping-session': 0,
         process: 0,
         sibling: 6,
         title: 2
