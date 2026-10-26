@@ -49,7 +49,7 @@ export function PRActionsSection({
   const avail = resolvePrActionAvailability(state)
   const merge = presentPrMerge(
     { ...pr, state, autoMergeEnabled: autoMerge || pr.autoMergeEnabled === true },
-    mergeMethods.defaultLabel
+    effectiveMethod
   )
   // Older hosts, or an older desktop relaying to a server, reject this method from mobile.
   const routeCanMarkReady = useRouteCapability(MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY)

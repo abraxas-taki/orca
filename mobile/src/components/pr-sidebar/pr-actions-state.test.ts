@@ -36,7 +36,7 @@ describe('presentPrMerge', () => {
   }
 
   it('disables Merge with desktop copy when GitHub reports conflicts', () => {
-    expect(presentPrMerge(pr, 'Squash and merge')).toMatchObject({
+    expect(presentPrMerge(pr, 'squash')).toMatchObject({
       enabled: false,
       label: 'Conflicts',
       hint: 'GitHub reports merge conflicts'
@@ -54,7 +54,7 @@ describe('presentPrMerge', () => {
         { ...entry, position: 2, number: 202 }
       ]
     }
-    expect(presentPrMerge({ ...pr, stack }, 'Squash and merge')).toMatchObject({
+    expect(presentPrMerge({ ...pr, stack }, 'squash')).toMatchObject({
       enabled: true,
       label: 'Merge through #202 · 2 PRs'
     })
@@ -62,7 +62,7 @@ describe('presentPrMerge', () => {
       ...stack,
       entries: [{ ...entry, position: 1, number: 201, state: 'draft' as const }, stack.entries[1]]
     }
-    expect(presentPrMerge({ ...pr, stack: blocked }, 'Squash and merge')).toMatchObject({
+    expect(presentPrMerge({ ...pr, stack: blocked }, 'squash')).toMatchObject({
       enabled: false,
       hint: '#201 is still a draft.'
     })

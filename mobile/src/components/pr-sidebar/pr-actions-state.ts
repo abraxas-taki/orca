@@ -1,4 +1,8 @@
-import type { PRInfo, PRState } from '../../../../src/shared/github/pull-request-types'
+import type {
+  GitHubPRMergeMethod,
+  PRInfo,
+  PRState
+} from '../../../../src/shared/github/pull-request-types'
 import {
   resolveGitHubPRMergeState,
   type GitHubPRMergeStateKind
@@ -91,6 +95,13 @@ const STACK_BLOCKER_COPY: Record<GitHubPRStackMergeBlocker['reason'], string> = 
   blocked: 'is blocked.'
 }
 
+// Desktop's merge-method labels; the desktop renderer translates the same three.
+const MERGE_METHOD_LABELS: Record<GitHubPRMergeMethod, string> = {
+  merge: 'Create merge commit',
+  squash: 'Squash and merge',
+  rebase: 'Rebase and merge'
+}
+
 export type PrMergePresentation = {
   enabled: boolean
   label: string
@@ -100,13 +111,16 @@ export type PrMergePresentation = {
 }
 
 // Desktop's merge gating, stack override included; GitHub merges a stacked PR with everything below it.
-export function presentPrMerge(pr: PRInfo, defaultMethodLabel: string): PrMergePresentation {
+export function presentPrMerge(
+  pr: PRInfo,
+  defaultMethod: GitHubPRMergeMethod
+): PrMergePresentation {
   const decision = resolveGitHubPRMergeState(pr)
   const blockedCopy = PR_MERGE_STATE_COPY[decision.kind]
   if (!pr.stack) {
     return {
       enabled: decision.directMergeAvailable,
-      label: decision.directMergeAvailable ? defaultMethodLabel : blockedCopy.label,
+      label: decision.directMergeAvailable ? MERGE_METHOD_LABELS[defaultMethod] : blockedCopy.label,
       hint: decision.directMergeAvailable ? null : blockedCopy.hint,
       confirmMessage: `This will merge #${pr.number} into its base branch.`,
       showAutoMerge: decision.autoMergeAction !== null
