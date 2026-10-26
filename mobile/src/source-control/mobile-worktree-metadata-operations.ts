@@ -1,13 +1,14 @@
 import { z } from 'zod'
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
 import { rpcResultVariant } from '../transport/rpc-operation-result-reader'
+import type { GitPushTarget } from '../../../src/shared/worktree/types'
 import { worktreeSummaryReplySchema } from './worktree-metadata-reply-schema'
 
 export type MobileWorktreeSummary = {
   readonly baseRef: string | null
   readonly linkedPR: number | null
   readonly suppressedGitHubPR: number | null
-  readonly pushTargetBranch: string | null
+  readonly pushTarget: GitPushTarget | null
 }
 
 // Both consumers treat unreadable metadata as no hint; normalize malformed baseRef/linkedPR to null before fallback.
@@ -19,7 +20,7 @@ const worktreeSummarySchema: z.ZodType<MobileWorktreeSummary | null, unknown> =
             baseRef: value.worktree.baseRef ?? null,
             linkedPR: value.worktree.linkedPR ?? null,
             suppressedGitHubPR: value.worktree.suppressedGitHubPR ?? null,
-            pushTargetBranch: value.worktree.pushTarget?.branchName ?? null
+            pushTarget: value.worktree.pushTarget ?? null
           }
         : null
     )

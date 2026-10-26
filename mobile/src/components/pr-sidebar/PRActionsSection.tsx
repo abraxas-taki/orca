@@ -21,6 +21,7 @@ type Props = {
   worktreeId: string
   // Refetch after unlinking so the view returns to the create/link empty state.
   onUnlinked: () => void
+  onRecheck: () => void
 }
 
 type Confirm =
@@ -28,7 +29,14 @@ type Confirm =
   | { kind: 'state'; state: 'open' | 'closed' }
 
 // Merge leads; Close/Reopen+Unlink share secondary row. Self-explanatory buttons need no mobile section header.
-export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }: Props) {
+export function PRActionsSection({
+  pr,
+  actions,
+  client,
+  worktreeId,
+  onUnlinked,
+  onRecheck
+}: Props) {
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [unlinking, setUnlinking] = useState(false)
   // Local unlink errors — unlink is not routed through the actions engine.
@@ -142,7 +150,20 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
           <Text style={[styles.actionButtonText, styles.actionButtonTextMerge]}>{merge.label}</Text>
         </Pressable>
       ) : null}
-      {avail.canMerge && merge.hint ? <Text style={styles.actionHint}>{merge.hint}</Text> : null}
+      {avail.canMerge && merge.hint ? (
+        <View style={styles.hintRow}>
+          <Text style={styles.actionHint}>{merge.hint}</Text>
+          {/* No mobile surface polls PR state, so a blocked Merge needs its own recheck. */}
+          <Pressable
+            onPress={onRecheck}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Recheck merge status"
+          >
+            <Text style={styles.recheckText}>Recheck</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {showMarkReady ? (
         <Pressable

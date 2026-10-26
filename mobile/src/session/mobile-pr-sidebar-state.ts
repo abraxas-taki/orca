@@ -51,6 +51,7 @@ export type PrSidebarLoadDeps = {
   >
   // Resolve persisted links in parallel so closed/merged PRs add no serial read.
   fetchWorktreeGitHubPRLink: (worktreeId: string) => Promise<WorktreeGitHubPRLink>
+  clearWorktreeReviewLink: (worktreeId: string) => Promise<void>
   fetchPRForBranch: (
     worktreeId: string,
     args: {
@@ -112,10 +113,11 @@ export async function loadPrSidebarData(
           linkedPRNumber: link.linkedPR,
           branch: args.branch,
           requestHeadOid,
-          pushTargetBranch: link.pushTargetBranch
+          pushTargetBranch: link.pushTarget?.branchName ?? null
         }))
     ) {
       linkedPR = null
+      await deps.clearWorktreeReviewLink(args.worktreeId)
       prOutcome = await fetchPR(null)
     }
     if (!prOutcome.ok) {

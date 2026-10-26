@@ -91,10 +91,21 @@ export const prActionsStyles = StyleSheet.create({
   togglePillTextOn: {
     color: colors.textPrimary
   },
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm
+  },
   actionHint: {
+    flex: 1,
     color: colors.textSecondary,
     fontSize: typography.metaSize,
     lineHeight: 18
+  },
+  recheckText: {
+    color: colors.textPrimary,
+    fontSize: typography.metaSize,
+    fontWeight: '600'
   },
   actionError: {
     color: colors.statusRed,

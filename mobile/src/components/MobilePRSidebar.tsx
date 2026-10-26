@@ -315,6 +315,7 @@ function PrSidebarSections({
             client={client}
             worktreeId={worktreeId}
             onUnlinked={refetch}
+            onRecheck={refetch}
           />
         </View>
       </View>

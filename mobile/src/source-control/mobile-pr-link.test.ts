@@ -63,15 +63,15 @@ describe('fetchWorktreeGitHubPRLink', () => {
         okFlag ? { ok: true, result } : { ok: false, error: { message: 'x' } }
       )
     }) as unknown as Pick<RpcClient, 'sendRequest'>
-  const none = { linkedPR: null, suppressedGitHubPR: null, pushTargetBranch: null }
+  const none = { linkedPR: null, suppressedGitHubPR: null, pushTarget: null }
 
   it('returns the linked and suppressed PR numbers when present', async () => {
     expect(
       await fetchWorktreeGitHubPRLink(
-        client({ worktree: { linkedPR: null, suppressedGitHubPR: 12, pushTargetBranch: null } }),
+        client({ worktree: { linkedPR: null, suppressedGitHubPR: 12 } }),
         'w'
       )
-    ).toEqual({ linkedPR: null, suppressedGitHubPR: 12, pushTargetBranch: null })
+    ).toEqual({ linkedPR: null, suppressedGitHubPR: 12, pushTarget: null })
   })
 
   it('returns nulls when unset, null, or non-numeric', async () => {

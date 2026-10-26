@@ -1,4 +1,6 @@
 import type { RpcSendParams } from '../transport/rpc-params-contract'
+import type { GitPushTarget } from '../../../src/shared/worktree/types'
+import { CLEARED_HOSTED_REVIEW_SELECTION_UPDATES } from '../../../src/shared/worktree/hosted-review-links'
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import type { RpcOperationSender } from '../transport/rpc-operation-sender'
 import { worktreeLinkSet, worktreeSummaryRead } from './mobile-worktree-metadata-operations'
@@ -17,7 +19,7 @@ export function buildWorktreeSetLinkParams(
 export type WorktreeGitHubPRLink = {
   linkedPR: number | null
   suppressedGitHubPR: number | null
-  pushTargetBranch: string | null
+  pushTarget: GitPushTarget | null
 }
 
 export function buildWorktreeSetHostedReviewLinkParams(
@@ -110,7 +112,19 @@ export function unlinkMobilePr(
 const NO_GITHUB_PR_LINK: WorktreeGitHubPRLink = {
   linkedPR: null,
   suppressedGitHubPR: null,
-  pushTargetBranch: null
+  pushTarget: null
+}
+
+// Desktop's durable clear for a link the branch has moved past; a failed write only repeats the check next load.
+export async function clearMobileWorktreeReviewLink(
+  client: RpcOperationSender,
+  worktreeId: string
+): Promise<void> {
+  await setWorktreeReviewLink(
+    client,
+    { worktree: `id:${worktreeId}`, ...CLEARED_HOSTED_REVIEW_SELECTION_UPDATES },
+    'Failed to update linked pull request'
+  )
 }
 
 // Persisted links recover closed/merged PRs that branch lookup no longer returns.
@@ -125,7 +139,7 @@ export async function fetchWorktreeGitHubPRLink(
       ? {
           linkedPR: summary.value.linkedPR,
           suppressedGitHubPR: summary.value.suppressedGitHubPR,
-          pushTargetBranch: summary.value.pushTargetBranch
+          pushTarget: summary.value.pushTarget
         }
       : NO_GITHUB_PR_LINK
   } catch {

@@ -84,8 +84,9 @@ describe('loadPrSidebarData', () => {
       fetchWorktreeGitHubPRLink: vi.fn(async () => ({
         linkedPR: null,
         suppressedGitHubPR: null,
-        pushTargetBranch: null
+        pushTarget: null
       })),
+      clearWorktreeReviewLink: vi.fn(async () => {}),
       fetchPRForBranch: vi.fn(async () => ok<PRInfo | null>(PR)),
       fetchWorkItemDetails: vi.fn(async () => ok<GitHubWorkItemDetails | null>(DETAILS)),
       fetchPRChecks: vi.fn(async () => ok<PRCheckDetail[]>(CHECKS)),
@@ -136,7 +137,7 @@ describe('loadPrSidebarData', () => {
       fetchWorktreeGitHubPRLink: vi.fn(async () => ({
         linkedPR: 42,
         suppressedGitHubPR: null,
-        pushTargetBranch: null
+        pushTarget: null
       })),
       fetchPRForBranch: vi.fn(async () => ok<PRInfo | null>(merged))
     })
@@ -158,7 +159,7 @@ describe('loadPrSidebarData', () => {
       fetchWorktreeGitHubPRLink: vi.fn(async () => ({
         linkedPR: 42,
         suppressedGitHubPR: null,
-        pushTargetBranch: null
+        pushTarget: null
       }))
     })
     await loadPrSidebarData(d, { worktreeId: 'w', branch: 'feat' })
@@ -186,7 +187,7 @@ describe('loadPrSidebarData', () => {
       fetchWorktreeGitHubPRLink: vi.fn(async () => ({
         linkedPR: 42,
         suppressedGitHubPR: null,
-        pushTargetBranch: null
+        pushTarget: null
       })),
       fetchPRForBranch
     })
@@ -198,6 +199,7 @@ describe('loadPrSidebarData', () => {
       currentHeadOid: 'head-now'
     })
     expect(out).toMatchObject({ kind: 'ready', data: { pr: PR } })
+    expect(d.clearWorktreeReviewLink).toHaveBeenCalledWith('w')
   })
 
   it('hides the branch PR the user unlinked', async () => {
@@ -205,7 +207,7 @@ describe('loadPrSidebarData', () => {
       fetchWorktreeGitHubPRLink: vi.fn(async () => ({
         linkedPR: null,
         suppressedGitHubPR: 7,
-        pushTargetBranch: null
+        pushTarget: null
       }))
     })
     expect(await loadPrSidebarData(d, { worktreeId: 'w', branch: 'feat' })).toEqual({
@@ -222,7 +224,7 @@ describe('loadPrSidebarData', () => {
       fetchWorktreeGitHubPRLink: vi.fn(async () => ({
         linkedPR: null,
         suppressedGitHubPR: null,
-        pushTargetBranch: null
+        pushTarget: null
       }))
     })
     await loadPrSidebarData(d, { worktreeId: 'w', branch: 'feat' })
@@ -299,8 +301,9 @@ describe('loadPrSidebarDetails (phase 2)', () => {
       fetchWorktreeGitHubPRLink: vi.fn(async () => ({
         linkedPR: null,
         suppressedGitHubPR: null,
-        pushTargetBranch: null
+        pushTarget: null
       })),
+      clearWorktreeReviewLink: vi.fn(async () => {}),
       fetchPRForBranch: vi.fn(async () => ok<PRInfo | null>(PR)),
       fetchWorkItemDetails: vi.fn(async () => ok<GitHubWorkItemDetails | null>(DETAILS)),
       fetchPRChecks: vi.fn(async () => ok<PRCheckDetail[]>(CHECKS)),

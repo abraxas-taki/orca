@@ -8,7 +8,10 @@ export const worktreeSummaryReplySchema = z.object({
       baseRef: salvagedOptional('baseRef', z.string()),
       linkedPR: salvagedOptional('linkedPR', z.number()),
       suppressedGitHubPR: salvagedOptional('suppressedGitHubPR', z.number()),
-      pushTarget: salvagedOptional('pushTarget', z.looseObject({ branchName: z.string() }))
+      pushTarget: salvagedOptional(
+        'pushTarget',
+        z.looseObject({ remoteName: z.string(), branchName: z.string() })
+      )
     })
 
     .nullable()
