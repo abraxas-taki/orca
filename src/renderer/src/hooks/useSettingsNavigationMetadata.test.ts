@@ -105,6 +105,23 @@ describe('settings navigation metadata', () => {
     )
   })
 
+  it.each([false, true])(
+    'routes heartbeat search only on a local desktop (web=%s)',
+    (isWebClient) => {
+      const sections = buildSettingsNavigationMetadata({
+        isMac: false,
+        isWindows: false,
+        isWebClient,
+        repos: [repo]
+      })
+      expect(
+        sections
+          .filter((section) => matchesSettingsSearch('heartbeat', section.searchEntries))
+          .map((section) => section.id)
+      ).toEqual(isWebClient ? [] : ['orchestration'])
+    }
+  )
+
   it('adds the Linear capability section right after Orchestration only when connected', () => {
     expect(ids()).not.toContain('linear')
 

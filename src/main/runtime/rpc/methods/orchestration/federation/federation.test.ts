@@ -4,6 +4,8 @@ import {
   ORCHESTRATION_CONTRACT_VERSION,
   ORCHESTRATION_FEDERATION_CONTROL_MAIL_RUNTIME_CAPABILITY
 } from '../../../../../../shared/protocol-version'
+import { partialRuntimeStore } from '../../../../runtime-store-partial-fixture'
+import { expectHeartbeatBrief } from '../../../../orchestration/dispatch-heartbeat-contract.test-support'
 import { OrcaRuntimeService } from '../../../../orca-runtime'
 import { OrchestrationDb } from '../../../../orchestration/db'
 import type { OrchestrationEnvironmentTransport } from '../../../../orchestration/environment-transport'
@@ -25,12 +27,18 @@ describe('orchestration federation', () => {
   let workerCapabilities: string[]
   let workerPeerFingerprint: string
   let loseNextAckResponse: boolean
+  let workerSettings: { orchestrationHeartbeatsEnabled?: boolean }
+  let homeSettings: { orchestrationHeartbeatsEnabled?: boolean }
 
   beforeEach(() => {
+    workerSettings = {}
+    homeSettings = {}
     homeDb = new OrchestrationDb(':memory:')
     workerDb = new OrchestrationDb(':memory:')
     databases.push(homeDb, workerDb)
-    workerRuntime = new OrcaRuntimeService()
+    workerRuntime = new OrcaRuntimeService(
+      partialRuntimeStore({ getSettings: () => workerSettings })
+    )
     workerRuntime.setOrchestrationDb(workerDb)
     workerDispatcher = new RpcDispatcher({
       runtime: workerRuntime,
@@ -70,9 +78,13 @@ describe('orchestration federation', () => {
         return response
       }
     }
-    homeRuntime = new OrcaRuntimeService(null, undefined, {
-      orchestrationEnvironmentTransport: transport
-    })
+    homeRuntime = new OrcaRuntimeService(
+      partialRuntimeStore({ getSettings: () => homeSettings }),
+      undefined,
+      {
+        orchestrationEnvironmentTransport: transport
+      }
+    )
     homeRuntime.setOrchestrationDb(homeDb)
     homeDispatcher = new RpcDispatcher({
       runtime: homeRuntime,
@@ -101,7 +113,9 @@ describe('orchestration federation', () => {
   }
 
   function restartWorkerRuntime(): void {
-    workerRuntime = new OrcaRuntimeService()
+    workerRuntime = new OrcaRuntimeService(
+      partialRuntimeStore({ getSettings: () => workerSettings })
+    )
     workerRuntime.setOrchestrationDb(workerDb)
     configureFederationWorkerRuntime(workerRuntime)
     workerDispatcher = new RpcDispatcher({
@@ -111,49 +125,59 @@ describe('orchestration federation', () => {
     workerCapabilities = [...(workerRuntime.getStatus().capabilities ?? [])]
   }
 
-  it('starts a remote worker while keeping authoritative Task state at home', async () => {
-    const task = createHomeTask()
+  it.each([undefined, false])(
+    'uses execution-host heartbeat preference %s while keeping authoritative Task state at home',
+    async (saved) => {
+      workerSettings.orchestrationHeartbeatsEnabled = saved
+      homeSettings.orchestrationHeartbeatsEnabled = saved === false
+      expect(homeRuntime.getOrchestrationHeartbeatMinutes()).toBe(saved === false ? 5 : null)
+      const task = createHomeTask()
 
-    const response = await homeDispatcher.dispatch(startRequest(task.id))
+      const response = await homeDispatcher.dispatch(startRequest(task.id))
 
-    expect(response).toMatchObject({
-      ok: true,
-      result: {
-        taskId: task.id,
+      expect(response).toMatchObject({
+        ok: true,
+        result: {
+          taskId: task.id,
+          state: 'ready',
+          server: { environmentId: 'environment_windows', name: 'windows' },
+          setup: { source: 'orchestration_default' },
+          mutation: { requestId: 'request_windows_worker' }
+        }
+      })
+      const dispatch = homeDb.getDispatchContext(task.id)!
+      expect(homeDb.getTask(task.id)?.status).toBe('dispatched')
+      expect(homeDb.getFederatedDispatch(dispatch.id)).toMatchObject({
+        environment_id: 'environment_windows',
+        environment_name: 'windows',
+        peer_fingerprint: 'windows_peer_fingerprint',
+        remote_worktree_id: 'repo::windows-worktree',
+        remote_terminal_handle: 'term_windows_worker'
+      })
+      const attachment = workerDb.getRemoteDispatchAttachment(dispatch.id)
+      expect(attachment).toMatchObject({
+        task_id: task.id,
+        protocol_version: 3,
         state: 'ready',
-        server: { environmentId: 'environment_windows', name: 'windows' },
-        setup: { source: 'orchestration_default' },
-        mutation: { requestId: 'request_windows_worker' }
-      }
-    })
-    const dispatch = homeDb.getDispatchContext(task.id)!
-    expect(homeDb.getTask(task.id)?.status).toBe('dispatched')
-    expect(homeDb.getFederatedDispatch(dispatch.id)).toMatchObject({
-      environment_id: 'environment_windows',
-      environment_name: 'windows',
-      peer_fingerprint: 'windows_peer_fingerprint',
-      remote_worktree_id: 'repo::windows-worktree',
-      remote_terminal_handle: 'term_windows_worker'
-    })
-    const attachment = workerDb.getRemoteDispatchAttachment(dispatch.id)
-    expect(attachment).toMatchObject({
-      task_id: task.id,
-      protocol_version: 3,
-      state: 'ready',
-      worktree_id: 'repo::windows-worktree',
-      terminal_handle: 'term_windows_worker'
-    })
-    const fx = JSON.parse(attachment?.effects ?? '[]') as { kind?: string; state?: string }[]
-    expect(fx.some((x) => x.kind === 'dispatch_input' && x.state === 'accepted')).toBe(true)
-    expect(workerDb.listTasks()).toHaveLength(0)
-    const create = vi.mocked(workerRuntime.createManagedWorktree).mock.calls[0]?.[0]
-    expect([create.activate, create.runHooks]).toEqual([false, false])
-    expect(workerRuntime.sendTerminalAgentPrompt).toHaveBeenCalledWith(
-      'term_windows_worker',
-      expect.stringContaining(`Your task ID is: ${task.id}`),
-      expect.objectContaining(dispatchPreambleSendOptions(expect.any(String)))
-    )
-  })
+        worktree_id: 'repo::windows-worktree',
+        terminal_handle: 'term_windows_worker'
+      })
+      const fx = JSON.parse(attachment?.effects ?? '[]') as { kind?: string; state?: string }[]
+      expect(fx.some((x) => x.kind === 'dispatch_input' && x.state === 'accepted')).toBe(true)
+      expect(workerDb.listTasks()).toHaveLength(0)
+      expectHeartbeatBrief(
+        vi.mocked(workerRuntime.sendTerminalAgentPrompt).mock.calls[0]?.[1],
+        saved !== false
+      )
+      const create = vi.mocked(workerRuntime.createManagedWorktree).mock.calls[0]?.[0]
+      expect([create.activate, create.runHooks]).toEqual([false, false])
+      expect(workerRuntime.sendTerminalAgentPrompt).toHaveBeenCalledWith(
+        'term_windows_worker',
+        expect.stringContaining(`Your task ID is: ${task.id}`),
+        expect.objectContaining(dispatchPreambleSendOptions(expect.any(String)))
+      )
+    }
+  )
 
   it('carries an explicit worker label as user display-name provenance', async () => {
     const task = createHomeTask()

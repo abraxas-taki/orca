@@ -106,6 +106,20 @@ function fullDispatchReads(calls: [string, ...unknown[]][]): string[] {
 }
 
 describe('remaining dispatch metadata statement compilation', () => {
+  it('skips the stale query while off and derives the default two-period threshold', () => {
+    const { reader } = fixture()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(NOW))
+    const query = vi.spyOn(reader, 'getStaleDispatches')
+    const log = vi.fn()
+    warnStaleDispatches(reader, log, null)
+    expect(query).not.toHaveBeenCalled()
+    expect(log).not.toHaveBeenCalled()
+    warnStaleDispatches(reader, log, 5)
+    expect(query).toHaveBeenCalledExactlyOnceWith('2026-10-02T11:50:00.000Z')
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('~10 min'))
+  })
+
   it.each(['fresh', 'v41'] as const)(
     'reuses stale and direct-owner reads with exact rows, rebinding, plans and cross-connection freshness (%s)',
     (version) => {

@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectHeartbeatBrief } from './dispatch-heartbeat-contract.test-support'
+import { resolveOrchestrationHeartbeatMinutes } from '../../../shared/orchestration-heartbeat'
 import { OrchestrationDb } from './db'
 import { reconcileLifecycleMessage } from './lifecycle-reconciliation'
 import { Coordinator } from './coordinator'
@@ -156,36 +158,50 @@ describe('Coordinator', () => {
     await expect(coordinator.run()).rejects.toThrow('No tasks found')
   })
 
-  it('dispatches a ready task to an available terminal', async () => {
-    db = new OrchestrationDb(':memory:')
-    const runtime = createMockRuntime()
-    runtime.cliCommand = 'orca-ide'
-    runtime.terminals = [{ handle: 'term_a', worktreeId: 'wt1', connected: true, writable: true }]
+  it.each([undefined, false])(
+    'dispatches a ready task with heartbeat preference %s',
+    async (saved) => {
+      db = new OrchestrationDb(':memory:')
+      const runtime = createMockRuntime()
+      runtime.cliCommand = 'orca-ide'
+      runtime.terminals = [{ handle: 'term_a', worktreeId: 'wt1', connected: true, writable: true }]
 
-    const task = db.createTask({
-      runId,
-      spec: 'implement feature'
-    })
+      const task = db.createTask({
+        runId,
+        spec: 'implement feature'
+      })
 
-    const coordinator = new Coordinator(db, runtime, {
-      spec: 'build it',
-      coordinatorHandle: 'coord',
-      pollIntervalMs: 50
-    })
+      const coordinator = new Coordinator(
+        db,
+        {
+          ...runtime,
+          getOrchestrationHeartbeatMinutes: () =>
+            resolveOrchestrationHeartbeatMinutes({ orchestrationHeartbeatsEnabled: saved })
+        },
+        {
+          spec: 'build it',
+          coordinatorHandle: 'coord',
+          pollIntervalMs: 50
+        }
+      )
 
-    const runPromise = coordinator.run()
+      const runPromise = coordinator.run()
 
-    await vi.advanceTimersByTimeAsync(100)
+      await vi.advanceTimersByTimeAsync(100)
 
-    insertWorkerDone(db, { taskId: task.id, filesModified: ['a.ts'] })
+      insertWorkerDone(db, { taskId: task.id, filesModified: ['a.ts'] })
 
-    const result = await settleCoordinatorRun(runPromise)
-    expect(result.status).toBe('completed')
-    expect(result.completedTasks).toContain(task.id)
-    expect(runtime.sentMessages.length).toBeGreaterThan(0)
-    expect(runtime.sentMessages[0].text).toContain('orca-ide orchestration send')
-    expect(runtime.sentMessages[0].options).toEqual(dispatchPreambleSendOptions(expect.any(String)))
-  })
+      const result = await settleCoordinatorRun(runPromise)
+      expect(result.status).toBe('completed')
+      expect(result.completedTasks).toContain(task.id)
+      expect(runtime.sentMessages.length).toBeGreaterThan(0)
+      expectHeartbeatBrief(runtime.sentMessages[0].text, saved !== false)
+      expect(runtime.sentMessages[0].text).toContain('orca-ide orchestration send')
+      expect(runtime.sentMessages[0].options).toEqual(
+        dispatchPreambleSendOptions(expect.any(String))
+      )
+    }
+  )
 
   it('records the assignee pane key when the runtime can resolve one', async () => {
     db = new OrchestrationDb(':memory:')
