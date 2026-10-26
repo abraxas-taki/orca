@@ -1,6 +1,7 @@
 import type { MobileHostedReviewEligibilityReply } from './hosted-review-reply-schema'
 import { supportsHostedReviewCreation } from '../../../src/shared/hosted-review-creation-providers'
 import { hostedReviewCopy } from './hosted-review-copy'
+import { isHostedReviewCreateEligibilityConfirmable } from '../../../src/shared/hosted-review-create-confirmation'
 import { getMobilePrCreateBlockMessage } from './mobile-pr-create'
 
 export type MobileCreatePrEligibilityState =
@@ -90,7 +91,13 @@ export function buildMobileCreatePrAction({
   const stale = eligibilityState.kind === 'loading'
   const pushFirst = eligibility.blockedReason === 'needs_push'
 
-  if (eligibility.canCreate || pushFirst) {
+  if (
+    isHostedReviewCreateEligibilityConfirmable({
+      eligibility,
+      reviewLookup: 'unknown',
+      hasHardRefreshError: false
+    })
+  ) {
     const disabled = busy || stale
     return {
       visible: true,
@@ -109,9 +116,10 @@ export function buildMobileCreatePrAction({
       base: eligibility.defaultBaseRef || 'main',
       title: eligibility.title || branch,
       body: eligibility.body || '',
-      canCreate: false,
+      canCreate: eligibility.canCreate,
       blockedReason: eligibility.blockedReason,
-      nextAction: eligibility.nextAction
+      nextAction: eligibility.nextAction,
+      reviewLookupOutcome: eligibility.reviewLookupOutcome
     }) ?? `This branch is not ready for a ${copy.reviewLabel} yet.`
 
   return {

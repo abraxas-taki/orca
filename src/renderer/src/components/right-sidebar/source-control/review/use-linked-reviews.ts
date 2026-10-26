@@ -9,7 +9,7 @@ import {
   hasUsableHostedReviewPushTarget,
   resolveHostedReviewActionUpstreamStatus,
   resolveHostedReviewStateForActions
-} from './hosted-review-push-target'
+} from '../../../../../../shared/hosted-review-push-target'
 import { buildSourceControlManualReviewUrlFromContext } from './manual-review-url'
 import type { SourceControlWorktreeContext } from '../listing/use-worktree-context'
 

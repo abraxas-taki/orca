@@ -1,9 +1,9 @@
-import type { GitUpstreamStatus } from '../../../../../../shared/git-status-types'
-import type { GitPushTarget } from '../../../../../../shared/worktree/types'
-import type { HostedReviewState } from '../../../../../../shared/hosted-review'
-import { isPositiveHostedReviewNumber } from '../../../../../../shared/hosted-review'
-import { getPublishTargetDisplayName } from '../../../../../../shared/git-publish-target-status'
-import { gitRefTargetsBranchName } from '../../../../../../shared/git-remote-branch-name'
+import type { GitUpstreamStatus } from './git-status-types'
+import type { GitPushTarget } from './worktree/types'
+import type { HostedReviewState } from './hosted-review'
+import { isPositiveHostedReviewNumber } from './hosted-review'
+import { getPublishTargetDisplayName } from './git-publish-target-status'
+import { gitRefTargetsBranchName } from './git-remote-branch-name'
 
 export function hasUsableHostedReviewPushTarget(args: {
   pushTarget?: GitPushTarget
