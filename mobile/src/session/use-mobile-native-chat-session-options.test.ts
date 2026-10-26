@@ -174,6 +174,30 @@ describe('useMobileNativeChatSessionOptions', () => {
     expect(api!.snapshot[0]!.kind).toMatchObject({ currentValue: 'sonnet' })
   })
 
+  it('drops a write that lands after the tab started another agent', async () => {
+    let resolveModel!: (outcome: MobileNativeChatSendOutcome) => void
+    dispatchCommand.mockImplementationOnce(
+      () =>
+        new Promise<MobileNativeChatSendOutcome>((resolve) => {
+          resolveModel = resolve
+        })
+    )
+    mount({ reportedModel: 'claude-sonnet-5' })
+    let picked!: Promise<boolean>
+    await act(async () => {
+      picked = api!.setOption('model', 'opus')
+      await Promise.resolve()
+    })
+    update({ agent: 'codex', reportedModel: 'gpt-5.5' })
+    await act(async () => {
+      resolveModel('accepted')
+      await expect(picked).resolves.toBe(false)
+    })
+    act(() => renderer!.unmount())
+    mount({ agent: 'codex', reportedModel: 'gpt-5.5' })
+    expect(api!.snapshot[0]!.kind).toMatchObject({ currentValue: 'gpt-5.5' })
+  })
+
   it('shows a pick that lands after the user left the chat and came back', async () => {
     let resolveModel!: (outcome: MobileNativeChatSendOutcome) => void
     dispatchCommand.mockImplementationOnce(

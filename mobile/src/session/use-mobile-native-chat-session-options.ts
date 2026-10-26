@@ -48,6 +48,12 @@ export type MobileNativeChatSessionOptionsController = {
 }
 
 type PendingOperation = { identity: string; id: string; token: number }
+type SurfaceEntry = {
+  surface: NativeChatPtySessionOptionsSurface
+  canSwitchOmpModel: boolean
+  /** Settles its writes unseen, so they cannot overwrite the cache of the agent that replaced it. */
+  retire: () => void
+}
 
 const EMPTY_SNAPSHOT: SessionOptionDescriptor[] = []
 const subscribeEmpty = (): (() => void) => () => {}
@@ -94,7 +100,7 @@ export function useMobileNativeChatSessionOptions(args: {
   const activeIdentityRef = useRef(identity)
   const [pending, setPending] = useState<PendingOperation | null>(null)
   // One surface per chat for this controller's life: a pick still on its way lands where the chat shows it on return.
-  const [surfaces] = useState(() => new Map<string, NativeChatPtySessionOptionsSurface>())
+  const [surfaces] = useState(() => new Map<string, SurfaceEntry>())
   const pendingTokenRef = useRef(0)
 
   useLayoutEffect(() => {
@@ -112,61 +118,75 @@ export function useMobileNativeChatSessionOptions(args: {
       return null
     }
     if (agentByScope.get(scopeKey) !== agent) {
-      forgetScope(scopeKey, surfaces.keys(), (key) => surfaces.delete(key))
+      forgetScope(scopeKey, surfaces.keys(), (key) => {
+        surfaces.get(key)?.retire()
+        surfaces.delete(key)
+      })
       forgetScope(scopeKey, appliedReportByIdentity.keys(), (key) =>
         appliedReportByIdentity.delete(key)
       )
       writeNativeChatSessionOptionCache(scopeKey, createNativeChatSessionOptionRecord(agent))
       setBoundedScopeCacheEntry(agentByScope, scopeKey, agent)
     }
-    const surfaceKey = `${identity}\0${canSwitchOmpModel}`
+    const kept = surfaces.get(identity)
+    // A changed OMP switch capability rebuilds from the cache, which holds the latest selection.
+    if (kept && kept.canSwitchOmpModel === canSwitchOmpModel) {
+      setBoundedScopeCacheEntry(surfaces, identity, kept)
+      return kept.surface
+    }
+    let retired = false
     const midSession = getAgentSessionOptionCatalog(agent)?.modelApply.midSession
     // Phone-only: desktop confirms a Claude model switch on its terminal screen; the phone cannot, so it never saves one as a launch default.
     const modelSwitchUnconfirmable =
       midSession?.kind === 'command' && midSession.detectAgentInteraction !== undefined
-    const created =
-      surfaces.get(surfaceKey) ??
-      createNativeChatPtySessionOptions({
-        agent,
-        scopeKey,
-        mode: 'live',
-        modelLabel: sayNativeChatSessionOptionEnglish('model'),
-        canSwitchOmpModel,
-        dispatchCommand: async (command, options) => {
-          // One controller serves every tab: a queued pick must not reach the tab opened since.
-          if (activeIdentityRef.current !== identity) {
-            throw new Error('The chat changed before the command was sent.')
-          }
-          const outcome = options?.delivery
-            ? await latest.current.dispatchCommand(command, { delivery: options.delivery })
-            : await latest.current.dispatchCommand(command)
-          // Desktop commits a pick only after the terminal confirms the write.
-          if (outcome === 'rejected' || outcome === 'unknown') {
-            throw new Error('The terminal did not accept the command.')
-          }
-        },
-        onAgentPicker: () => {
-          if (activeIdentityRef.current === identity) {
-            latest.current.onAgentPicker?.()
-          }
-        },
-        persistSelection: (pick) => {
-          // A pick that lands after the phone moved to another host's chat must not become that host's default.
-          if (
-            activeIdentityRef.current === identity &&
-            (!modelSwitchUnconfirmable || pick.optionId !== 'model')
-          ) {
-            latest.current.writeSettings?.({
-              type: 'apply-picks',
-              agent,
-              picks: [
-                modelSwitchUnconfirmable ? { ...pick, adoptModelAsLaunchDefault: false } : pick
-              ]
-            })
-          }
+    const created = createNativeChatPtySessionOptions({
+      agent,
+      scopeKey,
+      mode: 'live',
+      modelLabel: sayNativeChatSessionOptionEnglish('model'),
+      canSwitchOmpModel,
+      dispatchCommand: async (command, options) => {
+        // One controller serves every tab: a queued pick must not reach the tab opened since.
+        if (activeIdentityRef.current !== identity) {
+          throw new Error('The chat changed before the command was sent.')
         }
-      })
-    setBoundedScopeCacheEntry(surfaces, surfaceKey, created)
+        const outcome = options?.delivery
+          ? await latest.current.dispatchCommand(command, { delivery: options.delivery })
+          : await latest.current.dispatchCommand(command)
+        if (retired) {
+          throw new Error('The tab started another agent.')
+        }
+        // Desktop commits a pick only after the terminal confirms the write.
+        if (outcome === 'rejected' || outcome === 'unknown') {
+          throw new Error('The terminal did not accept the command.')
+        }
+      },
+      onAgentPicker: () => {
+        if (activeIdentityRef.current === identity) {
+          latest.current.onAgentPicker?.()
+        }
+      },
+      persistSelection: (pick) => {
+        // A pick that lands after the phone moved to another host's chat must not become that host's default.
+        if (
+          activeIdentityRef.current === identity &&
+          (!modelSwitchUnconfirmable || pick.optionId !== 'model')
+        ) {
+          latest.current.writeSettings?.({
+            type: 'apply-picks',
+            agent,
+            picks: [modelSwitchUnconfirmable ? { ...pick, adoptModelAsLaunchDefault: false } : pick]
+          })
+        }
+      }
+    })
+    setBoundedScopeCacheEntry(surfaces, identity, {
+      surface: created,
+      canSwitchOmpModel,
+      retire: () => {
+        retired = true
+      }
+    })
     return created
   }, [agent, canSwitchOmpModel, identity, scopeKey, surfaces])
 
