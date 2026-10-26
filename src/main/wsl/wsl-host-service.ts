@@ -161,11 +161,12 @@ export class WslHostService {
       this.connector,
       record
     ).finally(() => this.removing.delete(environmentId))
+    // Removed or pending, nothing may boot it early at the next launch.
+    forgetWslHostToWake(this.deps.userDataPath(), record.distro)
     if (!removal.removed) {
       this.setStatus(this.recordForEnvironment(environmentId) ?? record, { state: 'closed' })
       return removal.serverStop
     }
-    forgetWslHostToWake(this.deps.userDataPath(), record.distro)
     this.visible.delete(environmentId)
     this.parked.delete(environmentId)
     this.statuses.delete(environmentId)
