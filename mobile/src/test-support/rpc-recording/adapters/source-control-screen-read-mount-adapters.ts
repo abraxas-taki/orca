@@ -188,7 +188,8 @@ const BRANCH_COMPARE_READY: MobileBranchCompareState = {
       status: 'ready'
     },
     entries: [BRANCH_ENTRY]
-  })
+  }),
+  effectiveBaseRef: 'origin/main'
 }
 
 function projectBranchDiffPreview(preview: MobileBranchDiffPreviewState | null): unknown {

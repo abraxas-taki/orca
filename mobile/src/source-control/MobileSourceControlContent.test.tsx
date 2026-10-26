@@ -116,7 +116,7 @@ function initialState(): MobileSourceControlContentState {
     setRootRef: noop,
     worktreeLabel: 'fixture',
     screenState: { kind: 'loading' },
-    branchCompareState: { kind: 'ready', result: branchCompareResult },
+    branchCompareState: { kind: 'ready', result: branchCompareResult, effectiveBaseRef: 'main' },
     branchDiffPreview: null,
     setBranchDiffPreview: noop,
     busyAction: null,

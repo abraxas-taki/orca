@@ -77,6 +77,15 @@ describe('buildMobileSourceControlActions', () => {
     expect(handlers.commitPush).toHaveBeenCalledWith(true)
   })
 
+  it('keeps the Force Push warning visible while the row is enabled', () => {
+    const actions = buildMobileSourceControlActions(
+      args({ decision: decision({ upstreamStatus: { hasUpstream: true, ahead: 1, behind: 2 } }) })
+    )
+    const forcePush = actions.find((action) => action.label.startsWith('Force Push'))
+    expect(forcePush?.disabled).toBe(false)
+    expect(forcePush?.hint).toBeTruthy()
+  })
+
   it('disables every row while another git action runs', () => {
     const actions = buildMobileSourceControlActions(args({ busyAction: 'fetch' }))
     expect(actions.every((action) => action.disabled)).toBe(true)

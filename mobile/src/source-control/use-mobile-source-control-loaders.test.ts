@@ -171,6 +171,7 @@ describe('useMobileSourceControlLoaders branch compare', () => {
     await settleCompare(calls, 'origin/main')
     expect(read.loaders?.branchCompareState).toEqual({
       kind: 'ready',
+      effectiveBaseRef: 'origin/main',
       result: expect.objectContaining({
         summary: expect.objectContaining({ baseRef: 'origin/main' })
       })
@@ -179,6 +180,7 @@ describe('useMobileSourceControlLoaders branch compare', () => {
     await settleCompare(calls, 'origin/dev')
     expect(read.loaders?.branchCompareState).toEqual({
       kind: 'ready',
+      effectiveBaseRef: 'origin/main',
       result: expect.objectContaining({
         summary: expect.objectContaining({ baseRef: 'origin/main' })
       })
@@ -208,6 +210,7 @@ describe('useMobileSourceControlLoaders branch compare', () => {
     await settleCompare(calls, 'origin/main')
     expect(read.loaders?.branchCompareState).toEqual({
       kind: 'ready',
+      effectiveBaseRef: 'origin/main',
       result: expect.objectContaining({
         summary: expect.objectContaining({ baseRef: 'origin/main' })
       })

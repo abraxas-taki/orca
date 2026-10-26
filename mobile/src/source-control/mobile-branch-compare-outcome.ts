@@ -2,7 +2,7 @@ import type { RpcOperationSender } from '../transport/rpc-operation-sender'
 import type { RequestCurrency } from '../transport/generation-scoped-request-owner'
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import {
-  resolveMobileBranchCompareBaseRef,
+  resolveMobileBranchBaseRefs,
   type MobileBranchCompareTarget
 } from './mobile-branch-base-ref'
 import { gitBranchCompareRead } from './mobile-git-read-operations'
@@ -11,7 +11,11 @@ import type { MobileGitBranchCompareReply } from './git-compare-reply-schema'
 import type { MobileBranchCompareState } from './mobile-source-control-screen-state'
 
 export type BranchCompareOutcome =
-  | { readonly kind: 'ready'; readonly result: MobileGitBranchCompareReply }
+  | {
+      readonly kind: 'ready'
+      readonly result: MobileGitBranchCompareReply
+      readonly effectiveBaseRef: string | null
+    }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'failed'; readonly message: string }
 
@@ -23,7 +27,11 @@ export async function readBranchCompareOutcome(
   compare?: MobileBranchCompareTarget
 ): Promise<BranchCompareOutcome | null> {
   try {
-    const baseRef = await resolveMobileBranchCompareBaseRef(client, worktreeId, compare)
+    const { compareBaseRef: baseRef, effectiveBaseRef } = await resolveMobileBranchBaseRefs(
+      client,
+      worktreeId,
+      compare
+    )
     // Base resolution can outlive its scope; stop before sending a superseded compare request.
     if (!currency.isCurrent()) {
       return null
@@ -40,7 +48,7 @@ export async function readBranchCompareOutcome(
       return { kind: 'unavailable' }
     }
     try {
-      return { kind: 'ready', result: gitBranchCompareRead.interpret(reply) }
+      return { kind: 'ready', result: gitBranchCompareRead.interpret(reply), effectiveBaseRef }
     } catch (error) {
       return {
         kind: 'failed',
@@ -61,7 +69,7 @@ export function nextBranchCompareState(
   preserveReadyOnFailure: boolean
 ): MobileBranchCompareState {
   if (outcome.kind === 'ready') {
-    return { kind: 'ready', result: outcome.result }
+    return { kind: 'ready', result: outcome.result, effectiveBaseRef: outcome.effectiveBaseRef }
   }
   // Clearing ready state to idle would claim No Changes despite retained branch commits.
   if (preserveReadyOnFailure && previous.kind === 'ready') {

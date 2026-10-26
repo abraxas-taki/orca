@@ -80,7 +80,8 @@ export function buildMobileSourceControlActions(
     label: item.label,
     iconKey,
     disabled: busy || item.disabled,
-    hint: item.disabled ? item.title : undefined,
+    // Mobile has no tooltips: show why a row is disabled, and always what Force Push replaces.
+    hint: item.disabled || item.kind === 'force_push' ? item.title : undefined,
     loading: args.busyAction === actionId,
     skipAutoClose: true,
     onPress

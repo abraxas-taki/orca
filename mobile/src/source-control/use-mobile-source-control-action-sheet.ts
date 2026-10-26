@@ -15,7 +15,7 @@ export function useMobileSourceControlActionSheet(
   const {
     primaryActionArgs,
     status,
-    branchCompareResult,
+    branchCompareState,
     upstreamKnown,
     busyAction,
     openingPath,
@@ -36,8 +36,9 @@ export function useMobileSourceControlActionSheet(
       buildMobileSourceControlActions({
         decision: buildMobileSourceControlDecisionInputs({ ...primaryActionArgs, review }),
         conflictOperation: status?.conflictOperation,
-        // The rebase runner resolves the same base when it runs; the compare shows it first.
-        rebaseBaseRef: branchCompareResult?.summary.baseRef ?? null,
+        // Desktop rebases onto the effective base, not an upstream compare base; the runner resolves the same ref.
+        rebaseBaseRef:
+          branchCompareState.kind === 'ready' ? branchCompareState.effectiveBaseRef : null,
         busyAction,
         openingPath,
         openingBranchPath,
@@ -75,7 +76,7 @@ export function useMobileSourceControlActionSheet(
         }
       }).map((action) => ({ ...action, icon: SOURCE_CONTROL_ACTION_ICONS[action.iconKey] })),
     [
-      branchCompareResult,
+      branchCompareState,
       busyAction,
       createPr,
       openBranchPicker,

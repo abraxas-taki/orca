@@ -20,9 +20,18 @@ export async function resolveMobileBranchCompareBaseRef(
   worktreeId: string,
   compare?: MobileBranchCompareTarget
 ): Promise<string | null> {
+  return (await resolveMobileBranchBaseRefs(client, worktreeId, compare)).compareBaseRef
+}
+
+// Desktop's pair: the compare base can be the upstream, while PRs and rebases target the effective base.
+export async function resolveMobileBranchBaseRefs(
+  client: RpcOperationSender,
+  worktreeId: string,
+  compare?: MobileBranchCompareTarget
+): Promise<{ compareBaseRef: string | null; effectiveBaseRef: string | null }> {
   const repoId = getRepoIdFromWorktreeId(worktreeId)
   if (!repoId) {
-    return null
+    return { compareBaseRef: null, effectiveBaseRef: null }
   }
 
   const [worktreeReply, repoReply] = await Promise.all([
@@ -39,21 +48,23 @@ export async function resolveMobileBranchCompareBaseRef(
     : null
 
   // Desktop's resolution; the default is fetched only when nothing is pinned.
-  const upstreamCompareBaseRef = compare
-    ? resolveSourceControlCompareBaseRef({
-        enabled: compare.compareAgainstUpstream,
-        worktreeBaseRef,
-        repoBaseRef,
-        upstreamName: compare.upstreamName,
-        fallbackBaseRef: null
-      })
-    : null
-  const pinnedBaseRef =
-    upstreamCompareBaseRef ?? resolveSourceControlBaseRef({ worktreeBaseRef, repoBaseRef })
-  if (pinnedBaseRef) {
-    return pinnedBaseRef
-  }
+  const effectiveBaseRef =
+    resolveSourceControlBaseRef({ worktreeBaseRef, repoBaseRef }) ??
+    (await readDefaultBaseRef(client, repoId))
+  const compareBaseRef = resolveSourceControlCompareBaseRef({
+    enabled: compare?.compareAgainstUpstream === true,
+    worktreeBaseRef,
+    repoBaseRef,
+    upstreamName: compare?.upstreamName,
+    fallbackBaseRef: effectiveBaseRef
+  })
+  return { compareBaseRef, effectiveBaseRef }
+}
 
+async function readDefaultBaseRef(
+  client: RpcOperationSender,
+  repoId: string
+): Promise<string | null> {
   const defaultReply = await repoDefaultBaseRefRead.request(client, { repo: `id:${repoId}` })
   // Inspect the raw refusal to distinguish a missing git capability from an actionable error.
   if (isMobileGitUnavailableReply(defaultReply)) {

@@ -7,13 +7,21 @@ import type { MobileBranchCompareState } from './mobile-source-control-screen-st
 // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the mapping passes the reply through untouched and reads no member of it.
 const REPLY = { summary: { baseRef: 'origin/main' } } as MobileGitBranchCompareReply
 
-const READY: MobileBranchCompareState = { kind: 'ready', result: REPLY }
+const READY: MobileBranchCompareState = {
+  kind: 'ready',
+  result: REPLY,
+  effectiveBaseRef: 'origin/main'
+}
 const UNAVAILABLE: BranchCompareOutcome = { kind: 'unavailable' }
 const FAILED: BranchCompareOutcome = { kind: 'failed', message: 'no base' }
 
 describe('nextBranchCompareState', () => {
   it('publishes a ready compare whatever the previous state was', () => {
-    const outcome: BranchCompareOutcome = { kind: 'ready', result: REPLY }
+    const outcome: BranchCompareOutcome = {
+      kind: 'ready',
+      result: REPLY,
+      effectiveBaseRef: 'origin/main'
+    }
     expect(nextBranchCompareState(outcome, { kind: 'idle' }, false)).toEqual(READY)
     expect(nextBranchCompareState(outcome, { kind: 'error', message: 'old' }, true)).toEqual(READY)
   })
