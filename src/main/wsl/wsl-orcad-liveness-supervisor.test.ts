@@ -6,6 +6,7 @@ import type { WslGuestIdentity } from './wsl-guest-process-identity'
 import type { WslOrcadConnection } from './wsl-orcad-connection'
 import type { WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
 import { WSL_ORCAD_HEARTBEAT_MS } from './wsl-orcad-liveness-state'
+import { WslDistroNotRunningError } from './wsl-orcad-connection-errors'
 import { WslOrcadLivenessSupervisor } from './wsl-orcad-liveness-supervisor'
 import { WSL_ORCAD_RECONNECT_DELAYS_MS } from './wsl-orcad-reconnect-backoff'
 import type { WslOrcadWatch } from './wsl-orcad-watch'
@@ -29,6 +30,7 @@ function harness(options: { visible?: boolean } = {}) {
     identity: WslGuestIdentity | null
     watchSignal: WslOrcadWatch['signal']
     ensureFails: number
+    ensureError?: Error
   } = {
     visible: options.visible ?? true,
     running: { status: 'confirmed', distros: ['Ubuntu'] },
@@ -48,7 +50,7 @@ function harness(options: { visible?: boolean } = {}) {
       }
       if (state.ensureFails > 0) {
         state.ensureFails -= 1
-        throw new Error('relaunch failed')
+        throw state.ensureError ?? new Error('relaunch failed')
       }
       connection = {
         distro,
@@ -203,6 +205,19 @@ describe('WslOrcadLivenessSupervisor', () => {
     await h.advance(60_000)
     expect(h.statuses.at(-1)).toMatchObject({ state: 'distro-stopped' })
     expect(h.supervisor.isSettling('Ubuntu')).toBe(false)
+  })
+
+  it('re-verifies after a no-boot connect is refused, so the distro still gets a verdict (E9)', async () => {
+    const h = harness({ visible: true })
+    await h.supervisor.connect('Ubuntu')
+    h.state.running = { status: 'confirmed', distros: [] }
+    h.state.ensureFails = 1
+    h.state.ensureError = new WslDistroNotRunningError('Ubuntu')
+    await expect(h.supervisor.connect('Ubuntu', { noBoot: true })).rejects.toBeInstanceOf(
+      WslDistroNotRunningError
+    )
+    await h.advance(60_000)
+    expect(h.statuses.at(-1)).toMatchObject({ state: 'distro-stopped' })
   })
 
   it('never boots a stopped distro for background work; the gate resumes it once running', async () => {

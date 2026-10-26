@@ -551,6 +551,8 @@ describe('WslHostService', () => {
     connector.distro.state = 'running'
     await service.ensureForRuntimeCall('wsl:ubuntu')
     expect(connector.connect).toHaveBeenCalledTimes(1)
+    // Even this reconnect to a running distro may not boot it if it stops meanwhile.
+    expect(connector.connect).toHaveBeenCalledWith('Ubuntu', { noBoot: true })
   })
 
   it('lifts a park on an explicit Connect', async () => {

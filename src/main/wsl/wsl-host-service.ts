@@ -28,7 +28,7 @@ import {
 } from './wsl-host-add-admission'
 import type { WslOrcadConnection } from './wsl-orcad-connection'
 import { registerWslHost } from './wsl-host-registration'
-import type { WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
+import type { WslOrcadConnectIntent, WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
 
 /** `stopped` and `unreachable` rest on a confirmed running list; `unavailable` could not read it. */
 export type WslHostReachability = 'available' | 'unreachable' | 'stopped' | 'unavailable'
@@ -39,7 +39,7 @@ export type WslHostConnector = {
   /** Runs in the distro, so it boots a stopped one: only after the user chose to. */
   readOrcadPublicKey(distro: string): Promise<string | null>
   /** User-initiated; may boot the distro. An intent retries or forces a skipped update. */
-  connect(distro: string, options?: { intent?: WslHostConnectIntent }): Promise<WslOrcadConnection>
+  connect(distro: string, options?: WslOrcadConnectIntent): Promise<WslOrcadConnection>
   /** Explicit retry must clear pairing-repair failures and spent caps. */
   forgetPairingFailures?(environmentId: string): void
   get(distro: string): WslOrcadConnection | null
@@ -269,7 +269,7 @@ export class WslHostService {
     ) {
       throw new Error(wslHostNotConnectedMessage(record.distro))
     }
-    await connector.connect(record.distro)
+    await connector.connect(record.distro, { noBoot: true })
   }
 
   /**
