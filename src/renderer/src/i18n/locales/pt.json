@@ -7718,6 +7718,10 @@
           "chatErrorEscalationNeedsChat": "Ative a interface de chat nas configurações experimentais para usar.",
           "chatErrorEscalationKeywordError": "erro",
           "chatErrorEscalationKeywordChat": "chat",
+          "heartbeatTitle": "Sinais de vida dos workers",
+          "heartbeatDescription": "Os workers atribuídos dão sinal a cada poucos minutos para que o coordenador distinga um agente trabalhando de um travado. Desativar reduz as mensagens para o coordenador, mas ele perde esse sinal de acompanhamento. Vale para workers atribuídos após a mudança.",
+          "heartbeatKeywordHeartbeat": "sinal de vida",
+          "heartbeatKeywordStalled": "travado",
           "7bc082f4de": "Copiar comando de instalação"
         },
         "RuntimeAccessGrantList": {

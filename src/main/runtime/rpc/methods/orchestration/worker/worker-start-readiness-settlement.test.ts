@@ -35,6 +35,7 @@ function settle(delivered: 'accepted' | undefined) {
   const args = {
     runtime: {
       getNestedWorkerMaxDepth: () => 3,
+      getOrchestrationHeartbeatMinutes: () => 5,
       getTerminalOrchestrationCliCommand: () => 'orca'
     },
     db,
@@ -111,6 +112,7 @@ describe('a terminal worker whose preamble delivery waited out a held paste', ()
       }))
       const runtime = {
         getNestedWorkerMaxDepth: () => 3,
+        getOrchestrationHeartbeatMinutes: () => 5,
         getTerminalOrchestrationCliCommand: () => 'orca',
         // A Windows Codex rescue held the writer for 40 s of the 50 s grace.
         sendTerminalAgentPrompt: async () => {

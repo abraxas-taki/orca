@@ -8129,6 +8129,10 @@
           "chatErrorEscalationNeedsChat": "使用するには、試験的機能の設定でチャット UI をオンにしてください。",
           "chatErrorEscalationKeywordError": "エラー",
           "chatErrorEscalationKeywordChat": "チャット",
+          "heartbeatTitle": "ワーカーのハートビート",
+          "heartbeatDescription": "割り当てられたワーカーが数分ごとに状況を知らせるので、コーディネーターは作業中の Agent と応答しなくなった Agent を見分けられます。オフにするとコーディネーターへのメッセージは減りますが、その定期連絡がなくなります。変更後に割り当てられたワーカーに適用されます。",
+          "heartbeatKeywordHeartbeat": "ハートビート",
+          "heartbeatKeywordStalled": "停止",
           "7bc082f4de": "インストールコマンドのコピー"
         },
         "OrchestrationSetupCard": {

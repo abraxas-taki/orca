@@ -8123,6 +8123,10 @@
           "chatErrorEscalationNeedsChat": "Activa la interfaz de chat en la configuración experimental para usarlo.",
           "chatErrorEscalationKeywordError": "error",
           "chatErrorEscalationKeywordChat": "chat",
+          "heartbeatTitle": "Latidos de los trabajadores",
+          "heartbeatDescription": "Los trabajadores asignados se reportan cada pocos minutos para que el coordinador distinga un agente que trabaja de uno colgado. Si lo desactivas, el coordinador recibe menos mensajes, pero pierde esa señal de actividad. Se aplica a los trabajadores asignados después del cambio.",
+          "heartbeatKeywordHeartbeat": "latido",
+          "heartbeatKeywordStalled": "atascado",
           "7bc082f4de": "Copiar comando de instalación"
         },
         "OrchestrationSetupCard": {

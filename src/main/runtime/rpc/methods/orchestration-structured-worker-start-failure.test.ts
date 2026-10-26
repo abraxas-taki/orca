@@ -76,6 +76,7 @@ function fakes() {
     showTerminal: async () => ({ worktreeId: WORKTREE }),
     showManagedTerminalWorkspace: async () => ({ id: WORKTREE }),
     getNestedWorkerMaxDepth: () => 3,
+    getOrchestrationHeartbeatMinutes: () => 5,
     getRuntimeId: () => 'epoch-1',
     ensureStructuredAgentSessionHost: async () => {},
     getTerminalOrchestrationCliCommand: () => 'orca',

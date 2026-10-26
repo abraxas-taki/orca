@@ -8299,6 +8299,10 @@
           "chatErrorEscalationNeedsChat": "Activez l'interface de chat dans les paramètres expérimentaux pour l'utiliser.",
           "chatErrorEscalationKeywordError": "erreur",
           "chatErrorEscalationKeywordChat": "chat",
+          "heartbeatTitle": "Signaux de vie des travailleurs",
+          "heartbeatDescription": "Les travailleurs assignés se signalent toutes les quelques minutes pour que le coordinateur distingue un agent qui travaille d'un agent figé. Les désactiver réduit les messages envoyés au coordinateur, mais il perd ce signal de suivi. S'applique aux travailleurs assignés après le changement.",
+          "heartbeatKeywordHeartbeat": "signal de vie",
+          "heartbeatKeywordStalled": "bloqué",
           "7bc082f4de": "Copier la commande d'installation"
         },
         "OrchestrationSetupCard": {
