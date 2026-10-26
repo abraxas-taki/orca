@@ -562,6 +562,26 @@
     "followSymlinkedDirectoriesDescription": "Search linked folders in Quick Open and expand local linked folders in File Explorer.",
     "accounts": {
       "claudeRemoveFolder": "Orca deletes this account's Claude folder and its sign-in from this computer. Chat history shared with System default stays. If it is selected, the next Claude you start uses System default."
+    },
+    "sourceControl": {
+      "actionModel": {
+        "on": "On",
+        "off": "Off",
+        "invalidArgs": "The CLI arguments for {{value0}} are invalid. Fix them in Settings → Source Control AI.",
+        "model": "Model",
+        "agentDefault": "Agent default",
+        "effortDefault": "Default",
+        "savedModel": "Model from Settings: {{value0}}",
+        "permissionsDefaultHint": "Terminals use Agent Permissions unless this action sets its own CLI arguments.",
+        "chatsOnly": "Applies to chats only",
+        "terminalsOnly": "Applies to terminals only",
+        "extraArgs": "Extra CLI arguments",
+        "launchOptions": "Model and permissions",
+        "savedLaunchOptions": "Saved options: {{value0}}. Older servers use their own permission settings."
+      },
+      "actionPermissions": {
+        "sameAsAgent": "Same as {{agent}}"
+      }
     }
   },
   "menu": {
@@ -13160,6 +13180,8 @@
           "linkedProjects_other": "This host’s Orca server already had {{paths}}, so this desktop now uses the server’s copy. This desktop’s tabs and {{count}} automations there were not moved, and worktrees it created there show as external worktrees.",
           "linkedProjects": "This host’s Orca server already had {{paths}}, so this desktop now uses the server’s copy. This desktop’s tabs and {{count}} automations there were not moved, and worktrees it created there show as external worktrees.",
           "linkedProjectsNoAutomations": "This host’s Orca server already had {{paths}}, so this desktop now uses the server’s copy. This desktop’s tabs there were not moved, and worktrees it created there show as external worktrees.",
+          "automationsLeftDisabled_one": "This host’s Orca server took over {{count}} automation but couldn’t turn it back on. Turn it on in Automations.",
+          "automationsLeftDisabled_other": "This host’s Orca server took over {{count}} automations but couldn’t turn them back on. Turn them on in Automations.",
           "launchSessionEnded": "Terminals on this Mac may have lost local network access because the SSH session that started this host’s Orca server ended. Restart Orca’s server to restore it.",
           "behindRolledBack": "Runs an older version of Orca’s server than this app; the last update was rolled back. Use Update server to try again.",
           "behindNoTemplate": "Runs a version of Orca’s server this app can’t update; this build has no server for this host.",
@@ -13175,7 +13197,8 @@
           "refusedLeaveBehind": "Some saved items for this host can’t move to its Orca server: {{items}}. Move anyway connects the host and keeps them on this computer.",
           "refusedLeaveBehindUnnamed": "Some saved items for this host can’t move to its Orca server. Move anyway connects the host and keeps them on this computer.",
           "windowsBuildUnsupported": "This host runs a version of Windows older than Windows 10 and Windows Server 2016, so it can’t run Orca’s server. Use a host with a newer version of Windows, or a Linux or macOS host.",
-          "windowsNoExtractor": "This Windows host has neither tar.exe nor PowerShell’s Expand-Archive, so Orca can’t unpack its server there. Install Windows PowerShell 5.1 on the host, then connect again."
+          "windowsNoExtractor": "This Windows host has neither tar.exe nor PowerShell’s Expand-Archive, so Orca can’t unpack its server there. Install Windows PowerShell 5.1 on the host, then connect again.",
+          "automationsLeftDisabled": "This host’s Orca server took over {{count}} automations but couldn’t turn them back on. Turn them on in Automations."
         },
         "ZcodeCliSetupSection": {
           "title": "Use GLM with ZCode",
@@ -14099,8 +14122,6 @@
             "ea4788705e": "Cancel",
             "7ec6abbf2a": "Reset",
             "f4f3c9ca4a": "Prompt template",
-            "fe119187bb": "--model sonnet",
-            "bc8dc39f4b": "CLI arguments",
             "b99c33cec5": "Settings",
             "15c5d85706": "Agent",
             "3e8f21954f": "error",
