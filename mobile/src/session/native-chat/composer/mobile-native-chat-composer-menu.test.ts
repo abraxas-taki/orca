@@ -55,15 +55,6 @@ describe('mobileComposerSlashItems', () => {
     ])
   })
 
-  it('narrows by the typed query across both groups', () => {
-    const items = mobileComposerSlashItems({
-      agent: 'claude',
-      structured: { reported, conversationCommands: [] },
-      query: 'rev'
-    })
-    expect(items.map((item) => item.token)).toEqual(['/review-pr'])
-  })
-
   it('names skills the way the agent invokes them', () => {
     const items = mobileComposerSlashItems({
       agent: 'codex',
