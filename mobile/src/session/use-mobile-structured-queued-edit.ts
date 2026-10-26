@@ -98,8 +98,9 @@ export function useMobileStructuredQueuedEdit(args: {
     [close, handOff, onSendError]
   )
 
-  // On chat changes or unmount, hand unsaved typing back to the chat it came from.
-  useEffect(() => {
+  // On chat changes or unmount, hand unsaved typing back to the chat it came from: a layout
+  // cleanup runs before the composer's append is repointed at the next chat.
+  useLayoutEffect(() => {
     return () => {
       const edit = active.current
       active.current = null
