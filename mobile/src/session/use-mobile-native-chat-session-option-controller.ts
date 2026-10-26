@@ -2,10 +2,10 @@ import type { RpcClient } from '../transport/rpc-client'
 import { useMobileNativeChatModelDiscovery } from './use-mobile-native-chat-model-discovery'
 import { writeMobileNativeChatSessionOptions } from './mobile-native-chat-session-option-persistence'
 import { getAgentSessionOptionCatalog } from '../../../src/shared/agent-session-option-catalog'
-import type { NativeChatSessionOptionSettingsMutation } from '../../../src/shared/native-chat-session-options'
 import type { AgentSessionConversationCommand } from '../../../src/shared/agent-session/agent-session-conversation-command'
 import { useCallback, useMemo } from 'react'
 import type {
+  NativeChatSessionOptionSettingsMutation,
   SessionOptionDescriptor,
   SessionOptionValue,
   SessionOptionsSurface
