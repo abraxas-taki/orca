@@ -1,9 +1,9 @@
-import { nativeChatContinuationSendText } from '../../../../shared/native-chat-continuation-send'
+import { nativeChatContinuationSendText } from './native-chat-continuation-send'
 import {
   normalizeNativeChatUserText,
   normalizedNativeChatUserMessageText
-} from '../../../../shared/native-chat-image-transcript-markers'
-import { isImageRefBlock, type NativeChatMessage } from '../../../../shared/native-chat-types'
+} from './native-chat-image-transcript-markers'
+import { isImageRefBlock, type NativeChatMessage } from './native-chat-types'
 
 export type NativeChatPendingOccurrence = {
   text: string

@@ -28,11 +28,8 @@ import { useNativeChatInteractiveSend } from './use-native-chat-interactive-send
 import { shouldClearNativeChatWorkingSuppression } from './native-chat-working-suppression'
 import { resolveNativeChatTerminalTurn } from './native-chat-terminal-turn'
 import { useNativeChatTerminalTurnTiming } from './use-native-chat-terminal-turn-timing'
-import {
-  launchPromptAsMessage,
-  pendingSendsAsMessages,
-  shouldPruneLaunchPrompt
-} from './native-chat-pending'
+import { launchPromptAsMessage, shouldPruneLaunchPrompt } from './native-chat-pending'
+import { pendingSendsAsMessages } from '../../../../shared/native-chat-pending-sends'
 import { useNativeChatPendingDelivery } from './use-native-chat-pending-delivery'
 import {
   appendCommandMarkerCache,

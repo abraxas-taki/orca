@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { NativeChatMessage } from '../../../../shared/native-chat-types'
-import { pendingSendsAsMessages, prunePendingSends } from './native-chat-pending'
+import type { NativeChatMessage } from './native-chat-types'
+import { pendingSendsAsMessages, prunePendingSends } from './native-chat-pending-sends'
 
 const prompt = 'Summarize the failing tests.\n\nThen propose a fix for each one.'
 const wrapped = `\n\n<pasted_content id="7e64">\n${prompt}\n</pasted_content id="7e64">\n`

@@ -1,15 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import type { NativeChatMessage } from '../../../../shared/native-chat-types'
-import { countLeadingPendingTextsGluedToUserText } from './native-chat-pending-occurrence'
+import { describe, expect, it } from 'vitest'
+import type { NativeChatMessage } from './native-chat-types'
 import {
-  appendPendingSendCache,
-  clearPendingSendCacheForTests,
-  pendingSendsAsMessages,
-  prunePendingSends,
-  type NativeChatPendingSendScope
-} from './native-chat-pending'
-
-const scope: NativeChatPendingSendScope = { paneKey: 'tab:leaf', agent: 'codex' }
+  assignNativeChatPendingOccurrence,
+  countLeadingPendingTextsGluedToUserText
+} from './native-chat-pending-occurrence'
+import { pendingSendsAsMessages, prunePendingSends } from './native-chat-pending-sends'
 
 function message(
   id: string,
@@ -27,22 +22,23 @@ function message(
 }
 
 describe('pending send occurrence reconciliation', () => {
-  beforeEach(() => clearPendingSendCacheForTests())
-
   it('keeps the next identical echo after pruning an earlier occurrence', () => {
-    const first = appendPendingSendCache(scope, {
+    const first = assignNativeChatPendingOccurrence([], {
       id: 'p1',
       text: 'repeat',
       sentAt: 100,
       afterMessageId: 'paged-out-boundary'
     })
-    const repeated = appendPendingSendCache(scope, {
-      id: 'p2',
-      text: 'repeat',
-      sentAt: 200,
-      afterMessageId: 'paged-out-boundary'
-    })
-    expect(first[0]?.matchingOccurrence).toBeUndefined()
+    const repeated = [
+      first,
+      assignNativeChatPendingOccurrence([first], {
+        id: 'p2',
+        text: 'repeat',
+        sentAt: 200,
+        afterMessageId: 'paged-out-boundary'
+      })
+    ]
+    expect(first.matchingOccurrence).toBeUndefined()
     expect(repeated[1]).toMatchObject({ matchingOccurrence: 2, matchingAfterTimestamp: 100 })
 
     const firstCompletedTurn = [
@@ -96,17 +92,10 @@ describe('countLeadingPendingTextsGluedToUserText', () => {
 })
 
 describe('pending sends typed through an agent TUI', () => {
-  beforeEach(() => clearPendingSendCacheForTests())
-
   const COMPOSER_TEXT = 'summarize the failing test and propose a fix'
 
   it('prunes the echo of a row carrying the clear byte', () => {
-    const pending = appendPendingSendCache(scope, {
-      id: 'p1',
-      text: COMPOSER_TEXT,
-      sentAt: 100,
-      afterMessageId: 'boundary'
-    })
+    const pending = [{ id: 'p1', text: COMPOSER_TEXT, sentAt: 100, afterMessageId: 'boundary' }]
     const transcript = [
       message('u1', 'user', `\u0015${COMPOSER_TEXT}`, 150),
       message('a1', 'assistant', 'done', 160)
