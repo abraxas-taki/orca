@@ -67,11 +67,13 @@ export function useMobileNativeChatComposerMenu(input: {
     }
   }
 
+  // Triggers read only the text before the caret, so edits after it rebuild nothing.
+  const beforeCaret = value.slice(0, cursor)
   const autocomplete = useMemo(
     () =>
       deriveComposerAutocomplete(
-        value,
-        cursor,
+        beforeCaret,
+        beforeCaret.length,
         catalog.commands,
         catalog.discovery.skills,
         catalog.profile,
@@ -79,7 +81,7 @@ export function useMobileNativeChatComposerMenu(input: {
         null,
         catalog.sessionSkills
       ),
-    [catalog, cursor, value]
+    [beforeCaret, catalog]
   )
   const rows = useMemo<ComposerMenuRow[]>(() => {
     if (autocomplete.mode === 'mention') {
@@ -97,7 +99,7 @@ export function useMobileNativeChatComposerMenu(input: {
 
   const { onNeedFiles, onNeedSkills, onSlashMenuOpen } = input
   // Scan disk skills only once a token needs them, as desktop does.
-  const skillsTriggered = isSkillPickerTriggered(value.slice(0, cursor), catalog.profile)
+  const skillsTriggered = isSkillPickerTriggered(beforeCaret, catalog.profile)
   useEffect(() => {
     if (skillsTriggered) {
       onNeedSkills?.()
@@ -136,18 +138,11 @@ export function useMobileNativeChatComposerMenu(input: {
     }
     const next = applyPickerSuggestion(value, cursor, row)
     // A skill at the start becomes the leading chip; mid-prompt it stays plain text like desktop.
-    if (
-      row.kind === 'skill' &&
-      next.insertedToken &&
-      next.caret === next.insertedToken.length + 1
-    ) {
-      const rest = value.slice(cursor).trimStart()
-      onChangeText(`${row.token} ${rest}`)
-    } else {
-      setDraft(next.draft)
-    }
+    const leadingSkill =
+      row.kind === 'skill' && next.insertedToken && next.caret === row.token.length + 1
+    setDraft(leadingSkill ? `${row.token} ${value.slice(cursor).trimStart()}` : next.draft)
     if (row.kind === 'skill') {
-      input.onPickSkill?.({ token: row.token, ...(row.path ? { path: row.path } : {}) })
+      input.onPickSkill?.(row)
     }
     placeCaret(next.caret)
   }

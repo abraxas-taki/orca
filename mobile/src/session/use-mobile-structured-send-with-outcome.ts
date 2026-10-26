@@ -7,7 +7,7 @@ import { agentSessionVisibleFailureFacts } from '../../../src/shared/agent-sessi
 import { tuiAgentDisplayName } from '../../../src/shared/tui-agent-display-names'
 import { pendingPromptsAllUnanswerableHere } from '../../../src/shared/agent-session-approval-subject'
 import {
-  pickedSkillsInText,
+  SkillRefLimitError,
   structuredAgentSessionSendBody,
   type StructuredAgentSessionAttachment
 } from '../../../src/shared/structured-agent-session-send-mutation'
@@ -171,13 +171,18 @@ export function useMobileStructuredSendWithOutcome(args: {
       }
       const wireText = nativeChatTextWithFileReferences(text, files)
       const skills = takesSkills ? (pickedSkills ?? []) : []
-      if (pickedSkillsInText(wireText, skills).length > MAX_SKILL_REFS) {
+      let body: ReturnType<typeof structuredAgentSessionSendBody>
+      try {
+        body = structuredAgentSessionSendBody(wireText, imageAttachments, skills)
+      } catch (error) {
+        if (!(error instanceof SkillRefLimitError)) {
+          throw error
+        }
         onSendError(
           `Message not sent. Keep at most ${MAX_SKILL_REFS} selected skill files and try again.`
         )
         return 'rejected'
       }
-      const body = structuredAgentSessionSendBody(wireText, imageAttachments, skills)
       if (body.blocks.length === 0) {
         return 'rejected'
       }

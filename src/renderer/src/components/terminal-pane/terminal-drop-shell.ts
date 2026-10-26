@@ -1,4 +1,4 @@
-import { isTerminalDropWindowsPathLike } from '../../../../shared/agent-image-paste-path'
+import { isTerminalDropWindowsPathLike } from '../../../../shared/image-path-paste'
 import { isWslUncPath } from '../../../../shared/wsl-paths'
 import { isWindowsUserAgent } from './pane-helpers'
 

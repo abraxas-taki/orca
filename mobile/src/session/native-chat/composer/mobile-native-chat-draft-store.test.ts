@@ -6,7 +6,6 @@ import {
   readMobileNativeChatPickedSkills,
   editMobileNativeChatDraft,
   readMobileNativeChatSkillOrigin,
-  recordMobileNativeChatPickedSkills,
   recordMobileNativeChatSkillPick,
   resetMobileNativeChatDraftStoreForTests,
   setMobileNativeChatDraftText
@@ -121,16 +120,18 @@ describe('picked skills', () => {
   it('forgets a pick once an edit deletes its token, even if the name is typed again', () => {
     const review = { name: 'review', path: '/a/review/SKILL.md' }
     setMobileNativeChatDraftText('draft', 'fix $review then ')
-    recordMobileNativeChatPickedSkills('draft', [review])
+    recordMobileNativeChatSkillPick('draft', { token: '$review', path: review.path })
     editMobileNativeChatDraft('draft', 'fix it then ')
     editMobileNativeChatDraft('draft', 'fix it then $review')
     expect(readMobileNativeChatPickedSkills('draft')).toEqual([])
   })
 
-  it('keeps a picked skill as the send origin only while it leads the draft', () => {
+  it('keeps a picked skill as the send origin through a send clear, until an edit stops it leading', () => {
     editMobileNativeChatDraft('draft', '/triage ')
     recordMobileNativeChatSkillPick('draft', { token: '/triage' })
     editMobileNativeChatDraft('draft', '/triage the flaky test')
+    setMobileNativeChatDraftText('draft', '')
+    setMobileNativeChatDraftText('draft', '/triage the flaky test')
     expect(readMobileNativeChatSkillOrigin('draft')).toBe('/triage')
     editMobileNativeChatDraft('draft', 'the flaky test')
     expect(readMobileNativeChatSkillOrigin('draft')).toBeNull()

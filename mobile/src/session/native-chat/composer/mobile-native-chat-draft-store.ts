@@ -4,7 +4,13 @@ import { pickedSkillsInText } from '../../../../../src/shared/structured-agent-s
 import type { MobileNativeChatLaunchDraftSeed } from './use-mobile-native-chat-launch-draft-seed'
 
 // Text and its edit revision outlive the screen, including callbacks from an older mount.
-type Draft = { text: string; editGeneration: number }
+// Picks behave like desktop chips: user edits drop skills the text stops naming and an origin that stops leading.
+type Draft = {
+  text: string
+  editGeneration: number
+  skills?: AgentJournalSkillRef[]
+  skillOrigin?: string
+}
 
 const drafts = new Map<string, Draft>()
 const listeners = new Set<() => void>()
@@ -16,37 +22,23 @@ export const mobileNativeChatLaunchDraftSeeds = new Map<
   MobileNativeChatLaunchDraftSeed | null
 >()
 
-// Skills picked from the menu into a draft; edits drop those the text no longer names, as deleting a desktop chip does.
-const pickedSkills = new Map<string, AgentJournalSkillRef[]>()
-
-export function recordMobileNativeChatPickedSkills(
-  draftKey: string,
-  skills: readonly AgentJournalSkillRef[]
-): void {
-  const held = pickedSkills.get(draftKey) ?? []
-  const paths = new Set(held.map((skill) => skill.path))
-  pickedSkills.set(draftKey, [...held, ...skills.filter((skill) => !paths.has(skill.path))])
-}
-
-// The skill token last picked into a draft while it still leads the draft, desktop's picker origin.
-const skillOrigins = new Map<string, string>()
-
 export function recordMobileNativeChatSkillPick(
   draftKey: string,
   skill: { token: string; path?: string }
 ): void {
-  skillOrigins.set(draftKey, skill.token)
-  if (skill.path) {
-    recordMobileNativeChatPickedSkills(draftKey, [{ name: skill.token.slice(1), path: skill.path }])
-  }
+  const current = drafts.get(draftKey) ?? { text: '', editGeneration: 0 }
+  const skills = skill.path
+    ? [...(current.skills ?? []), { name: skill.token.slice(1), path: skill.path }]
+    : current.skills
+  drafts.set(draftKey, { ...current, skillOrigin: skill.token, ...(skills ? { skills } : {}) })
 }
 
 export function readMobileNativeChatSkillOrigin(draftKey: string): string | null {
-  return skillOrigins.get(draftKey) ?? null
+  return drafts.get(draftKey)?.skillOrigin ?? null
 }
 
 export function readMobileNativeChatPickedSkills(draftKey: string): AgentJournalSkillRef[] {
-  return pickedSkills.get(draftKey) ?? []
+  return drafts.get(draftKey)?.skills ?? []
 }
 
 function subscribe(listener: () => void): () => void {
@@ -63,14 +55,17 @@ function writeDraft(draftKey: string, update: SetStateAction<string>, userEdit: 
   if (next === text && !userEdit) {
     return
   }
-  drafts.set(draftKey, { text: next, editGeneration: (current?.editGeneration ?? 0) + 1 })
-  const picked = pickedSkills.get(draftKey)
-  if (picked) {
-    pickedSkills.set(draftKey, pickedSkillsInText(next, picked))
-  }
-  if (skillOrigins.has(draftKey) && next.split(/\s/, 1)[0] !== skillOrigins.get(draftKey)) {
-    skillOrigins.delete(draftKey)
-  }
+  // Send clears and restores are not edits, so a rejected draft keeps its picks.
+  const skills =
+    userEdit && current?.skills ? pickedSkillsInText(next, current.skills) : current?.skills
+  const skillOrigin =
+    userEdit && current?.skillOrigin !== next.split(/\s/, 1)[0] ? undefined : current?.skillOrigin
+  drafts.set(draftKey, {
+    text: next,
+    editGeneration: (current?.editGeneration ?? 0) + 1,
+    ...(skills ? { skills } : {}),
+    ...(skillOrigin ? { skillOrigin } : {})
+  })
   if (next === text) {
     return
   }
@@ -112,7 +107,5 @@ export function useMobileNativeChatDraft(draftKey: string | null): string {
 
 export function resetMobileNativeChatDraftStoreForTests(): void {
   drafts.clear()
-  pickedSkills.clear()
-  skillOrigins.clear()
   mobileNativeChatLaunchDraftSeeds.clear()
 }

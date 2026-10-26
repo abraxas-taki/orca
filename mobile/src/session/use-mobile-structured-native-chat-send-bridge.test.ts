@@ -6,7 +6,7 @@ import type { MobileNativeChatSendOutcome } from './native-chat/mobile-native-ch
 import type { MobileNativeChatSendOrigin } from './native-chat/mobile-native-chat-pending-echo'
 import { useMobileStructuredNativeChatSendBridge } from './use-mobile-structured-native-chat-send-bridge'
 import {
-  recordMobileNativeChatPickedSkills,
+  recordMobileNativeChatSkillPick,
   resetMobileNativeChatDraftStoreForTests
 } from './native-chat/composer/mobile-native-chat-draft-store'
 
@@ -58,7 +58,7 @@ describe('useMobileStructuredNativeChatSendBridge', () => {
 
   it('sends the skills picked into the draft', async () => {
     const review = { name: 'review', path: '/skills/review/SKILL.md' }
-    recordMobileNativeChatPickedSkills(ORIGIN.draftKey, [review])
+    recordMobileNativeChatSkillPick(ORIGIN.draftKey, { token: '$review', path: review.path })
     sendStructured.mockResolvedValue('accepted')
     mount('codex')
 
@@ -78,7 +78,7 @@ describe('useMobileStructuredNativeChatSendBridge', () => {
 
       await expect(sendWithOutcome('/review')).resolves.toBe(outcome)
 
-      expect(sendStructured).toHaveBeenCalledWith('/review')
+      expect(sendStructured).toHaveBeenCalledWith('/review', undefined, undefined, undefined, [])
       expect(clearDraftForSend).toHaveBeenCalledExactlyOnceWith(ORIGIN, '/review')
       expect(restoreRejectedDraft).not.toHaveBeenCalled()
     }

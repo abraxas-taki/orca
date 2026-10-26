@@ -1,58 +1,12 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { z } from 'zod'
-import { getNativeChatAgentProfile } from '../../../../../src/shared/native-chat-agent-profiles'
+import type { z } from 'zod'
 import type { NativeChatSkillDiscoverySnapshot } from '../../../../../src/shared/native-chat-picker-items'
 import { isNativeChatSkillForAgent } from '../../../../../src/shared/native-chat-skill-visibility'
-import { salvagingArray } from '../../../../../src/shared/zod-salvage'
 import type { RpcClient } from '../../../transport/rpc-client'
-import { bindDeferredRpcOperation, defineRpcOperation } from '../../../transport/rpc-operation'
-import { rpcResultVariant } from '../../../transport/rpc-operation-result-reader'
-
-const skillProviders = z.array(z.enum(['codex', 'claude', 'agent-skills']))
-const skillSourceKind = z.enum(['home', 'repo', 'bundled', 'plugin'])
-
-// Rows a newer host shapes differently drop alone; the rest of the scan still lists.
-const skillDiscoveryReplySchema = z.looseObject({
-  skills: salvagingArray(
-    z.looseObject({
-      id: z.string(),
-      name: z.string(),
-      description: z.string().nullable(),
-      providers: skillProviders,
-      sourceKind: skillSourceKind,
-      sourceLabel: z.string(),
-      rootPath: z.string(),
-      rootPaths: z.array(z.string()).optional(),
-      directoryPath: z.string(),
-      skillFilePath: z.string(),
-      installed: z.boolean(),
-      updatedAt: z.number().nullable()
-    })
-  ),
-  sources: salvagingArray(
-    z.looseObject({
-      id: z.string(),
-      label: z.string(),
-      path: z.string(),
-      sourceKind: skillSourceKind,
-      providers: skillProviders,
-      owner: z.string().nullable(),
-      exists: z.boolean()
-    })
-  )
-})
+import { nativeChatSkillDiscoveryRead } from '../../mobile-session-read-operations'
+import type { skillDiscoveryReplySchema } from '../../session-read-reply-schema'
 
 type SkillDiscoveryReply = z.output<typeof skillDiscoveryReplySchema>
-
-const skillDiscoveryRead = bindDeferredRpcOperation(
-  defineRpcOperation({
-    name: 'skills.discover-or-skip',
-    method: 'skills.discover',
-    acceptance: 'success-result-or-skip',
-    barrier: 'after-caller-barrier',
-    read: rpcResultVariant('skill-discovery', skillDiscoveryReplySchema)
-  })
-)
 
 type Scan = { status: 'loading' | 'error' } | { status: 'ready'; reply: SkillDiscoveryReply }
 
@@ -72,11 +26,13 @@ export function useMobileNativeChatSkills(args: {
   })
   const key = `${client?.getGeneration?.() ?? 0}\0${worktreeId}`
   const scan = scans.client === client ? scans.byKey.get(key) : undefined
-  // Read the scan through a ref so a settled failure cannot recreate the loader and refire the menu's request.
+  // Read through refs so a settled failure cannot recreate the loader and refire the menu's request.
   const scanRef = useRef(scan)
+  const clientRef = useRef(client)
   useLayoutEffect(() => {
     scanRef.current = scan
-  }, [scan])
+    clientRef.current = client
+  }, [client, scan])
 
   const loadNativeChatSkills = useCallback(() => {
     // The phone has no Retry button, so the next menu opening retries a failed scan.
@@ -84,24 +40,29 @@ export function useMobileNativeChatSkills(args: {
     if (!client || !supported || (held && held.status !== 'error')) {
       return
     }
-    const settle = (next: Scan): void =>
+    const settle = (next: Scan): void => {
+      // A reply from a replaced connection must not wipe the current one's scans.
+      if (clientRef.current !== client) {
+        return
+      }
       setScans((current) => {
         const byKey = new Map(current.client === client ? current.byKey : [])
         byKey.set(key, next)
         return { client, byKey }
       })
+    }
     settle({ status: 'loading' })
-    void skillDiscoveryRead
+    void nativeChatSkillDiscoveryRead
       .request(client, { worktreeId })
       .then((response) => {
-        const accepted = skillDiscoveryRead.interpret(response)
+        const accepted = nativeChatSkillDiscoveryRead.interpret(response)
         settle(accepted.accepted ? { status: 'ready', reply: accepted.value } : { status: 'error' })
       })
       .catch(() => settle({ status: 'error' }))
   }, [client, key, supported, worktreeId])
 
   const nativeChatSkills = useMemo<NativeChatSkillDiscoverySnapshot>(() => {
-    if (!agent || !supported || !getNativeChatAgentProfile(agent)) {
+    if (!agent || !supported) {
       return NO_SKILLS
     }
     if (scan?.status !== 'ready') {
