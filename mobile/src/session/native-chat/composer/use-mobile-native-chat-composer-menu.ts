@@ -17,7 +17,6 @@ import {
   type MobileComposerStructuredCatalog
 } from './mobile-native-chat-composer-menu'
 import type { ComposerMenuRow } from './MobileNativeChatComposerMenu'
-import type { AgentJournalSkillRef } from '../../../../../src/shared/agent-session-journal-types'
 
 type Selection = { start: number; end: number }
 /** Opening the menu from the + sheet narrows it to what that row named. */
@@ -36,8 +35,8 @@ export function useMobileNativeChatComposerMenu(input: {
   onNeedSkills?: () => void
   /** The `/` menu opened; the session's list may have changed since it was read. */
   onSlashMenuOpen?: () => void
-  /** A picked skill the agent selects by file; a send carries it while its token stays. */
-  onPickSkill?: (skill: AgentJournalSkillRef) => void
+  /** A picked skill; a send carries its file while its token stays, and treats a leading one as chat. */
+  onPickSkill?: (skill: { token: string; path?: string }) => void
   focusField: () => void
 }) {
   const { value, onChangeText, agent, structuredCatalog, filePaths, skillDiscovery } = input
@@ -147,8 +146,8 @@ export function useMobileNativeChatComposerMenu(input: {
     } else {
       setDraft(next.draft)
     }
-    if (row.kind === 'skill' && row.path) {
-      input.onPickSkill?.({ name: row.token.slice(1), path: row.path })
+    if (row.kind === 'skill') {
+      input.onPickSkill?.({ token: row.token, ...(row.path ? { path: row.path } : {}) })
     }
     placeCaret(next.caret)
   }

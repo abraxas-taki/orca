@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { z } from 'zod'
 import { getNativeChatAgentProfile } from '../../../../../src/shared/native-chat-agent-profiles'
 import type { NativeChatSkillDiscoverySnapshot } from '../../../../../src/shared/native-chat-picker-items'
@@ -72,10 +72,16 @@ export function useMobileNativeChatSkills(args: {
   })
   const key = `${client?.getGeneration?.() ?? 0}\0${worktreeId}`
   const scan = scans.client === client ? scans.byKey.get(key) : undefined
+  // Read the scan through a ref so a settled failure cannot recreate the loader and refire the menu's request.
+  const scanRef = useRef(scan)
+  useLayoutEffect(() => {
+    scanRef.current = scan
+  }, [scan])
 
   const loadNativeChatSkills = useCallback(() => {
     // The phone has no Retry button, so the next menu opening retries a failed scan.
-    if (!client || !supported || (scan && scan.status !== 'error')) {
+    const held = scanRef.current
+    if (!client || !supported || (held && held.status !== 'error')) {
       return
     }
     const settle = (next: Scan): void =>
@@ -92,7 +98,7 @@ export function useMobileNativeChatSkills(args: {
         settle(accepted.accepted ? { status: 'ready', reply: accepted.value } : { status: 'error' })
       })
       .catch(() => settle({ status: 'error' }))
-  }, [client, key, scan, supported, worktreeId])
+  }, [client, key, supported, worktreeId])
 
   const nativeChatSkills = useMemo<NativeChatSkillDiscoverySnapshot>(() => {
     if (!agent || !supported || !getNativeChatAgentProfile(agent)) {

@@ -28,6 +28,23 @@ export function recordMobileNativeChatPickedSkills(
   pickedSkills.set(draftKey, [...held, ...skills.filter((skill) => !paths.has(skill.path))])
 }
 
+// The skill token last picked into a draft while it still leads the draft, desktop's picker origin.
+const skillOrigins = new Map<string, string>()
+
+export function recordMobileNativeChatSkillPick(
+  draftKey: string,
+  skill: { token: string; path?: string }
+): void {
+  skillOrigins.set(draftKey, skill.token)
+  if (skill.path) {
+    recordMobileNativeChatPickedSkills(draftKey, [{ name: skill.token.slice(1), path: skill.path }])
+  }
+}
+
+export function readMobileNativeChatSkillOrigin(draftKey: string): string | null {
+  return skillOrigins.get(draftKey) ?? null
+}
+
 export function readMobileNativeChatPickedSkills(draftKey: string): AgentJournalSkillRef[] {
   return pickedSkills.get(draftKey) ?? []
 }
@@ -50,6 +67,9 @@ function writeDraft(draftKey: string, update: SetStateAction<string>, userEdit: 
   const picked = pickedSkills.get(draftKey)
   if (picked) {
     pickedSkills.set(draftKey, pickedSkillsInText(next, picked))
+  }
+  if (skillOrigins.has(draftKey) && next.split(/\s/, 1)[0] !== skillOrigins.get(draftKey)) {
+    skillOrigins.delete(draftKey)
   }
   if (next === text) {
     return
@@ -93,5 +113,6 @@ export function useMobileNativeChatDraft(draftKey: string | null): string {
 export function resetMobileNativeChatDraftStoreForTests(): void {
   drafts.clear()
   pickedSkills.clear()
+  skillOrigins.clear()
   mobileNativeChatLaunchDraftSeeds.clear()
 }
