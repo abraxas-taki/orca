@@ -222,7 +222,8 @@ export function useMobileStructuredAgentState(args: {
   return {
     state,
     stateRef,
-    queuedMessages: state.queuedMessages ?? null,
+    // A published null is an empty queue; only an absent list is no claim.
+    queuedMessages: state.queuedMessages === undefined ? null : (state.queuedMessages ?? []),
     queuePause: state.queuePause ?? null,
     olderPages,
     loadEarlier
