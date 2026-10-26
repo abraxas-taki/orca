@@ -5,10 +5,6 @@ import { colors, spacing, typography } from '../../../theme/mobile-theme'
 
 export type ComposerMenuRow = NativeChatPickerItem | { kind: 'file'; id: string; path: string }
 
-export function composerMenuInsertText(row: ComposerMenuRow): string {
-  return row.kind === 'file' ? `@${row.path}` : row.token
-}
-
 const HEADINGS = { command: 'Commands', skill: 'Skills', file: 'Files' } as const
 
 export function MobileNativeChatComposerMenu({
@@ -47,9 +43,11 @@ function MenuRow({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={
-        row.kind === 'skill' && row.location
-          ? `${row.token}, ${row.location}`
-          : composerMenuInsertText(row)
+        row.kind === 'file'
+          ? row.path
+          : row.kind === 'skill' && row.location
+            ? `${row.token}, ${row.location}`
+            : row.token
       }
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
       onPress={() => onPick(row)}

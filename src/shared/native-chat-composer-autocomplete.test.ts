@@ -12,11 +12,11 @@ import {
   isSlashCommandDraft,
   slashCommandDispatchText,
   type SlashCommandSuggestion
-} from './native-chat-composer-state'
-import { sessionSlashCommandSuggestions } from '../../../../shared/native-chat-slash-commands'
-import type { DiscoveredSkill } from '../../../../shared/skills'
-import { getNativeChatAgentProfile } from '../../../../shared/native-chat-agent-profiles'
-import { pickedSkillsInText } from '../../../../shared/structured-agent-session-send-mutation'
+} from './native-chat-composer-autocomplete'
+import { sessionSlashCommandSuggestions } from './native-chat-slash-commands'
+import type { DiscoveredSkill } from './skills'
+import { getNativeChatAgentProfile } from './native-chat-agent-profiles'
+import { pickedSkillsInText } from './structured-agent-session-send-mutation'
 
 const COMMANDS: SlashCommandSuggestion[] = [
   { name: 'clear' },

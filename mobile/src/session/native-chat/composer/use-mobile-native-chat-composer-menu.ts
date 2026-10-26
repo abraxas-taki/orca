@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  applyAutocomplete,
-  detectAutocompleteTrigger,
-  rankSuggestions
-} from './mobile-native-chat-autocomplete'
+  applyMentionSuggestion,
+  applyPickerSuggestion,
+  deriveComposerAutocomplete
+} from '../../../../../src/shared/native-chat-composer-autocomplete'
 import {
+  boundedMenuItems,
   draftAfterSkillEdit,
   narrowedMenuItems,
   leadingSkillToken,
+  MENU_ROWS_PER_GROUP,
+  mobileComposerCatalog,
   mobileComposerSkillTokens,
-  mobileComposerSlashItems,
   type MobileComposerStructuredCatalog
 } from './mobile-native-chat-composer-menu'
-import { composerMenuInsertText, type ComposerMenuRow } from './MobileNativeChatComposerMenu'
+import type { ComposerMenuRow } from './MobileNativeChatComposerMenu'
 
 type Selection = { start: number; end: number }
 /** Opening the menu from the + sheet narrows it to what that row named. */
@@ -38,10 +40,11 @@ export function useMobileNativeChatComposerMenu(input: {
   const [pendingSelection, setPendingSelection] = useState<Selection | null>(null)
   const [menuKind, setMenuKind] = useState<MenuKind | null>(null)
 
-  const skillTokens = useMemo(
-    () => mobileComposerSkillTokens({ agent, structured: structuredCatalog }),
+  const catalog = useMemo(
+    () => mobileComposerCatalog({ agent, structured: structuredCatalog }),
     [agent, structuredCatalog]
   )
+  const skillTokens = useMemo(() => mobileComposerSkillTokens(catalog), [catalog])
   const skillToken = leadingSkillToken(value, skillTokens)
   const setDraft = (next: string): void => {
     if (!next.startsWith('/')) {
@@ -57,36 +60,42 @@ export function useMobileNativeChatComposerMenu(input: {
     }
   }
 
-  const trigger = useMemo(() => detectAutocompleteTrigger(value, cursor), [value, cursor])
-  // Memoize by query content so caret movement within it rebuilds nothing.
-  const menuMode = trigger?.kind ?? null
-  const menuQuery = trigger?.query ?? ''
+  const autocomplete = useMemo(
+    () =>
+      deriveComposerAutocomplete(
+        value,
+        cursor,
+        catalog.commands,
+        catalog.discovery.skills,
+        catalog.profile,
+        catalog.discovery,
+        null,
+        catalog.sessionSkills
+      ),
+    [catalog, cursor, value]
+  )
   const rows = useMemo<ComposerMenuRow[]>(() => {
-    if (menuMode === 'file') {
-      return rankSuggestions(filePaths, menuQuery).map((path) => ({
+    if (autocomplete.mode === 'mention') {
+      return filePaths.slice(0, MENU_ROWS_PER_GROUP).map((path) => ({
         kind: 'file' as const,
         id: `file:${path}`,
         path
       }))
     }
-    if (menuMode !== 'slash') {
+    if (autocomplete.mode !== 'slash') {
       return []
     }
-    const items = mobileComposerSlashItems({
-      agent,
-      structured: structuredCatalog,
-      query: menuQuery
-    })
-    return narrowedMenuItems(items, menuKind)
-  }, [agent, filePaths, menuKind, menuMode, menuQuery, structuredCatalog])
+    return narrowedMenuItems(boundedMenuItems(autocomplete.items), menuKind)
+  }, [autocomplete, filePaths, menuKind])
 
   const { onNeedFiles, onSlashMenuOpen } = input
+  const mentionQuery = autocomplete.mode === 'mention' ? autocomplete.query : null
   useEffect(() => {
-    if (trigger?.kind === 'file') {
-      onNeedFiles?.(trigger.query)
+    if (mentionQuery !== null) {
+      onNeedFiles?.(mentionQuery)
     }
-  }, [onNeedFiles, trigger?.kind, trigger?.query])
-  const slashOpen = trigger?.kind === 'slash'
+  }, [onNeedFiles, mentionQuery])
+  const slashOpen = autocomplete.mode === 'slash'
   useEffect(() => {
     if (slashOpen) {
       onSlashMenuOpen?.()
@@ -99,21 +108,28 @@ export function useMobileNativeChatComposerMenu(input: {
   }
 
   const pick = (row: ComposerMenuRow): void => {
-    if (!trigger) {
+    if (autocomplete.mode === 'none') {
       return
     }
     setMenuKind(null)
     // Restore page field focus after a menu tap so typing continues at the inserted pick.
     input.focusField()
-    if (row.kind === 'skill') {
-      const rest = value.slice(trigger.end).trimStart()
+    if (row.kind === 'file') {
+      const next = applyMentionSuggestion(value, cursor, row.path)
+      setDraft(next.draft)
+      placeCaret(next.caret)
+      return
+    }
+    const next = applyPickerSuggestion(value, cursor, row)
+    // A skill at the start becomes the leading chip; mid-prompt it stays plain text like desktop.
+    if (row.kind === 'skill' && next.insertedToken && next.caret === next.insertedToken.length + 1) {
+      const rest = value.slice(cursor).trimStart()
       onChangeText(`${row.token} ${rest}`)
       placeCaret(row.token.length + 1)
       return
     }
-    const next = applyAutocomplete(value, trigger, composerMenuInsertText(row))
-    setDraft(next.text)
-    placeCaret(next.cursor)
+    setDraft(next.draft)
+    placeCaret(next.caret)
   }
 
   const openSlashMenu = (kind: MenuKind): void => {

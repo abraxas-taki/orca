@@ -1,6 +1,6 @@
-import type { DiscoveredSkill } from '../../../../shared/skills'
-import { formatNativeChatFileReference } from '../../../../shared/agent-image-paste'
-import type { NativeChatAgentProfile } from '../../../../shared/native-chat-agent-profiles'
+import type { DiscoveredSkill } from './skills'
+import { formatNativeChatFileReference } from './agent-image-paste'
+import type { NativeChatAgentProfile } from './native-chat-agent-profiles'
 import {
   filterSlashCommands,
   isSlashCommandDraft,
@@ -8,7 +8,7 @@ import {
   slashCommandDispatchText,
   type NativeChatSessionSkill,
   type SlashCommandSuggestion
-} from '../../../../shared/native-chat-slash-commands'
+} from './native-chat-slash-commands'
 import {
   buildNativeChatPickerItems,
   LEADING_SLASH_TRIGGER,
@@ -16,20 +16,20 @@ import {
   matchSkillSigil,
   type NativeChatPickerItem,
   type NativeChatSkillDiscoverySnapshot
-} from '../../../../shared/native-chat-picker-items'
+} from './native-chat-picker-items'
 
 export type { SlashCommandSuggestion }
 export { filterSlashCommands, isSlashCommandDraft, applySlashSuggestion, slashCommandDispatchText }
 export {
   classifyNativeChatSend,
   type NativeChatSendClassification
-} from '../../../../shared/native-chat-slash-commands'
+} from './native-chat-slash-commands'
 export {
   applyPickerSuggestion,
   buildNativeChatPickerItems,
   type NativeChatPickerItem,
   type NativeChatSkillDiscoverySnapshot
-} from '../../../../shared/native-chat-picker-items'
+} from './native-chat-picker-items'
 
 type PickerAutocomplete = {
   query: string
@@ -134,16 +134,9 @@ function deriveSlashAutocomplete(
   }
   // Known agent grammar enables skills; the caller owns catalog policy, while this layer formats tokens.
   const skillsEnabled = profile !== null
-  const namePrefix = profile?.skillNamePrefix
-  // Scanned names take the agent's prefix so they match the names its session reports.
-  const scannedSkills = !skillsEnabled
-    ? []
-    : namePrefix
-      ? discovery.skills.map((skill) => ({ ...skill, name: `${namePrefix}${skill.name}` }))
-      : discovery.skills
   const items = buildNativeChatPickerItems(
     agentCommands,
-    scannedSkills,
+    nativeChatPickerScannedSkills(profile, discovery.skills),
     query,
     profile?.skillPrefix ?? '/',
     skillsEnabled ? sessionSkills : [],
@@ -170,6 +163,18 @@ function deriveSlashAutocomplete(
       ? { skillErrorKind: discovery.errorKind }
       : {})
   }
+}
+
+/** Scanned names take the agent's prefix so they match the names its session reports. */
+export function nativeChatPickerScannedSkills(
+  profile: NativeChatAgentProfile | null,
+  skills: readonly DiscoveredSkill[]
+): readonly DiscoveredSkill[] {
+  if (!profile) {
+    return []
+  }
+  const namePrefix = profile.skillNamePrefix
+  return namePrefix ? skills.map((skill) => ({ ...skill, name: `${namePrefix}${skill.name}` })) : skills
 }
 
 /** Replacing across an entire dismissed token starts a new occurrence; typing/deleting within it does not. */

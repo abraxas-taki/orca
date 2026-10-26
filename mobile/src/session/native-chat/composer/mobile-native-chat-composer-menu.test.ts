@@ -1,11 +1,34 @@
 import { describe, expect, it } from 'vitest'
+import { deriveComposerAutocomplete } from '../../../../../src/shared/native-chat-composer-autocomplete'
 import {
+  boundedMenuItems,
   draftAfterSkillEdit,
   narrowedMenuItems,
   leadingSkillToken,
+  mobileComposerCatalog,
   mobileComposerSkillTokens,
-  mobileComposerSlashItems
+  type MobileComposerStructuredCatalog
 } from './mobile-native-chat-composer-menu'
+
+function mobileComposerSlashItems(input: {
+  agent: string
+  structured: MobileComposerStructuredCatalog | undefined
+  query: string
+}) {
+  const catalog = mobileComposerCatalog(input)
+  const draft = `/${input.query}`
+  const result = deriveComposerAutocomplete(
+    draft,
+    draft.length,
+    catalog.commands,
+    catalog.discovery.skills,
+    catalog.profile,
+    catalog.discovery,
+    null,
+    catalog.sessionSkills
+  )
+  return result.mode === 'slash' ? boundedMenuItems(result.items) : []
+}
 
 const reported = [
   { name: 'compact', kind: 'command' as const, description: 'Compact the chat' },
@@ -74,7 +97,7 @@ describe('mobileComposerSkillTokens', () => {
     const structured = { reported: many, conversationCommands: [] }
     const drawn = mobileComposerSlashItems({ agent: 'claude', structured, query: '' })
     expect(drawn.filter((item) => item.kind === 'skill')).toHaveLength(10)
-    const tokens = mobileComposerSkillTokens({ agent: 'claude', structured })
+    const tokens = mobileComposerSkillTokens(mobileComposerCatalog({ agent: 'claude', structured }))
     expect(tokens.size).toBe(60)
     expect(tokens.has('/skill-59')).toBe(true)
   })
