@@ -37,7 +37,6 @@ export type MobileNativeChatController = {
   nativeChatStructured: boolean
   nativeChatVisualSource: MobileNativeChatVisualSource | null
   nativeChatItemSource: MobileNativeChatVisualSource | null
-  nativeChatAgentWorking: boolean
   /** Working or waiting on the reader: keeps the turn clock running. */
   nativeChatTurnActive: boolean
   nativeChatAwaitingInput: NativeChatAwaitingInput | null

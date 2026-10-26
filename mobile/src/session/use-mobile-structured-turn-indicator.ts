@@ -18,26 +18,27 @@ export function useMobileStructuredTurnIndicator(input: {
   queueFollowUps: boolean
 }): NativeChatLiveTurnIndicator & { stopping: boolean } {
   const { state, turnId, hostStopping, stopPressed, queueCapable, queueFollowUps } = input
-  const working = input.isWorking || input.canStop
-  const activityText =
-    selectStructuredAgentTurnActivity(state.items, turnId, state.activity)?.text ?? null
+  const activityText = useMemo(
+    () => selectStructuredAgentTurnActivity(state.items, turnId, state.activity)?.text ?? null,
+    [state.items, turnId, state.activity]
+  )
   const thinking = isStructuredAgentSessionThinking(state)
+  const working = input.isWorking || input.canStop
   const stopping = agentStopDisplayStatus({ working, hostStopping, stopPressed }) === 'stopping'
   const stopRequestInFlight = working && stopPressed
+  const afterStop = stopping
+    ? mobileStructuredSendQueues(queueCapable, queueFollowUps, state)
+      ? ('queue' as const)
+      : ('send' as const)
+    : undefined
   return useMemo(
     () => ({
       thinking,
       activityText,
       stopping,
       stopRequestInFlight,
-      ...(stopping
-        ? {
-            afterStop: mobileStructuredSendQueues(queueCapable, queueFollowUps, state)
-              ? ('queue' as const)
-              : ('send' as const)
-          }
-        : {})
+      ...(afterStop ? { afterStop } : {})
     }),
-    [thinking, activityText, stopping, stopRequestInFlight, queueCapable, queueFollowUps, state]
+    [thinking, activityText, stopping, stopRequestInFlight, afterStop]
   )
 }

@@ -205,7 +205,6 @@ async function mountPhone(): Promise<Phone> {
       showNativeChat: true,
       nativeChatSession: session.session,
       nativeChatAgent: 'codex',
-      nativeChatAgentWorking: session.isWorking,
       nativeChatCanStop: false,
       nativeChatStructured: true,
       nativeChatTurnIndicator: session.turnIndicator,

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { structuredAgentSessionCanStop } from '../../../src/shared/structured-agent-session-stop-control'
 
 type Send<Args extends unknown[], Result> = (...args: Args) => Promise<Result>
@@ -14,15 +14,31 @@ export function useMobileStructuredStopOffer(input: {
   trackSend: <Args extends unknown[], Result>(send: Send<Args, Result>) => Send<Args, Result>
 } {
   const { sessionKey } = input
-  const [inFlight, setInFlight] = useState<Readonly<Record<string, number>>>({})
+  const countsRef = useRef(new Map<string, number>())
+  // Re-render only when a chat starts or stops having a send out, not on every send.
+  const [sendingKeys, setSendingKeys] = useState<ReadonlySet<string>>(() => new Set())
   const trackSend = useCallback(
     <Args extends unknown[], Result>(send: Send<Args, Result>): Send<Args, Result> =>
       async (...args) => {
-        const count = (by: number) =>
-          setInFlight((previous) => ({
-            ...previous,
-            [sessionKey]: (previous[sessionKey] ?? 0) + by
-          }))
+        const count = (by: 1 | -1) => {
+          const next = (countsRef.current.get(sessionKey) ?? 0) + by
+          if (next === 0) {
+            countsRef.current.delete(sessionKey)
+          } else {
+            countsRef.current.set(sessionKey, next)
+          }
+          if (next === 0 || (next === 1 && by === 1)) {
+            setSendingKeys((previous) => {
+              const keys = new Set(previous)
+              if (next === 0) {
+                keys.delete(sessionKey)
+              } else {
+                keys.add(sessionKey)
+              }
+              return keys
+            })
+          }
+        }
         count(1)
         try {
           return await send(...args)
@@ -36,7 +52,7 @@ export function useMobileStructuredStopOffer(input: {
     canStop: structuredAgentSessionCanStop({
       turnId: input.turnId,
       isWorking: input.isWorking,
-      sending: (inFlight[sessionKey] ?? 0) > 0,
+      sending: sendingKeys.has(sessionKey),
       stopsConversation: input.stopsConversation
     }),
     trackSend

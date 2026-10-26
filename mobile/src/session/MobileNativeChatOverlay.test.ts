@@ -26,7 +26,6 @@ vi.mock('./MobileNativeChatRowOverlaysHost', () => ({
 type Tick = {
   show?: boolean
   messages?: NativeChatMessage[]
-  working?: boolean
   stopping?: boolean
   acceptsImages?: boolean
   agent?: string
@@ -45,7 +44,6 @@ function overlayElement(tick: Tick): ReturnType<typeof createElement> {
     nativeChatStructured: tick.structured ?? false,
     setTabView: tick.setTabView ?? vi.fn(),
     nativeChatAcceptsImages: tick.acceptsImages ?? true,
-    nativeChatAgentWorking: tick.working ?? false,
     nativeChatTurnIndicator: {
       thinking: false,
       activityText: null,
@@ -109,11 +107,11 @@ describe("MobileNativeChatOverlay while a person's Stop ends the turn", () => {
   }
 
   it("holds the queued cards' Steer while the agent works and the host says Stopping", async () => {
-    expect(await steerHeld({ working: true, stopping: true })).toBe(true)
+    expect(await steerHeld({ stopping: true })).toBe(true)
   })
 
   it('leaves Steer to the cards otherwise', async () => {
-    expect(await steerHeld({ working: true, stopping: false })).toBe(false)
+    expect(await steerHeld({ stopping: false })).toBe(false)
   })
 })
 

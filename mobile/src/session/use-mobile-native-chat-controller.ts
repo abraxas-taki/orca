@@ -273,7 +273,6 @@ export function useMobileNativeChatController(args: {
       activeChatStructured && agentSessionHostSupport?.itemDetail === true
         ? structuredNativeChat.visualSource
         : null,
-    nativeChatAgentWorking,
     nativeChatTurnActive: activeChatStructured
       ? structuredNativeChat.isWorking
       : terminalTurn.turnActive,
