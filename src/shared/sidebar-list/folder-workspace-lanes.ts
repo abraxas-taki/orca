@@ -47,12 +47,12 @@ export function getFolderWorkspaceLaneKey(
   }
 }
 
-/** Match project-group ordering: user rank, then name. */
 type FolderWorkspaceDisplayOrder = Pick<
   FolderWorkspace,
   'id' | 'name' | 'sortOrder' | 'manualOrder' | 'executionHostId'
 >
 
+/** Match project-group ordering: user rank, then name. */
 export function compareFolderWorkspacesForDisplay(
   left: FolderWorkspaceDisplayOrder,
   right: FolderWorkspaceDisplayOrder

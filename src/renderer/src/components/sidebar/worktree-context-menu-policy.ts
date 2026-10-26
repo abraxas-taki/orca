@@ -1,4 +1,5 @@
 import type { AppState } from '@/store/types'
+import type { Repo } from '../../../../shared/repo-types'
 import type {
   WorkspaceStatus,
   WorkspaceStatusDefinition,
@@ -120,10 +121,19 @@ export function getWorktreeParentPickerAnchor(
   return scope
 }
 
-export {
-  isContextWorktreeDeletable,
-  shouldRemoveProjectFromContextMenu
-} from '../../../../shared/worktree-delete-policy'
+export function shouldRemoveProjectFromContextMenu(
+  repo: Pick<Repo, 'id'> | null | undefined,
+  worktree: Pick<Worktree, 'isMainWorktree'>
+): boolean {
+  return repo != null && worktree.isMainWorktree
+}
+
+export function isContextWorktreeDeletable(
+  worktree: Pick<Worktree, 'isMainWorktree'>,
+  repo: Pick<Repo, 'kind'> | null | undefined
+): boolean {
+  return repo != null && !worktree.isMainWorktree
+}
 
 function findSidebarVirtualRowByKey(sidebar: Element, rowKey: string): HTMLElement | null {
   return (

@@ -1,4 +1,3 @@
-import { shouldRemoveProjectFromContextMenu } from '../../../src/shared/worktree-delete-policy'
 import { openExternalLink } from '../platform/external-link'
 import { Pressable, Text, View } from 'react-native'
 import { Moon, Pin, PinOff } from 'lucide-react-native'
@@ -122,23 +121,18 @@ export function HostScreenOverlays({ controller }: { controller: HostScreenContr
                         state.setActionTarget(null)
                       }
                     },
-                    // Older hosts omit isMainWorktree; the host still refuses a primary checkout.
-                    shouldRemoveProjectFromContextMenu(
-                      { id: actionTarget.repoId },
-                      { isMainWorktree: actionTarget.isMainWorktree === true }
-                    )
-                      ? {
-                          label: 'Delete',
-                          destructive: true,
-                          disabled: true,
-                          hint: "Primary worktree — can't be deleted. Remove the project instead.",
-                          onPress: () => {}
-                        }
-                      : {
-                          label: 'Delete',
-                          destructive: true,
-                          onPress: () => state.setConfirmDelete(actionTarget)
-                        }
+                    {
+                      label: 'Delete',
+                      destructive: true,
+                      onPress: () => state.setConfirmDelete(actionTarget),
+                      // Like desktop, git can't remove a primary checkout; older hosts omit the flag.
+                      ...(actionTarget.isMainWorktree === true
+                        ? {
+                            disabled: true,
+                            hint: "Primary worktree — can't be deleted. Remove the project instead."
+                          }
+                        : {})
+                    }
                   ]
                 : []
             }
