@@ -30,6 +30,8 @@ import { attachTermObservers } from './term-observers'
 import { applyTerminalTheme } from './terminal-theme'
 import { attachWebglAddon, cancelWebglContextRecovery } from './webgl-recovery'
 import { afterWritesDrained, enqueueWrite, pumpWrites, resetWriteQueue } from './write-queue'
+import { DESKTOP_TERMINAL_SCROLLBACK_ROWS_DEFAULT } from '../../../../src/shared/terminal-scrollback-policy'
+import { activateOrcaTerminalUnicodeProvider } from '../../../../src/shared/terminal-unicode-provider'
 
 function openTerminal(scope: TerminalDocumentScope, cols: number, rows: number) {
   const term = scope.createTerminal({
@@ -41,7 +43,7 @@ function openTerminal(scope: TerminalDocumentScope, cols: number, rows: number) 
     fontSize: fontPxForScale(scope.currentTextScale),
     fontWeight: '300',
     fontWeightBold: '500',
-    scrollback: 5000,
+    scrollback: DESKTOP_TERMINAL_SCROLLBACK_ROWS_DEFAULT,
     // Parser query replies need stdin enabled; native still validates their grammar.
     disableStdin: false,
     cursorBlink: MOBILE_TERMINAL_CARET_OPTIONS.cursorBlink,
@@ -60,7 +62,7 @@ function openTerminal(scope: TerminalDocumentScope, cols: number, rows: number) 
     const unicodeAddon = scope.createUnicode11Addon()
     if (unicodeAddon) {
       term.loadAddon(unicodeAddon)
-      term.unicode.activeVersion = '11'
+      activateOrcaTerminalUnicodeProvider(term)
     }
   } catch {}
   return term

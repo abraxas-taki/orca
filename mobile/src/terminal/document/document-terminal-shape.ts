@@ -1,3 +1,5 @@
+import type { IUnicodeHandling, IUnicodeVersionProvider } from '@xterm/xterm'
+
 // Describe only xterm members the document consumes; native globals and embedded imports satisfy the same seam.
 
 export type TerminalOscLinkService = { getLinkData?: (id: number) => { uri?: string } | undefined }
@@ -6,6 +8,7 @@ export type TerminalDocumentCore = {
   _renderService?: { dimensions?: { css: { cell: { height: number; width: number } } } }
   _oscLinkService?: TerminalOscLinkService
   _inputHandler?: { _oscLinkService?: TerminalOscLinkService }
+  unicodeService?: { _providers?: Record<string, IUnicodeVersionProvider> }
 }
 
 export type TerminalInitialOscLink = {
@@ -68,7 +71,7 @@ export type TerminalDocumentTerminal = {
   getSelection?: () => string
   select: (col: number, row: number, length: number) => void
   clearSelection: () => void
-  readonly unicode: { activeVersion: string }
+  readonly unicode: IUnicodeHandling
   attachCustomKeyEventHandler: (handler: () => boolean) => void
   onData: (listener: (data: string) => void) => TerminalDocumentDisposable
   readonly parser?: {
