@@ -89,8 +89,8 @@ export function useMobileStructuredSendWithOutcome(args: {
     stateRef,
     stopping
   } = args
-  // Sends whose request is still out: a command waits behind them, as on desktop.
-  const sendsInFlight = useRef(0)
+  // Each send whose request is still out, by its chat: a command waits behind them, as on desktop.
+  const sendsInFlight = useRef(new Map<string, string>())
   return useCallback(
     async (
       text: string,
@@ -133,7 +133,7 @@ export function useMobileStructuredSendWithOutcome(args: {
             ),
             background: tasks.show || tasks.isMonitoring,
             backgroundTasksRunning: tasks.isMonitoring,
-            sending: sendsInFlight.current > 0
+            sending: [...sendsInFlight.current.values()].includes(sessionId)
           }
         },
         startFailures: () => agentSessionVisibleFailureFacts(stateRef.current.items),
@@ -169,7 +169,7 @@ export function useMobileStructuredSendWithOutcome(args: {
       }
       // Wait for pending picks so the send carries this chat’s settled options.
       const options = sendOptions?.()
-      sendsInFlight.current += 1
+      sendsInFlight.current.set(send.clientMessageId, sessionId)
       const outcome = await sendMobileStructuredAgentSessionMessage({
         client,
         sessionId,
@@ -186,7 +186,7 @@ export function useMobileStructuredSendWithOutcome(args: {
           accept({ ...send, ...(cursor ? { recordedCursor: cursor } : {}) }, images),
         onError: onSendError
       }).finally(() => {
-        sendsInFlight.current -= 1
+        sendsInFlight.current.delete(send.clientMessageId)
       })
       if (outcome === 'unknown') {
         hold(send)

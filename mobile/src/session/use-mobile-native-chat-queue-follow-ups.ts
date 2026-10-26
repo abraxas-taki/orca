@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react'
 import { nativeChatQueueFollowUpsRead } from '../transport/settings-read-operations'
 import type { RpcClient } from '../transport/rpc-client'
 
-// Read once per connection: the phone has no settings stream, and on is today's default.
+// Read per connection and chat: the phone has no settings stream, and on is today's default.
 export function useMobileNativeChatQueueFollowUps(
   client: RpcClient | null,
-  connected: boolean
+  connected: boolean,
+  sessionId: string | null
 ): boolean {
   const [queueFollowUps, setQueueFollowUps] = useState(true)
   useEffect(() => {
-    if (!client || !connected) {
+    if (!client || !connected || !sessionId) {
       return
     }
     let stale = false
@@ -27,6 +28,6 @@ export function useMobileNativeChatQueueFollowUps(
     return () => {
       stale = true
     }
-  }, [client, connected])
+  }, [client, connected, sessionId])
   return queueFollowUps
 }
