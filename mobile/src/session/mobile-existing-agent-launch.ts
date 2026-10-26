@@ -79,6 +79,7 @@ export async function launchAgentInExistingWorkspace(args: {
   launchSource?: string
   reservation?: MobileAgentLaunchReservation
   placement?: AgentLaunchPlacement
+  agentArgs?: string
   mintOperationId?: () => string
 }): Promise<MobileExistingAgentLaunch> {
   if (!supportsMobileExistingAgentLaunch(args.hostCapabilities)) {
@@ -91,6 +92,7 @@ export async function launchAgentInExistingWorkspace(args: {
     ...(args.prompt ? { prompt: args.prompt } : {}),
     ...(args.launchSource ? { launchSource: args.launchSource } : {}),
     ...(args.placement ? { placement: args.placement } : {}),
+    ...(args.agentArgs !== undefined ? { agentArgs: args.agentArgs } : {}),
     ...(args.reservation
       ? {
           paneKey: makePaneKey(args.reservation.pane.tabId, args.reservation.pane.leafId),

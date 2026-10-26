@@ -164,7 +164,7 @@ describe('launchAgentWithPrompt', () => {
     })
   })
 
-  it("never sends the action's saved agent arguments; the agent's defaults apply", async () => {
+  it("sends the action's saved agent arguments, like desktop", async () => {
     const { client, sendRequest } = hostClient({
       settings: {
         defaultTuiAgent: 'claude',
@@ -173,8 +173,7 @@ describe('launchAgentWithPrompt', () => {
       launch: launchedWith({ delivery: 'submit', outcome: 'handed-to-terminal' })
     })
     await run(client)
-    expect(launchParams(sendRequest)).toMatchObject({ agent: 'claude' })
-    expect(launchParams(sendRequest)).not.toHaveProperty('agentArgs')
+    expect(launchParams(sendRequest)).toMatchObject({ agent: 'claude', agentArgs: '--model opus' })
   })
 
   it('refuses rather than swaps when the saved agent is not on this host', async () => {

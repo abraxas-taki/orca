@@ -10,13 +10,13 @@ import type { MobilePrActions } from '../../session/use-mobile-pr-actions'
 import {
   checkOutcome,
   checkOutcomeToken,
-  checkStatusLabel,
   firstFailingCheckKey,
   prCheckKey,
   prChecksSummaryLabel,
-  sortPRChecks,
   summarizePRChecks
 } from './pr-checks-presentation'
+import { sortChecksBySeverity } from '../../../../src/shared/pr-check-severity-order'
+import { getCheckStatusLabel } from '../../../../src/shared/pr-check-status-label'
 import { statusColor } from './pr-sidebar-status-color'
 import { PRSection } from './PRSection'
 import { PRCheckDetailView, type DetailEntry } from './PRCheckDetail'
@@ -58,7 +58,7 @@ export function PRChecksSection({
   actions,
   triage
 }: Props) {
-  const sorted = sortPRChecks(checks)
+  const sorted = sortChecksBySeverity(checks)
   const summary = summarizePRChecks(checks)
   const rerunBusy = actions?.isBusy({ kind: 'rerun' }) ?? false
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -236,7 +236,7 @@ export function PRChecksSection({
               </View>
               {/* Show status word/open-on-host without requiring expansion, matching desktop. */}
               <Text style={[styles.rowStatus, { color: statusColor(token) }]} numberOfLines={1}>
-                {checkStatusLabel(check)}
+                {getCheckStatusLabel(check)}
               </Text>
               {url ? (
                 <Pressable

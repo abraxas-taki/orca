@@ -73,7 +73,8 @@ export async function launchAgentWithPrompt(args: {
     hostCapabilities: args.hostCapabilities,
     worktreeId: args.worktreeId,
     agent: resolved.agent,
-    // Leave agent arguments to host defaults because applicability depends on the host-selected route and shell.
+    // Like desktop, the action's saved arguments apply; the host checks them for its own shell.
+    ...(recipe?.agentArgs !== undefined ? { agentArgs: recipe.agentArgs } : {}),
     prompt: { text, delivery: 'submit' },
     launchSource: args.launchSource
   })
