@@ -103,7 +103,11 @@ export function collectRuntimeWorktreePtyAgentSources(args: {
       continue
     }
     const worktreeId = mirroredWorktreeId ?? source.worktreeId
-    sources.push({ ...source, tabId, worktreeId })
+    const hasLivePty =
+      source.ptyId !== undefined ||
+      args.connectedPtyEvidence.paneKeys.has(source.paneKey) ||
+      (tabId !== undefined && args.connectedPtyEvidence.tabIds.has(tabId))
+    sources.push({ ...source, tabId, worktreeId, ...(hasLivePty ? { hasLivePty: true } : {}) })
   }
   return sources
 }

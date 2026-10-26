@@ -1,3 +1,4 @@
+import { resolveRepoBadgeColor } from '../../../src/shared/repo-badge-color'
 import { getRepoExecutionHostId, parseExecutionHostId } from '../../../src/shared/execution-host'
 import {
   getHostContextLabel,
@@ -42,8 +43,8 @@ export function getTaskRepoDetail(
   return `${getHostContextLabel(hostId, sources)} · ${repo.path}`
 }
 
-export function getRepoBadgeColor(repo: RepoSummary | undefined, fallbackName: string): string {
-  return repo?.badgeColor || repoColor(repo?.displayName ?? fallbackName)
+export function getRepoBadgeColor(repo: RepoSummary | undefined): string {
+  return resolveRepoBadgeColor(repo?.badgeColor)
 }
 
 export function setupSourceLabel(source: string | null | undefined): string {
@@ -65,7 +66,7 @@ export function taskRepositoryMeta(
     return {
       key: item.source.repoId,
       label: repo?.displayName ?? item.source.repoName,
-      color: getRepoBadgeColor(repo, item.source.repoName)
+      color: getRepoBadgeColor(repo)
     }
   }
   if (item.provider === 'gitlabTodo') {

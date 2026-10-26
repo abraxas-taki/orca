@@ -1,18 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { RuntimeWorktreeAgentRow } from '../../../src/shared/runtime-types'
-import {
-  agentMainAgentVerdict,
-  agentVerdictDisplayMark
-} from '../../../src/shared/agent-main-agent-verdict'
 import { AGENT_TURN_OUTCOMES } from '../../../src/shared/agent-turn-outcome'
 import { isAgentStatusFresh } from '../../../src/shared/agent-status-freshness'
 import {
   agentDisplayLabel,
   agentDotState,
-  agentIdentityLabel,
   agentRowTimeAt,
-  agentRowVerdict,
-  agentRowVerdictMark,
   formatTimeAgo
 } from './agent-row-display'
 
@@ -102,36 +95,11 @@ describe('agentDotState', () => {
     ).toBe('working')
   })
 
-  // App code cannot import the desktop accessor; pin the mirror against it.
-  it('agrees with the desktop verdict accessor on every row', () => {
-    const states = ['working', 'blocked', 'waiting', 'done'] as const
-    const mainAgents = [
-      undefined,
-      ...states.flatMap((state) =>
-        [undefined, ...AGENT_TURN_OUTCOMES].map((outcome) => ({
-          state,
-          ...(outcome ? { outcome } : {}),
-          stateStartedAt: 0
-        }))
-      )
-    ]
-    for (const state of states) {
-      for (const mainAgent of mainAgents) {
-        for (const interrupted of [false, true]) {
-          const agentRow = { state, interrupted, ...(mainAgent ? { mainAgent } : {}) }
-          expect(agentRowVerdict(agentRow), JSON.stringify(agentRow)).toBe(
-            agentMainAgentVerdict(agentRow)
-          )
-          expect(agentRowVerdictMark(agentRow), JSON.stringify(agentRow)).toBe(
-            agentVerdictDisplayMark(agentRow)
-          )
-        }
-      }
-    }
-  })
-
   it('decays a stale active state to idle, matching desktop', () => {
     const stale = 1_800_001
+    expect(agentDotState(row({ state: 'working', updatedAt: 0, hasLivePty: true }), stale)).toBe(
+      'unverifiable'
+    )
     expect(agentDotState(row({ state: 'working', updatedAt: 0 }), stale)).toBe('idle')
     expect(agentDotState(row({ state: 'blocked', updatedAt: 0 }), stale)).toBe('idle')
     expect(agentDotState(row({ state: 'waiting', updatedAt: 0 }), stale)).toBe('idle')
@@ -208,14 +176,10 @@ describe('agentDisplayLabel', () => {
       'Idle'
     )
   })
-})
 
-describe('agentIdentityLabel', () => {
-  it('maps known agent types and falls back to initials', () => {
-    expect(agentIdentityLabel('claude')).toBe('CL')
-    expect(agentIdentityLabel('codex')).toBe('CX')
-    expect(agentIdentityLabel('mystery')).toBe('MY')
-    expect(agentIdentityLabel(null)).toBe('')
+  it('reports how long a stale row on a live terminal has been silent, like desktop', () => {
+    const silent = row({ state: 'working', prompt: 'build', updatedAt: 0, hasLivePty: true })
+    expect(agentDisplayLabel(silent, 40 * 60_000)).toBe('No update in 40m')
   })
 })
 

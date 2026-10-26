@@ -48,9 +48,14 @@ export function getFolderWorkspaceLaneKey(
 }
 
 /** Match project-group ordering: user rank, then name. */
+type FolderWorkspaceDisplayOrder = Pick<
+  FolderWorkspace,
+  'id' | 'name' | 'sortOrder' | 'manualOrder' | 'executionHostId'
+>
+
 export function compareFolderWorkspacesForDisplay(
-  left: FolderWorkspace,
-  right: FolderWorkspace
+  left: FolderWorkspaceDisplayOrder,
+  right: FolderWorkspaceDisplayOrder
 ): number {
   const leftOrder = left.manualOrder ?? left.sortOrder
   const rightOrder = right.manualOrder ?? right.sortOrder
