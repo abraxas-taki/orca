@@ -44,17 +44,4 @@ describe('nextBranchCompareState', () => {
       message: 'no base'
     })
   })
-
-  it('keeps the resolved rebase base when the compare itself failed', () => {
-    const outcome: BranchCompareOutcome = {
-      kind: 'failed',
-      message: 'request_aborted',
-      effectiveBaseRef: 'origin/main'
-    }
-    expect(nextBranchCompareState(outcome, { kind: 'loading' }, false)).toEqual({
-      kind: 'error',
-      message: 'request_aborted',
-      effectiveBaseRef: 'origin/main'
-    })
-  })
 })

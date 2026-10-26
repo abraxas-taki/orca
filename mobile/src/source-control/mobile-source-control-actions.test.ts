@@ -91,7 +91,7 @@ describe('buildMobileSourceControlActions', () => {
     expect(actions.every((action) => action.disabled)).toBe(true)
   })
 
-  it('shows the shared row title as the hint for a disabled row', () => {
+  it('explains why a disabled row is disabled', () => {
     const actions = buildMobileSourceControlActions(
       args({ decision: decision({ stagedCount: 0 }) })
     )

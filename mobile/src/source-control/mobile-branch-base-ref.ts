@@ -48,17 +48,20 @@ export async function resolveMobileBranchBaseRefs(
     : null
 
   // Desktop's resolution; the default is fetched only when nothing is pinned.
-  const effectiveBaseRef =
-    resolveSourceControlBaseRef({ worktreeBaseRef, repoBaseRef }) ??
-    (await readDefaultBaseRef(client, repoId))
-  const compareBaseRef = resolveSourceControlCompareBaseRef({
+  const upstreamCompareBaseRef = resolveSourceControlCompareBaseRef({
     enabled: compare?.compareAgainstUpstream === true,
     worktreeBaseRef,
     repoBaseRef,
     upstreamName: compare?.upstreamName,
-    fallbackBaseRef: effectiveBaseRef
+    fallbackBaseRef: null
   })
-  return { compareBaseRef, effectiveBaseRef }
+  const effectiveBaseRef =
+    resolveSourceControlBaseRef({ worktreeBaseRef, repoBaseRef }) ??
+    // An upstream compare does not need the default, so its lookup failing only loses the rebase target.
+    (upstreamCompareBaseRef
+      ? await readDefaultBaseRef(client, repoId).catch(() => null)
+      : await readDefaultBaseRef(client, repoId))
+  return { compareBaseRef: upstreamCompareBaseRef ?? effectiveBaseRef, effectiveBaseRef }
 }
 
 async function readDefaultBaseRef(
