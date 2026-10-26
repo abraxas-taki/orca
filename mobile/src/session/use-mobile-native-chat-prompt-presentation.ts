@@ -45,8 +45,7 @@ export function useMobileNativeChatPromptPresentation({
     occurrenceKey: promptKey === null ? null : JSON.stringify([scopeKey, sessionKey, promptKey]),
     permission: showPrompt || collapsed ? permission : null,
     collapsePrompt,
-    collapsed:
-      collapsed && permission ? { title: permission.title, expand: expandPrompt } : null,
+    collapsed: collapsed && permission ? { title: permission.title, expand: expandPrompt } : null,
     respondPermission: respond
   }
 }

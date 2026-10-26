@@ -1,6 +1,9 @@
 import { pendingStructuredSessionPrompts } from '../../../src/shared/structured-agent-session-message-projection'
 import type { StructuredAgentSessionState } from '../../../src/shared/structured-agent-session-reducer'
-import type { StructuredApprovalItem, StructuredQuestionItem } from './mobile-structured-agent-prompts'
+import type {
+  StructuredApprovalItem,
+  StructuredQuestionItem
+} from './mobile-structured-agent-prompts'
 
 type PromptState = Pick<
   StructuredAgentSessionState,

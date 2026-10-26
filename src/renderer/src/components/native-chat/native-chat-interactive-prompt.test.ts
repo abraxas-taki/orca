@@ -105,7 +105,6 @@ describe('parseApprovalFromStatus translated labels', () => {
   })
 })
 
-
 describe('formatAskAnswer', () => {
   it('joins selected option labels per question, one line each', () => {
     const prompt: AskPrompt = {

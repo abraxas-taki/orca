@@ -290,7 +290,11 @@ describe('useMobileStructuredPromptResponses', () => {
         )
       })
 
-      expect(sentFields(sent)).toEqual({ itemId: 'item-s', expectedRevision: 3, optionId: 'notes:' })
+      expect(sentFields(sent)).toEqual({
+        itemId: 'item-s',
+        expectedRevision: 3,
+        optionId: 'notes:'
+      })
     })
 
     it('tries structured answers for an answer too long to pack while support is unknown', async () => {
