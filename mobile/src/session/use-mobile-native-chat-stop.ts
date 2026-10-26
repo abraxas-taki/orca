@@ -8,6 +8,7 @@ import { openMobileNativeChatSendBudget } from './native-chat/mobile-native-chat
 import { nativeChatStopSendsSecondEscape } from '../../../src/shared/native-chat-agent-support'
 import { NATIVE_CHAT_QUESTION_STEP_MS } from '../../../src/shared/native-chat-answer-stepping'
 
+// Resolves false only when no Escape could have landed, so the chat may offer Stop again.
 export function useMobileNativeChatStop(args: {
   client: RpcClient | null
   enabled: boolean
@@ -17,7 +18,7 @@ export function useMobileNativeChatStop(args: {
   streamIdentity: string
   cancelPending: () => void
   onSendError: (message: string) => void
-}): () => void {
+}): () => Promise<boolean> {
   const {
     client,
     enabled,
@@ -54,7 +55,7 @@ export function useMobileNativeChatStop(args: {
     const handle = handleRef.current
     if (!client || !handle || !enabled) {
       onSendError('Stop not sent (terminal not ready)')
-      return
+      return Promise.resolve(false)
     }
     cancelPending()
     generationRef.current += 1
@@ -67,13 +68,16 @@ export function useMobileNativeChatStop(args: {
     let sawAccepted = false
     let sawUnknown = false
     let sawRejected = false
+    let settle!: (sent: boolean) => void
+    const verdict = new Promise<boolean>((resolve) => {
+      settle = resolve
+    })
     const reportIfSettled = (): void => {
-      if (
-        generationRef.current !== generation ||
-        pending > 0 ||
-        sawAccepted ||
-        (!sawUnknown && !sawRejected)
-      ) {
+      if (pending > 0) {
+        return
+      }
+      settle(sawAccepted || sawUnknown || !sawRejected)
+      if (generationRef.current !== generation || sawAccepted || (!sawUnknown && !sawRejected)) {
         return
       }
       // Lost-ack/cutover Escape may have stopped work; report uncertainty instead of inviting a second key.
@@ -136,7 +140,7 @@ export function useMobileNativeChatStop(args: {
     if (!nativeChatStopSendsSecondEscape(agentRef.current)) {
       pending -= 1
       reportIfSettled()
-      return
+      return verdict
     }
     dropSecondEscapeRef.current = () => {
       pending -= 1
@@ -150,6 +154,7 @@ export function useMobileNativeChatStop(args: {
       pending -= 1
       reportIfSettled()
     }, NATIVE_CHAT_QUESTION_STEP_MS)
+    return verdict
   }, [
     agentRef,
     cancelPending,

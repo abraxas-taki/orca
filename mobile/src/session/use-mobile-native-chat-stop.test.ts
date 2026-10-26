@@ -13,7 +13,7 @@ vi.mock('../terminal/worker-terminal-takeover-report', () => ({
 
 describe('useMobileNativeChatStop', () => {
   let renderer: ReactTestRenderer | null = null
-  let stop: (() => void) | null = null
+  let stop: (() => Promise<boolean>) | null = null
   const sendRequest = vi.fn()
   const onSendError = vi.fn()
 
@@ -74,7 +74,7 @@ describe('useMobileNativeChatStop', () => {
   ])('cancels the delayed second Escape when %s', async (_case, enabled, streamIdentity) => {
     await render(true, 'stream-1')
 
-    act(() => stop?.())
+    act(() => void stop?.())
     expect(sendRequest).toHaveBeenCalledTimes(1)
 
     await render(enabled as boolean, streamIdentity as string)
@@ -93,7 +93,7 @@ describe('useMobileNativeChatStop', () => {
     agent = stopAgent
     await render(true, 'stream-1')
 
-    act(() => stop?.())
+    act(() => void stop?.())
     await act(async () => {
       await vi.runAllTimersAsync()
     })
@@ -101,11 +101,33 @@ describe('useMobileNativeChatStop', () => {
     expect(sendRequest).toHaveBeenCalledTimes(count)
   })
 
+  it.each([
+    ['a definite rejection', new Error('disconnected'), false],
+    ['a lost ack', markRpcDeliveryUnknown(new Error('rpc timeout')), true]
+  ])(
+    'settles the Stop as possibly sent only when it was not refused: %s',
+    async (_case, error, sent) => {
+      agent = 'claude'
+      sendRequest.mockRejectedValue(error)
+      await render(true, 'stream-1')
+
+      let verdict: Promise<boolean> | undefined
+      act(() => {
+        verdict = stop?.()
+      })
+      await act(async () => {
+        await vi.runAllTimersAsync()
+      })
+
+      await expect(verdict).resolves.toBe(sent)
+    }
+  )
+
   it('handles a rejected Escape without leaking an unhandled rejection', async () => {
     sendRequest.mockRejectedValue(new Error('disconnected'))
     await render(true, 'stream-1')
 
-    act(() => stop?.())
+    act(() => void stop?.())
     await act(async () => {
       await Promise.resolve()
       await vi.runAllTimersAsync()
@@ -122,7 +144,7 @@ describe('useMobileNativeChatStop', () => {
     sendRequest.mockResolvedValue(response)
     await render(true, 'stream-1')
 
-    act(() => stop?.())
+    act(() => void stop?.())
     await act(async () => {
       await vi.runAllTimersAsync()
     })
@@ -141,7 +163,7 @@ describe('useMobileNativeChatStop', () => {
     sendRequest.mockRejectedValue(makeError())
     await render(true, 'stream-1')
 
-    act(() => stop?.())
+    act(() => void stop?.())
     await act(async () => {
       await Promise.resolve()
       await vi.runAllTimersAsync()
@@ -166,7 +188,7 @@ describe('useMobileNativeChatStop', () => {
     })
     await render(true, 'stream-1')
 
-    act(() => stop?.())
+    act(() => void stop?.())
     await act(async () => {
       await Promise.resolve()
       await vi.runAllTimersAsync()
@@ -187,8 +209,8 @@ describe('useMobileNativeChatStop', () => {
       .mockResolvedValue({ ok: true, result: { send: { accepted: true } } })
     await render(true, 'stream-1')
 
-    act(() => stop?.())
-    act(() => stop?.())
+    act(() => void stop?.())
+    act(() => void stop?.())
     await act(async () => {
       await vi.runAllTimersAsync()
     })
@@ -203,7 +225,7 @@ describe('useMobileNativeChatStop', () => {
   it('reports the takeover once an Escape is accepted', async () => {
     await render(true, 'stream-1')
 
-    act(() => stop?.())
+    act(() => void stop?.())
     await act(async () => {
       await vi.runAllTimersAsync()
     })
@@ -218,7 +240,7 @@ describe('useMobileNativeChatStop', () => {
     sendRequest.mockResolvedValue({ ok: true, result: { send: { accepted: false } } })
     await render(true, 'stream-1')
 
-    act(() => stop?.())
+    act(() => void stop?.())
     await act(async () => {
       await vi.runAllTimersAsync()
     })

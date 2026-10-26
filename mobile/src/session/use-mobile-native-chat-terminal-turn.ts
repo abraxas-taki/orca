@@ -42,7 +42,7 @@ export function useMobileNativeChatTerminalTurn(args: {
   hasPending: boolean
   hasPromptCard: boolean
   scopeKey: string
-  stop: () => void
+  stop: () => Promise<boolean>
 }): MobileNativeChatTerminalTurn {
   const { status, resolution, hasPending, hasPromptCard, scopeKey, stop } = args
   const messages = args.session?.messages ?? NO_MESSAGES
@@ -62,7 +62,8 @@ export function useMobileNativeChatTerminalTurn(args: {
   // Throttle status-part previews to avoid reparsing the whole accumulated markdown per part.
   const streamingText = useThrottledLatestValue(
     deriveNativeChatStreamingText({
-      messages,
+      // A pending echo is the transcript's tail on desktop, so no earlier reply can hide the preview.
+      messages: hasPending ? NO_MESSAGES : messages,
       previewText: status?.lastAssistantMessage,
       working: liveWorking,
       previewIsToolOutput: status?.lastAssistantMessageIsToolOutput === true
@@ -90,8 +91,13 @@ export function useMobileNativeChatTerminalTurn(args: {
   }
   const interrupted = suppressed !== null
   const stopTurn = useCallback(() => {
-    setSuppression({ scopeKey, epoch: stateStartedAt })
-    stop()
+    const pressed = { scopeKey, epoch: stateStartedAt }
+    setSuppression(pressed)
+    void stop().then((sent) => {
+      if (!sent) {
+        setSuppression((current) => (current === pressed ? null : current))
+      }
+    })
   }, [scopeKey, stateStartedAt, stop])
 
   const turn = resolveNativeChatTerminalTurn({
