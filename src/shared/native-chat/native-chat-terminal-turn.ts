@@ -1,15 +1,11 @@
-import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
-import {
-  isInterruptedStatusMessage,
-  type NativeChatMessage
-} from '../../../../shared/native-chat-types'
-import type {
-  NativeChatSettledTurn,
-  NativeChatSettledTurns
-} from '../../../../shared/native-chat-turn-status'
-import { isNoiseMessage } from '../../../../shared/native-chat-noise'
-import type { NativeChatAwaitingInput } from './NativeChatMessageList'
+import type { AgentStatusEntry } from '../agent-status-types'
+import { isInterruptedStatusMessage, type NativeChatMessage } from '../native-chat-types'
+import type { NativeChatSettledTurn, NativeChatSettledTurns } from '../native-chat-turn-status'
+import { isNoiseMessage } from '../native-chat-noise'
 import { shouldShowNativeChatWorking } from './native-chat-working-suppression'
+
+/** shown prompts have a card in this pane; unshown prompts require input in the agent’s terminal. */
+export type NativeChatAwaitingInput = 'shown' | 'unshown'
 
 export type NativeChatTerminalTurn = {
   /** The agent is generating: drives Stop-vs-Send and the streaming preview. */
@@ -109,4 +105,24 @@ export function nativeChatTranscriptSettledTurns(
     turn = { id: message.id, startedAt: message.timestamp, endedAt: null }
   }
   return settled
+}
+
+/** Overlay the host's latest-turn timing on transcript durations once the turn settles. */
+export function nativeChatTerminalSettledTurns(args: {
+  transcriptSettled: NativeChatSettledTurns
+  latestTurnId: string | null
+  latestWorkedSeconds: number | null | undefined
+  turnStartedAt: number | null
+  turnActive: boolean
+}): NativeChatSettledTurns {
+  const { transcriptSettled, latestTurnId, latestWorkedSeconds, turnStartedAt, turnActive } = args
+  if (turnActive || latestWorkedSeconds === undefined || latestTurnId === null) {
+    return transcriptSettled
+  }
+  return new Map(transcriptSettled).set(
+    latestTurnId,
+    latestWorkedSeconds === null || turnStartedAt === null
+      ? null
+      : { startedAt: turnStartedAt, workedSeconds: latestWorkedSeconds }
+  )
 }

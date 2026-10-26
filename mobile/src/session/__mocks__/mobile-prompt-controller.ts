@@ -143,9 +143,6 @@ vi.mock('../native-chat/composer/use-mobile-native-chat-composer-tray', () => ({
   NO_COMPOSER_TRAY: {},
   useMobileNativeChatComposerTray: () => ({})
 }))
-vi.mock('../native-chat/use-mobile-native-chat-streaming-bubble', () => ({
-  useMobileNativeChatStreamingBubble: () => null
-}))
 
 let tree: ReactTestRenderer | null = null
 let controller: MobileNativeChatController

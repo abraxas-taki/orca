@@ -1,13 +1,15 @@
 // Reconcile live working state with provider turn boundaries so a dropped final hook cannot leave Stop stuck.
 
-import type { AgentStatusState } from '../../../../shared/agent-status-types'
+import type { AgentStatusEntry, AgentStatusState } from '../agent-status-types'
+import { isAgentStatusFresh } from '../agent-status-freshness'
 import type {
   AgentType,
   NativeChatMessage,
   NativeChatSession,
   NativeChatSessionStatus,
   NativeChatTurnLifecycle
-} from '../../../../shared/native-chat-types'
+} from '../native-chat-types'
+import { LIFECYCLE_CLOCK_SKEW_SLACK_MS } from '../native-chat-clock-skew'
 
 export type NativeChatLiveMergeInput = {
   /** Already deduped, ordered, and transcript-normalized by the live assembler. */
@@ -30,8 +32,12 @@ export type NativeChatLiveMergeInput = {
   error?: string
 }
 
+export type NativeChatLiveMergedSession = NativeChatSession & { hookAwaitingInput: boolean }
+
 /** Errors win; working hooks override loading until their turn ends, with provider lifecycle settling dropped Stop hooks. */
-export function mergeNativeChatLiveSession(input: NativeChatLiveMergeInput): NativeChatSession {
+export function mergeNativeChatLiveSession(
+  input: NativeChatLiveMergeInput
+): NativeChatLiveMergedSession {
   const {
     messages,
     sessionId,
@@ -44,8 +50,13 @@ export function mergeNativeChatLiveSession(input: NativeChatLiveMergeInput): Nat
     loading,
     error
   } = input
+  const hookAwaitingInput = nativeChatHookAwaitsInput(
+    hookState,
+    stateStartedAt,
+    transcriptLifecycle
+  )
   if (error) {
-    return { messages, status: 'error', sessionId, agent, error }
+    return { messages, status: 'error', sessionId, agent, error, hookAwaitingInput }
   }
 
   const status = liveStatusOverride(
@@ -58,14 +69,42 @@ export function mergeNativeChatLiveSession(input: NativeChatLiveMergeInput): Nat
   )
   // Keep Stop/activity live while loading; view-state selection separately holds empty transcripts on their loading surface.
   if (loading && status !== 'working') {
-    return { messages, status: 'loading', sessionId, agent }
+    return { messages, status: 'loading', sessionId, agent, hookAwaitingInput }
   }
   return {
     messages,
     status: status ?? (messages.length === 0 ? 'empty' : 'ready'),
     sessionId,
-    agent
+    agent,
+    hookAwaitingInput
   }
+}
+
+/** Restored nonterminal rows need a live hook confirmation before they may keep chat busy. */
+export function resolveNativeChatHookState(
+  entry:
+    | Pick<AgentStatusEntry, 'state' | 'workingMode' | 'updatedAt' | 'restoredUnconfirmed'>
+    | undefined
+    | null,
+  now = Date.now()
+): AgentStatusState | null {
+  if (!entry || !isAgentStatusFresh(entry, now)) {
+    return null
+  }
+  return entry.state === 'working' && entry.workingMode === 'monitoring' ? null : entry.state
+}
+
+/** Only children started in this parent epoch may delay settlement; missed stops and reused panes leave stale roster entries. */
+export function nativeChatHookHasWorkingSubagents(
+  entry: Pick<AgentStatusEntry, 'stateStartedAt' | 'subagents'> | undefined | null
+): boolean {
+  const epochStart = entry?.stateStartedAt
+  return (
+    entry?.subagents?.some(
+      (subagent) =>
+        subagent.state === 'working' && (epochStart == null || subagent.startedAt >= epochStart)
+    ) ?? false
+  )
 }
 
 /** blocked/waiting needs human input; a transcript terminal marker can clear waits whose interrupt emitted no hook. */
@@ -79,9 +118,6 @@ export function nativeChatHookAwaitsInput(
     !lifecycleTerminatesCurrentTurn(transcriptLifecycle, stateStartedAt)
   )
 }
-
-/** Slack for comparing transcript timestamps to hook receipt times across hosts. */
-export const LIFECYCLE_CLOCK_SKEW_SLACK_MS = 2_000
 
 /** omp retries its own agent_end hook, so trailing mid-run prose/tool rows cannot stand in for a lost end signal. */
 function hookDeliversTurnEnd(agent: AgentType): boolean {

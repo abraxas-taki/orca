@@ -1,6 +1,6 @@
 import type { NativeChatMessage } from '../../../../shared/native-chat-types'
 import type { NativeChatLaunchDraft } from '@/lib/native-chat-launch-prompt'
-import { LIFECYCLE_CLOCK_SKEW_SLACK_MS } from './native-chat-live-status'
+import { LIFECYCLE_CLOCK_SKEW_SLACK_MS } from '../../../../shared/native-chat-clock-skew'
 
 /** A new tail turn proves resolution without timestamps; older-history prepends cannot advance it. */
 export type NativeChatLaunchDraftTurnBaseline = {

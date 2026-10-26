@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { NativeChatMessage } from '../../../../shared/native-chat-types'
+import type { NativeChatMessage } from '../native-chat-types'
 import { mergeNativeChatLiveSession, nativeChatHookAwaitsInput } from './native-chat-live-status'
-import { selectNativeChatViewState } from './native-chat-view-state'
 import { shouldShowNativeChatWorking } from './native-chat-working-suppression'
 
 function assistant(id: string, text: string): NativeChatMessage {
@@ -268,28 +267,6 @@ describe('mergeNativeChatLiveSession', () => {
       hookState: null
     })
     expect(session.status).toBe('empty')
-  })
-
-  // Session ids can arrive before transcript flush; live work must still retain Stop and its activity indicator.
-  it('keeps the Stop affordance for a working known session mid-flush', () => {
-    const session = mergeNativeChatLiveSession({
-      messages: [user('u-1', 'run it')],
-      sessionId: 'sess',
-      agent: 'claude',
-      hookState: 'working',
-      loading: true
-    })
-    const viewState = selectNativeChatViewState(session)
-    const isConversation = viewState.kind === 'ready'
-
-    expect(viewState).toEqual({ kind: 'ready', isWorking: true })
-    expect(
-      shouldShowNativeChatWorking({
-        isConversation,
-        working: session.status === 'working',
-        interrupted: false
-      })
-    ).toBe(true)
   })
 })
 

@@ -683,10 +683,11 @@ describe('useMobileNativeChatController ask dismissal across a transcript reload
   })
 })
 
-describe('useMobileNativeChatController streaming scope', () => {
+describe('useMobileNativeChatController terminal turn', () => {
   let renderer: ReactTestRenderer | null = null
   let controller: MobileNativeChatController | null = null
   const clientStub = { sendRequest: vi.fn() }
+  const turnStartedAt = 1_700_000_000_000
 
   const workingTab = {
     type: 'terminal',
@@ -698,7 +699,10 @@ describe('useMobileNativeChatController streaming scope', () => {
       workingMode: undefined as 'monitoring' | undefined,
       agentType: 'claude',
       lastAssistantMessage: 'Partial reply',
-      providerSession: { id: 'session-1' }
+      providerSession: { id: 'session-1' },
+      updatedAt: Date.now(),
+      stateStartedAt: turnStartedAt,
+      turnStartedAt
     },
     isActive: true
   }
@@ -721,9 +725,14 @@ describe('useMobileNativeChatController streaming scope', () => {
     return null
   }
 
+  function rerender(): void {
+    act(() => renderer?.update(createElement(Harness)))
+  }
+
   beforeEach(() => {
     viewMode.isTabChatView = () => true
     workingTab.agentStatus.workingMode = undefined
+    workingTab.agentStatus.stateStartedAt = turnStartedAt
     act(() => {
       renderer = create(createElement(Harness))
     })
@@ -734,44 +743,52 @@ describe('useMobileNativeChatController streaming scope', () => {
     renderer = null
     controller = null
     viewMode.isTabChatView = () => true
+    Reflect.deleteProperty(sessionState, 'transcriptLifecycle')
   })
 
-  it('holds the stream scope and liveness while the user peeks at the terminal', () => {
-    expect(controller?.showNativeChat).toBe(true)
+  it('runs the turn clock and streams the hook preview while the agent works', () => {
     expect(controller?.nativeChatAgentWorking).toBe(true)
-    const scopeKey = controller?.nativeChatStreamScopeKey
-    expect(scopeKey).toContain('session-1')
-    expect(controller?.nativeChatStreamLive).toBe(true)
-
-    viewMode.isTabChatView = () => false
-    act(() => renderer?.update(createElement(Harness)))
-
-    expect(controller?.showNativeChat).toBe(false)
-    expect(controller?.nativeChatAgentWorking).toBe(false)
-    expect(controller?.nativeChatStreamScopeKey).toBe(scopeKey)
-    expect(controller?.nativeChatStreamLive).toBe(true)
+    expect(controller?.nativeChatCanStop).toBe(true)
+    expect(controller?.nativeChatStreamingText).toBe('Partial reply')
+    expect(controller?.nativeChatWorkingStartedAt).toBe(turnStartedAt)
   })
 
   it('treats passive monitoring as outside the foreground turn', () => {
     workingTab.agentStatus.workingMode = 'monitoring'
-    act(() => renderer?.update(createElement(Harness)))
+    rerender()
 
     expect(controller?.nativeChatAgentWorking).toBe(false)
-    expect(controller?.nativeChatStreamLive).toBe(false)
     expect(controller?.nativeChatStreamingText).toBeUndefined()
     expect(controller?.nativeChatSessionOptions?.isWorking).toBe(false)
   })
 
-  it('keeps the delayed-send route guard view-gated, unlike the stream scope', () => {
+  it("ends working at the transcript's turn end when the final hook never came", () => {
+    Object.assign(sessionState, {
+      transcriptLifecycle: { state: 'completed', turnId: 't1', timestamp: turnStartedAt + 30_000 }
+    })
+    rerender()
+
+    expect(controller?.nativeChatAgentWorking).toBe(false)
+    expect(controller?.nativeChatCanStop).toBe(false)
+  })
+
+  it('holds Stop until the agent starts a newer turn', () => {
+    act(() => controller?.handleNativeChatStop())
+    expect(controller?.nativeChatCanStop).toBe(false)
+
+    workingTab.agentStatus.stateStartedAt = turnStartedAt + 60_000
+    rerender()
+    expect(controller?.nativeChatCanStop).toBe(true)
+  })
+
+  it('keeps the delayed-send route guard view-gated', () => {
     const before = answerSendArgs.at(-1)?.streamIdentity
-    expect(before).toBe(controller?.nativeChatStreamScopeKey)
+    expect(before).toContain('term-1')
 
     viewMode.isTabChatView = () => false
-    act(() => renderer?.update(createElement(Harness)))
+    rerender()
 
-    const after = answerSendArgs.at(-1)?.streamIdentity
-    expect(after).not.toBe(before)
-    expect(after).not.toContain('session-1')
-    expect(controller?.nativeChatStreamScopeKey).toBe(before)
+    expect(answerSendArgs.at(-1)?.streamIdentity).not.toBe(before)
+    expect(controller?.nativeChatAgentWorking).toBe(false)
   })
 })

@@ -9,6 +9,7 @@ import type {
   NativeChatSettledTurns
 } from '../../../src/shared/native-chat-turn-status'
 import type { NativeChatTurnJournal } from '../../../src/shared/native-chat-turn-membership'
+import type { NativeChatAwaitingInput } from '../../../src/shared/native-chat/native-chat-terminal-turn'
 import type { NativeChatResolvedPrompt } from '../../../src/shared/native-chat-resolution-receipt'
 import type { MobileNativeChatSendOutcome } from './native-chat/mobile-native-chat-send'
 import type { MobileNativeChatCommandRefusalCauses } from './native-chat/use-mobile-native-chat-send-error'
@@ -37,6 +38,9 @@ export type MobileNativeChatController = {
   nativeChatVisualSource: MobileNativeChatVisualSource | null
   nativeChatItemSource: MobileNativeChatVisualSource | null
   nativeChatAgentWorking: boolean
+  /** Working or waiting on the reader: keeps the turn clock running. */
+  nativeChatTurnActive: boolean
+  nativeChatAwaitingInput: NativeChatAwaitingInput | null
   nativeChatTurnIndicator: NativeChatLiveTurnIndicator | null
   nativeChatWorkingStartedAt: number | null
   nativeChatSettledTurns: NativeChatSettledTurns | null
@@ -46,9 +50,6 @@ export type MobileNativeChatController = {
   nativeChatCommandRefusalCauses: MobileNativeChatCommandRefusalCauses
   nativeChatCanStop: boolean
   nativeChatStreamingText?: string
-  // Keep stream liveness independent of whether chat is visible.
-  nativeChatStreamLive: boolean
-  nativeChatStreamScopeKey: string
   nativeChatPermission: MobileChatPermission | null
   // A new prompt occurrence resets local card submission state only.
   nativeChatPromptKey: string | null

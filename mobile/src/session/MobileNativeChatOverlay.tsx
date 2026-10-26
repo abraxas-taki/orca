@@ -5,7 +5,6 @@ import { foldMobileNativeChatMessages } from './mobile-native-chat-render-data'
 import type { MobileNativeChatImageAttachments } from './native-chat/composer/use-mobile-native-chat-image-attachments'
 import type { MobileNativeChatController } from './use-mobile-native-chat-controller'
 import type { MobileNativeChatStructuredComposer } from './native-chat/composer/MobileNativeChatComposer'
-import { useMobileNativeChatStreamingBubble } from './native-chat/use-mobile-native-chat-streaming-bubble'
 import { useMobileNativeChatComposerTray } from './native-chat/composer/use-mobile-native-chat-composer-tray'
 import { useMobileNativeChatVisualRenderer } from './MobileNativeChatVisual'
 import { MobileNativeChatVisualContext } from './mobile-native-chat-visual-context'
@@ -69,12 +68,7 @@ export function MobileNativeChatOverlay({
     () => foldMobileNativeChatMessages(fullContent.messages, agent),
     [fullContent.messages, agent]
   )
-  const streaming = useMobileNativeChatStreamingBubble(
-    folded,
-    controller.nativeChatStreamingText,
-    controller.nativeChatStreamScopeKey,
-    controller.nativeChatStreamLive
-  )
+  const streaming = controller.nativeChatStreamingText ?? null
   const queued = controller.nativeChatQueued
   const composerTray = useMobileNativeChatComposerTray({
     queued: {
@@ -137,7 +131,8 @@ export function MobileNativeChatOverlay({
                 error={session.error}
                 readFailedFinally={session.readFailedFinally === true}
                 agent={controller.nativeChatAgent}
-                agentWorking={controller.nativeChatAgentWorking}
+                agentWorking={controller.nativeChatTurnActive}
+                awaitingInput={controller.nativeChatAwaitingInput}
                 canStop={controller.nativeChatCanStop}
                 structuredActivityUi={controller.nativeChatStructured}
                 turnIndicator={controller.nativeChatTurnIndicator}

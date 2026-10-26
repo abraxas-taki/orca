@@ -39,6 +39,8 @@ import {
   useSettledMobileNativeChatInputLock
 } from './native-chat/use-mobile-native-chat-input-lease'
 import { MobileNativeChatLiveLine } from './MobileNativeChatLiveLine'
+import { MobileNativeChatAwaitingInputRow } from './MobileNativeChatAwaitingInputRow'
+import type { NativeChatAwaitingInput } from '../../../src/shared/native-chat/native-chat-terminal-turn'
 import { MobileNativeChatFloatingControls } from './MobileNativeChatFloatingControls'
 import type { PendingNativeChatImage } from './native-chat/composer/mobile-native-chat-image-attachment'
 import {
@@ -70,8 +72,10 @@ type Props = ComposerTrayProps & {
   // Permanent read failure replaces the pane because further chat actions cannot succeed.
   readFailedFinally?: boolean
   agent?: string | null
+  /** The turn is live: working, or waiting on the reader. */
   agentWorking?: boolean
   canStop?: boolean
+  awaitingInput?: NativeChatAwaitingInput | null
   structuredActivityUi?: boolean
   turnIndicator?: NativeChatLiveTurnIndicator | null
   workingStartedAt?: number | null
@@ -142,6 +146,7 @@ export function MobileNativeChatView({
   agent,
   agentWorking,
   canStop = agentWorking,
+  awaitingInput = null,
   structuredActivityUi = false,
   turnIndicator = null,
   workingStartedAt,
@@ -248,7 +253,7 @@ export function MobileNativeChatView({
 
   const turns = useMobileNativeChatTurnDisclosure({
     messages: data,
-    enabled: structuredActivityUi,
+    enabled: true,
     isWorking: agentWorking === true,
     workingStartedAt,
     settledTurns,
@@ -279,14 +284,17 @@ export function MobileNativeChatView({
     actionablePromptIds
   })
 
-  const liveStatus = turns.liveLine ? (
-    <MobileNativeChatLiveLine
-      line={turns.liveLine}
-      onToggleReasoning={turns.onToggleReasoning}
-      fontScale={fontScale}
-      onOpenFile={onOpenFile}
-    />
-  ) : null
+  const liveStatus =
+    awaitingInput === 'unshown' ? (
+      <MobileNativeChatAwaitingInputRow subject={null} pending fontScale={fontScale} />
+    ) : turns.liveLine ? (
+      <MobileNativeChatLiveLine
+        line={turns.liveLine}
+        onToggleReasoning={turns.onToggleReasoning}
+        fontScale={fontScale}
+        onOpenFile={onOpenFile}
+      />
+    ) : null
 
   const header = mobileNativeChatListHeader(hasMore, olderPages, loadEarlier)
   // Changing text scale relays out every row, so preserve the page’s reading anchor.
