@@ -36,6 +36,20 @@ const ORDER_BY_PRESET: Record<
   'staged-first': ['staged', 'unstaged']
 }
 
+/** Rows by staging area, each sorted conflicts-first then by path, as Source Control lists them. */
+export function groupSourceControlEntries<T extends GitStatusEntry>(
+  entries: readonly T[]
+): SourceControlEntryGroups<T> {
+  const groups: SourceControlEntryGroups<T> = { staged: [], unstaged: [], untracked: [] }
+  for (const entry of entries) {
+    groups[entry.area].push(entry)
+  }
+  for (const area of SOURCE_CONTROL_AREAS) {
+    groups[area].sort(compareGitStatusEntries)
+  }
+  return groups
+}
+
 export function resolveSourceControlGroupOrder(
   value: SourceControlGroupOrder | null | undefined
 ): readonly SourceControlDisplaySectionArea[] {

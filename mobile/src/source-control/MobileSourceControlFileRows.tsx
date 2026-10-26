@@ -75,7 +75,7 @@ export function makeRenderFileRow(state: RowState) {
         </View>
         {rowBusy ? (
           <ActivityIndicator size="small" color={colors.textSecondary} />
-        ) : item.area === 'staged' ? (
+        ) : item.canUnstage ? (
           <Pressable
             style={({ pressed }) => [
               styles.iconButton,

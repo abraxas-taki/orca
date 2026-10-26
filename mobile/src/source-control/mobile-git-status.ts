@@ -1,17 +1,17 @@
 import type { GitFileStatus, GitStagingArea } from '../../../src/shared/git-status-types'
-import { compareGitStatusEntries } from '../../../src/shared/git-status-sort'
 import {
   buildSourceControlDisplaySections,
+  groupSourceControlEntries,
   resolveSourceControlGroupOrder,
   type SourceControlDisplaySectionArea,
-  type SourceControlDisplaySectionId,
-  type SourceControlEntryGroups
+  type SourceControlDisplaySectionId
 } from '../../../src/shared/source-control-section-order'
+import { getUnstageAllPaths } from '../../../src/shared/source-control-discard-all-sequence'
 import {
-  getUnstageAllPaths,
-  isStageableStatusEntry
-} from '../../../src/shared/source-control-discard-all-sequence'
-import { canDiscardStatusEntry } from '../../../src/shared/source-control-entry-actions'
+  canDiscardStatusEntry,
+  canStageStatusEntry,
+  canUnstageStatusEntry
+} from '../../../src/shared/source-control-entry-actions'
 import type { SourceControlGroupOrder } from '../../../src/shared/ui-chrome-types'
 import type { RpcResponse } from '../transport/types'
 import type {
@@ -52,29 +52,17 @@ const SECTION_TITLES: Record<SourceControlDisplaySectionId, string> = {
 // Desktop's sections: conflicts pinned on top, then the user's group order, sorted like desktop.
 export function buildMobileSourceControlSections<TEntry extends MobileGitStatusEntry>(
   entries: readonly TEntry[],
-  groupOrder?: SourceControlGroupOrder | null
+  groupOrder: SourceControlGroupOrder
 ): MobileSourceControlSection<TEntry>[] {
-  const groups: SourceControlEntryGroups<KnownAreaEntry<TEntry>> = {
-    staged: [],
-    unstaged: [],
-    untracked: []
-  }
-  for (const entry of entries) {
-    if (hasKnownArea(entry)) {
-      groups[entry.area].push(entry)
-    }
-  }
-  for (const group of Object.values(groups)) {
-    group.sort(compareGitStatusEntries)
-  }
-  return buildSourceControlDisplaySections(groups, resolveSourceControlGroupOrder(groupOrder)).map(
-    (section) => ({
-      id: section.id,
-      area: section.area,
-      title: SECTION_TITLES[section.id],
-      data: section.items
-    })
-  )
+  return buildSourceControlDisplaySections(
+    groupSourceControlEntries(entries.filter(hasKnownArea)),
+    resolveSourceControlGroupOrder(groupOrder)
+  ).map((section) => ({
+    id: section.id,
+    area: section.area,
+    title: SECTION_TITLES[section.id],
+    data: section.items
+  }))
 }
 
 export function countStagedEntries(entries: readonly MobileGitStatusEntry[]): number {
@@ -94,11 +82,15 @@ export function getUnstageablePaths(entries: readonly MobileGitStatusEntry[]): s
 }
 
 export function isMobileGitStageableEntry(entry: MobileGitStatusEntry): boolean {
-  return hasKnownArea(entry) && isStageableStatusEntry(entry)
+  return hasKnownArea(entry) && canStageStatusEntry(entry)
 }
 
 export function isMobileGitDiscardableEntry(entry: MobileGitStatusEntry): boolean {
   return hasKnownArea(entry) && canDiscardStatusEntry(entry)
+}
+
+export function isMobileGitUnstageableEntry(entry: MobileGitStatusEntry): boolean {
+  return hasKnownArea(entry) && canUnstageStatusEntry(entry)
 }
 
 // Unresolved conflicts cannot open as stable files; deletions can still show their pre-delete diff.

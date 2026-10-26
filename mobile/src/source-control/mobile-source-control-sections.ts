@@ -11,8 +11,9 @@ function useMobileSourceControlGroupOrder(
   client: RpcClient | null,
   connState: ConnectionState
 ): SourceControlGroupOrder {
-  const [groupOrder, setGroupOrder] = useState<SourceControlGroupOrder>(
-    DEFAULT_SOURCE_CONTROL_GROUP_ORDER
+  // Keyed by client so a new host never shows the previous host's order while its read is in flight.
+  const [read, setRead] = useState<{ client: RpcClient; order: SourceControlGroupOrder } | null>(
+    null
   )
   useEffect(() => {
     if (!client || connState !== 'connected') {
@@ -22,9 +23,9 @@ function useMobileSourceControlGroupOrder(
     void sourceControlGroupOrderRead
       .request(client)
       .then((response) => {
-        const read = sourceControlGroupOrderRead.interpret(response)
-        if (!stale && read.accepted) {
-          setGroupOrder(read.value)
+        const reply = sourceControlGroupOrderRead.interpret(response)
+        if (!stale && reply.accepted) {
+          setRead({ client, order: reply.value })
         }
       })
       .catch(() => {
@@ -34,7 +35,7 @@ function useMobileSourceControlGroupOrder(
       stale = true
     }
   }, [client, connState])
-  return groupOrder
+  return read && read.client === client ? read.order : DEFAULT_SOURCE_CONTROL_GROUP_ORDER
 }
 
 export function useMobileSourceControlSections<TEntry extends MobileGitStatusEntry>(

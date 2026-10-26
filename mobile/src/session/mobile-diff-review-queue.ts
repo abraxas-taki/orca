@@ -8,6 +8,7 @@ import type { MobileGitBranchChangeEntry } from '../source-control/mobile-branch
 import {
   isMobileGitDiscardableEntry,
   isMobileGitStageableEntry,
+  isMobileGitUnstageableEntry,
   type MobileGitFileStatus,
   type MobileGitStagingArea,
   type MobileGitStatusEntry
@@ -194,8 +195,8 @@ function statusEntryToQueueItem(
     added: entry.added,
     removed: entry.removed,
     canStage: isMobileGitStageableEntry(entry),
-    canUnstage: entry.area === 'staged',
-    canDiscard: isMobileGitDiscardableEntry(entry) && entry.area !== 'staged',
+    canUnstage: isMobileGitUnstageableEntry(entry),
+    canDiscard: isMobileGitDiscardableEntry(entry),
     isGeneratedOrLockFile: isGeneratedOrLockFile(entry.path),
     diffIdentity,
     ...counts,
