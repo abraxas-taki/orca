@@ -5,18 +5,29 @@ import { isLogicalClientCutoverError } from '../transport/stable-logical-rpc-cli
 import { nativeChatTerminalWrite } from './mobile-session-write-operations'
 import { reportWorkerTerminalUserInput } from '../terminal/worker-terminal-takeover-report'
 import { openMobileNativeChatSendBudget } from './native-chat/mobile-native-chat-send'
+import { nativeChatStopSendsSecondEscape } from '../../../src/shared/native-chat-agent-support'
+import { NATIVE_CHAT_QUESTION_STEP_MS } from '../../../src/shared/native-chat-answer-stepping'
 
 export function useMobileNativeChatStop(args: {
   client: RpcClient | null
   enabled: boolean
   handleRef: MutableRefObject<string | null>
   deviceTokenRef: MutableRefObject<string | null>
+  agentRef: MutableRefObject<string | null>
   streamIdentity: string
   cancelPending: () => void
   onSendError: (message: string) => void
 }): () => void {
-  const { client, enabled, handleRef, deviceTokenRef, streamIdentity, cancelPending, onSendError } =
-    args
+  const {
+    client,
+    enabled,
+    handleRef,
+    deviceTokenRef,
+    agentRef,
+    streamIdentity,
+    cancelPending,
+    onSendError
+  } = args
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const generationRef = useRef(0)
   // Settle a cancelled second Escape so first-write failure cannot wait forever for an unsent write.
@@ -122,19 +133,25 @@ export function useMobileNativeChatStop(args: {
         })
     }
     sendEscape()
+    if (!nativeChatStopSendsSecondEscape(agentRef.current)) {
+      pending -= 1
+      reportIfSettled()
+      return
+    }
     dropSecondEscapeRef.current = () => {
       pending -= 1
       reportIfSettled()
     }
-    // Pace Escape bytes so remote input cannot coalesce them away.
+    // Pace like desktop's answer steps so remote input cannot coalesce the two Escapes away.
     timerRef.current = setTimeout(() => {
       timerRef.current = null
       dropSecondEscapeRef.current = null
       sendEscape()
       pending -= 1
       reportIfSettled()
-    }, 80)
+    }, NATIVE_CHAT_QUESTION_STEP_MS)
   }, [
+    agentRef,
     cancelPending,
     cancelSecondEscape,
     client,

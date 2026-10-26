@@ -25,6 +25,7 @@ describe('useMobileNativeChatStop', () => {
     })
     onSendError.mockReset()
     reportWorkerTerminalUserInput.mockReset()
+    agent = 'opencode'
   })
 
   afterEach(() => {
@@ -33,6 +34,8 @@ describe('useMobileNativeChatStop', () => {
     stop = null
     vi.useRealTimers()
   })
+
+  let agent = 'opencode'
 
   function Harness({
     enabled,
@@ -46,6 +49,7 @@ describe('useMobileNativeChatStop', () => {
       enabled,
       handleRef: { current: 'terminal-1' },
       deviceTokenRef: { current: 'mobile-1' },
+      agentRef: { current: agent },
       streamIdentity,
       cancelPending: vi.fn(),
       onSendError
@@ -79,6 +83,22 @@ describe('useMobileNativeChatStop', () => {
     })
 
     expect(sendRequest).toHaveBeenCalledTimes(1)
+  })
+
+  it.each<[string, number]>([
+    ['claude', 1],
+    ['codex', 1],
+    ['opencode', 2]
+  ])('sends %s %i Escape(s) per Stop like desktop', async (stopAgent, count) => {
+    agent = stopAgent
+    await render(true, 'stream-1')
+
+    act(() => stop?.())
+    await act(async () => {
+      await vi.runAllTimersAsync()
+    })
+
+    expect(sendRequest).toHaveBeenCalledTimes(count)
   })
 
   it('handles a rejected Escape without leaking an unhandled rejection', async () => {
