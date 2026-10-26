@@ -12,7 +12,7 @@ function folderDisplayOrder(w: Worktree) {
 }
 
 // Like desktop, a lane lists its folder workspaces after its worktrees, by user rank then name.
-export function withFolderWorkspacesLast(worktrees: Worktree[]): Worktree[] {
+export function withFolderWorkspacesLast(worktrees: readonly Worktree[]): readonly Worktree[] {
   const folders = worktrees.filter((w) => w.workspaceKind === 'folder-workspace')
   if (folders.length === 0) {
     return worktrees

@@ -99,7 +99,9 @@ function makeSection(
 
 // Idle prompts have no recent output; live terminals or unread output still count as active.
 export function isWorktreeActive(
-  w: Pick<Worktree, 'hasHostSidebarActivity' | 'unread' | 'status' | 'liveTerminalCount'>
+  w: Pick<Worktree, 'hasHostSidebarActivity' | 'status' | 'liveTerminalCount'> & {
+    unread?: boolean
+  }
 ): boolean {
   if (w.hasHostSidebarActivity !== undefined) {
     return w.hasHostSidebarActivity
