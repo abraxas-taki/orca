@@ -13,6 +13,7 @@ const restoreRejectedDraft = vi.fn()
 const holdUnconfirmedSend = vi.fn()
 
 const viewMode = { isTabChatView: (_tabId: string) => true }
+let draftPending: { id: string }[] = []
 const sessionState = { messages: [] as unknown[], status: 'ready', transcriptLoading: false }
 const structuredSendWithOutcome = vi.fn()
 const structuredCancel = vi.fn()
@@ -109,7 +110,7 @@ vi.mock('./native-chat/composer/use-mobile-native-chat-drafts', () => ({
     return {
       composerText: '',
       setComposerText: vi.fn(),
-      pending: [],
+      pending: draftPending,
       imagePreviewsByMessageId: {},
       captureSendOrigin,
       readSeededLaunchDraft: () => null,
@@ -777,6 +778,19 @@ describe('useMobileNativeChatController terminal turn', () => {
     workingTab.agentStatus.stateStartedAt = turnStartedAt + 60_000
     rerender()
     expect(controller?.nativeChatCanStop).toBe(true)
+  })
+
+  it('ends the Stop hold once a new message is sent, as desktop does', () => {
+    act(() => controller?.handleNativeChatStop())
+    expect(controller?.nativeChatCanStop).toBe(false)
+
+    draftPending = [{ id: 'pending-1' }]
+    try {
+      rerender()
+      expect(controller?.nativeChatCanStop).toBe(true)
+    } finally {
+      draftPending = []
+    }
   })
 
   it('offers Stop again when the Escape definitely went nowhere', async () => {

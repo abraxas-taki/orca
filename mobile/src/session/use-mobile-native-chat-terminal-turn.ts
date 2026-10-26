@@ -39,12 +39,14 @@ export function useMobileNativeChatTerminalTurn(args: {
   resolution: Pick<MobileNativeChatResolution, 'agent' | 'sessionId'> | null
   /** The terminal chat's transcript; null for structured chats. */
   session: Pick<MobileNativeChatSession, 'messages' | 'transcriptLifecycle'> | null
-  hasPending: boolean
+  /** The newest pending echo; a new one is a new send, which ends Stop's suppression like desktop. */
+  latestPendingId: string | null
   hasPromptCard: boolean
   scopeKey: string
   stop: () => Promise<boolean>
 }): MobileNativeChatTerminalTurn {
-  const { status, resolution, hasPending, hasPromptCard, scopeKey, stop } = args
+  const { status, resolution, latestPendingId, hasPromptCard, scopeKey, stop } = args
+  const hasPending = latestPendingId !== null
   const messages = args.session?.messages ?? NO_MESSAGES
   const transcriptLifecycle = args.session?.transcriptLifecycle
   const hookState = resolveNativeChatHookState(status)
@@ -71,34 +73,38 @@ export function useMobileNativeChatTerminalTurn(args: {
     50
   )
 
-  // The working epoch a Stop suppressed; a newer epoch or the turn's end releases it.
-  const [suppression, setSuppression] = useState<{ scopeKey: string; epoch: number | null } | null>(
-    null
-  )
+  // The working epoch a Stop suppressed; a newer epoch, a new send or the turn's end releases it.
+  const [suppression, setSuppression] = useState<{
+    scopeKey: string
+    epoch: number | null
+    latestPendingId: string | null
+  } | null>(null)
   const suppressed = suppression?.scopeKey === scopeKey ? suppression : null
+  const sentSince = hasPending && latestPendingId !== suppressed?.latestPendingId
   if (
     suppressed &&
-    shouldClearNativeChatWorkingSuppression({
-      working: liveWorking,
-      interrupted: true,
-      workingEpoch: stateStartedAt,
-      previousWorkingEpoch: suppressed.epoch
-    })
+    (sentSince ||
+      shouldClearNativeChatWorkingSuppression({
+        working: liveWorking,
+        interrupted: true,
+        workingEpoch: stateStartedAt,
+        previousWorkingEpoch: suppressed.epoch
+      }))
   ) {
     setSuppression(null)
   } else if (suppressed && suppressed.epoch === null && stateStartedAt !== null) {
-    setSuppression({ scopeKey, epoch: stateStartedAt })
+    setSuppression({ ...suppressed, epoch: stateStartedAt })
   }
   const interrupted = suppressed !== null
   const stopTurn = useCallback(() => {
-    const pressed = { scopeKey, epoch: stateStartedAt }
+    const pressed = { scopeKey, epoch: stateStartedAt, latestPendingId }
     setSuppression(pressed)
     void stop().then((sent) => {
       if (!sent) {
         setSuppression((current) => (current === pressed ? null : current))
       }
     })
-  }, [scopeKey, stateStartedAt, stop])
+  }, [latestPendingId, scopeKey, stateStartedAt, stop])
 
   const turn = resolveNativeChatTerminalTurn({
     isConversation: messages.length > 0 || hasPending || streamingText !== undefined,

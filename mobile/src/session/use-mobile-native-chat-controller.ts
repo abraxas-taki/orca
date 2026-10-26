@@ -166,7 +166,7 @@ export function useMobileNativeChatController(args: {
     status: nativeChatStatus,
     resolution: activeChatResolution,
     session: activeChatStructured ? null : nativeChatSession,
-    hasPending: chatPending.length > 0,
+    latestPendingId: chatPending.at(-1)?.id ?? null,
     hasPromptCard: (legacyNativeChatPermission ?? nativeChatAskPrompt) != null,
     scopeKey: streamIdentity,
     stop: handleNativeChatStop
