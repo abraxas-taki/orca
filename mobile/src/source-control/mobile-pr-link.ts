@@ -13,7 +13,7 @@ import {
 
 export type MobilePrLinkOutcome = { ok: true } | { ok: false; error: string }
 
-export function buildWorktreeSetLinkParams(
+function buildWorktreeSetLinkParams(
   worktreeId: string,
   linkedPR: number | null
 ): RpcSendParams<'worktree.set'> {
