@@ -29,6 +29,11 @@ import {
 import type { WslOrcadConnection } from './wsl-orcad-connection'
 import { registerWslHost } from './wsl-host-registration'
 import type { WslOrcadConnectIntent, WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
+import {
+  forgetWslHostToWake,
+  forgetWslHostsToWake,
+  rememberWslHostsToWake
+} from './wsl-host-early-wake'
 
 /** `stopped` and `unreachable` rest on a confirmed running list; `unavailable` could not read it. */
 export type WslHostReachability = 'available' | 'unreachable' | 'stopped' | 'unavailable'
@@ -188,6 +193,7 @@ export class WslHostService {
         await connector.releaseHolder(record.distro)
       }
       removeWslHostEnvironment(this.deps.userDataPath(), environmentId)
+      forgetWslHostToWake(this.deps.userDataPath(), record.distro)
       this.visible.delete(environmentId)
       this.parked.delete(environmentId)
     } finally {
@@ -211,6 +217,7 @@ export class WslHostService {
       return
     }
     this.disableGeneration += 1
+    forgetWslHostsToWake(this.deps.userDataPath())
     for (const record of this.records()) {
       await connector.disconnect(record.distro)
       await connector.releaseHolder(record.distro)
@@ -276,14 +283,18 @@ export class WslHostService {
    * The user switched to a workspace on this host (or launch restored it focused): the one
    * non-explicit act that may boot its distro, and it lifts a park.
    */
-  focusHost(environmentId: string): void {
-    const record = this.recordForEnvironment(environmentId)
-    if (!record || !this.connector || !this.canRun() || this.removing.has(environmentId)) {
+  focusHost(environmentId: string | null): void {
+    const record = environmentId ? this.recordForEnvironment(environmentId) : null
+    const runnable =
+      record && this.connector && this.canRun() && !this.removing.has(record.environmentId)
+    // The next launch starts booting only this distro, early (none when off WSL or not runnable).
+    rememberWslHostsToWake(this.deps.userDataPath(), runnable ? [record.distro] : [])
+    if (!record || !runnable || !this.connector) {
       return
     }
-    this.parked.delete(environmentId)
+    this.parked.delete(record.environmentId)
     void this.connector
-      .reachability(record.distro, environmentId)
+      .reachability(record.distro, record.environmentId)
       .then((reachability) =>
         reachability === 'available' ? undefined : this.connector?.connect(record.distro)
       )
