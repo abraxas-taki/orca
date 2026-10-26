@@ -19,6 +19,8 @@ export function MobileNativeChatAskOptionRow({
 }): React.JSX.Element {
   return (
     <Pressable
+      accessibilityRole={multi ? 'checkbox' : 'radio'}
+      accessibilityState={{ checked: selected, disabled }}
       style={[styles.option, selected && styles.optionSelected]}
       disabled={disabled}
       onPress={onPress}
