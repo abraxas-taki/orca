@@ -27,6 +27,7 @@ export type WslHostConnector = {
   /** Ends the host's terminals, orcad and its terminal daemon; never boots a stopped distro. */
   stopServer(distro: string, environmentId: string): Promise<WslHostServerStop>
   releaseHolder(distro: string): Promise<void>
-  adoptHolders(): Promise<void>
+  /** Startup: keeps the holders an earlier run left and releases those `isWanted` refuses. */
+  adoptHolders(isWanted: (distro: string) => boolean): Promise<void>
   dispose(): Promise<void>
 }
