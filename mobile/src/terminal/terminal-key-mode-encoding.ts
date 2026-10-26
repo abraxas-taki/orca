@@ -15,7 +15,9 @@ export function encodeTerminalKeyForModes(bytes: string, modes: TerminalModes | 
       modifyOtherKeys: modes?.modifyOtherKeys ?? 0
     })
   }
-  // Match xterm's key encoder: DECCKM sends unmodified arrows, Home and End as SS3.
-  const cursorKey = modes?.applicationCursorKeysMode ? UNMODIFIED_CURSOR_KEY.exec(bytes) : null
+  // Match xterm's legacy encoder: DECCKM sends unmodified arrows, Home and End as SS3; its Kitty encoder keeps CSI.
+  const legacyApplicationCursor =
+    modes?.applicationCursorKeysMode === true && (modes.kittyKeyboardFlags ?? 0) === 0
+  const cursorKey = legacyApplicationCursor ? UNMODIFIED_CURSOR_KEY.exec(bytes) : null
   return cursorKey ? `\x1bO${cursorKey[1]}` : bytes
 }

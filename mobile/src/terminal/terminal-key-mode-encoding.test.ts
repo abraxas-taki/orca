@@ -20,6 +20,7 @@ describe('encodeTerminalKeyForModes', () => {
     expect(encodeTerminalKeyForModes('\x1b[H', decckm)).toBe('\x1bOH')
     expect(encodeTerminalKeyForModes('\x1b[1;5A', decckm)).toBe('\x1b[1;5A')
     expect(encodeTerminalKeyForModes('\x1b[A', MODES)).toBe('\x1b[A')
+    expect(encodeTerminalKeyForModes('\x1b[A', { ...decckm, kittyKeyboardFlags: 1 })).toBe('\x1b[A')
   })
 
   it('encodes Shift+Enter for the negotiated keyboard protocol', () => {

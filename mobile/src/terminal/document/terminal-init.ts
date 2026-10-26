@@ -131,13 +131,11 @@ export function init(
   scope.mouseEncodingKnown = false
   scope.sgrMouseMode = false
   scope.sgrMousePixelsMode = false
-  // Seed like desktop's snapshot path: replayed modes, then the host's proven Kitty flags.
   // lastEmittedModes stays what native last received, so a cleared snapshot still publishes its modes.
-  scope.keyboardModes.resetForSnapshot()
-  scope.keyboardModes.scanReplay(typeof initialData === 'string' ? initialData : '')
-  if (typeof kittyKeyboardFlags === 'number') {
-    scope.keyboardModes.restoreSnapshotFlags(kittyKeyboardFlags)
-  }
+  scope.keyboardModes.adoptSnapshot(
+    typeof initialData === 'string' ? initialData : '',
+    typeof kittyKeyboardFlags === 'number' ? kittyKeyboardFlags : undefined
+  )
   const replayData = normalizeInitialData(initialData)
   // Mirror only replayed modes after normal-buffer prefixes are discarded.
   updateMouseModeFromData(scope, replayData)
