@@ -4,10 +4,10 @@ import { windowsFsPath } from '../wsl/wsl-unc-drive-fs-path'
 import { readFile } from 'node:fs/promises'
 import type { Repo } from '../../shared/repo-types'
 import { getEffectiveHooks, hasHooksFile, hasUnrecognizedOrcaYamlKeys, loadHooks } from '../hooks'
-import {
-  getDefaultTabCommandTrustContent,
-  getEffectiveSetupRunPolicy
-} from '../effective-hook-config'
+import { getEffectiveSetupRunPolicy } from '../effective-hook-config'
+import { resolveHookCommandSourcePolicy } from '../../shared/hook-command-source-policy'
+import { getSetupConfig, getSetupTrustContent } from '../../shared/orca-hook-setup-config'
+import type { OrcaHooks } from '../../shared/orca-yaml-hook-types'
 import { isENOENT } from '../ipc/filesystem/filesystem-path-containment'
 import { isFolderRepo } from '../../shared/repo-kind'
 import { inspectSetupScriptImportCandidates } from '../../shared/setup-script-imports'
@@ -40,7 +40,9 @@ export class RuntimeRepositoryHooksCommands {
       hooks,
       setupRunPolicy: getEffectiveSetupRunPolicy(repo),
       source: hasFile ? ('orca.yaml' as const) : hooks ? ('legacy' as const) : null,
-      setupTrust: setupTrust(repo, getDefaultTabCommandTrustContent(sharedHooks))
+      // Why: `hooks` drops defaultTabs, so clients gate the setup choice on this instead.
+      setupConfig: isFolderRepo(repo) ? null : getSetupConfig(repo, sharedHooks),
+      setupTrust: setupTrust(repo, sharedHooks)
     }
   }
 
@@ -87,10 +89,13 @@ export class RuntimeRepositoryHooksCommands {
 
 function setupTrust(
   repo: Repo,
-  scriptContentValue: string | undefined
+  yamlHooks: OrcaHooks | null
 ): { contentHash: string; scriptContent: string } | undefined {
-  const scriptContent = scriptContentValue?.trim()
-  if (!scriptContent || repo.hookSettings?.commandSourcePolicy === 'local-only') {
+  const scriptContent = getSetupTrustContent(yamlHooks)
+  const sourcePolicy = resolveHookCommandSourcePolicy(repo.hookSettings?.commandSourcePolicy, {
+    hasLocalScript: Boolean(repo.hookSettings?.scripts.setup?.trim())
+  })
+  if (!scriptContent || sourcePolicy === 'local-only') {
     return undefined
   }
   return { contentHash: createHash('sha256').update(scriptContent).digest('hex'), scriptContent }

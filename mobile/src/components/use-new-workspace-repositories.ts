@@ -5,11 +5,11 @@ import { getCachedRepos, setCachedRepos } from '../cache/repo-cache'
 import { listHostRepos } from '../worktree/server-repos'
 import { useServerRepos } from '../worktree/use-server-repos'
 import { useLastVisitedWorktreeRepoId } from '../worktree/use-last-visited-worktree-repo'
+import { refreshMobileNewWorkspaceDialogSelectedRepo } from '../worktree/new-workspace-dialog-repo-selection'
 import {
-  getMobileNewWorkspaceDialogEligibleRepos,
-  refreshMobileNewWorkspaceDialogSelectedRepo,
-  resolveMobileNewWorkspaceDialogRepoId
-} from '../worktree/new-workspace-dialog-repo-selection'
+  getNewWorkspaceDialogEligibleRepos,
+  resolveNewWorkspaceDialogRepoId
+} from '../../../src/shared/new-workspace-dialog-repo'
 import type { MobileWorkspaceRepo } from './new-worktree-modal-types'
 
 const NO_SERVER_CLIENTS: ReadonlyMap<ExecutionHostId, RpcClient> = new Map()
@@ -37,9 +37,11 @@ export function useNewWorkspaceRepositories(args: {
   const lastVisitedRepo = useLastVisitedWorktreeRepoId(hostId, visible)
   const repos = useMemo(
     () =>
-      serverRepos.size === 0
-        ? desktopRepos
-        : [...desktopRepos, ...[...serverRepos.values()].flat()],
+      getNewWorkspaceDialogEligibleRepos(
+        serverRepos.size === 0
+          ? desktopRepos
+          : [...desktopRepos, ...[...serverRepos.values()].flat()]
+      ),
     [desktopRepos, serverRepos]
   )
   // Derive the pick so it follows updated listings and disappears when its host stops listing it.
@@ -52,9 +54,8 @@ export function useNewWorkspaceRepositories(args: {
     if (!visible || !lastVisitedRepo.loaded || selectedRepo || repos.length === 0) {
       return
     }
-    const eligibleRepos = getMobileNewWorkspaceDialogEligibleRepos(repos)
-    const preferredRepoId = resolveMobileNewWorkspaceDialogRepoId({
-      eligibleRepos,
+    const preferredRepoId = resolveNewWorkspaceDialogRepoId({
+      eligibleRepos: repos,
       activeRepoId: lastVisitedRepo.repoId
     })
     const preferredRepo = repos.find((repo) => repo.id === preferredRepoId) ?? null

@@ -128,6 +128,7 @@ function NewWorktreeModalContent(props: NewWorktreeModalProps) {
   )
   const createSubmit = useNewWorkspaceCreateSubmit({
     client,
+    repos,
     selectedRepo,
     selectedAgent: agentSelection.selectedAgent,
     setSelectedAgent: agentSelection.setSelectedAgent,
