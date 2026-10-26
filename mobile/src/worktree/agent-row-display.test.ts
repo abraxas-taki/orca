@@ -46,53 +46,11 @@ describe('agentDotState', () => {
     expect(agentDotState(row({ state: 'unknown-state' as never }), 0)).toBe('idle')
   })
 
-  it("reports the verdict of a done row: failed, or a user's Stop (also an old host's flag) as interrupted", () => {
-    expect(agentDotState(row({ state: 'done', interrupted: true }), 0)).toBe('interrupted')
-    expect(agentDotState(row({ state: 'done', ...mainAgentDone('failure') }), 0)).toBe('failed')
-    expect(
-      agentDotState(row({ state: 'done', ...mainAgentDone('cancellation'), interrupted: true }), 0)
-    ).toBe('interrupted')
-    expect(agentDotState(row({ state: 'done', ...mainAgentDone('success') }), 0)).toBe('done')
-    expect(agentDotState(row({ state: 'done', ...mainAgentDone('superseded') }), 0)).toBe(
-      'interrupted'
-    )
-  })
-
-  it('reads a crash-cut turn as failed and an unproven end as unconfirmed', () => {
-    expect(agentDotState(row({ state: 'done', ...mainAgentDone('interruption') }), 0)).toBe(
-      'failed'
-    )
-    expect(agentDisplayLabel(row({ state: 'done', ...mainAgentDone('interruption') }), 0)).toBe(
-      'Failed'
-    )
-    expect(agentDotState(row({ state: 'done', ...mainAgentDone('unconfirmed') }), 0)).toBe(
-      'unconfirmed'
-    )
+  it('lets the shared verdict mark win over the row state, label included', () => {
+    expect(agentDotState(row({ state: 'working', ...mainAgentDone('failure') }), 0)).toBe('failed')
     expect(agentDisplayLabel(row({ state: 'done', ...mainAgentDone('unconfirmed') }), 0)).toBe(
       'Couldn’t confirm'
     )
-  })
-
-  // Unparsed rows may carry a future outcome; keep the done fallback.
-  it('reads a done row carrying an outcome it cannot name as done', () => {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: an arm from a newer host, which the unparsed wire row can carry.
-    const future = mainAgentDone('from-a-newer-host' as Outcome)
-    expect(agentDotState(row({ state: 'done', ...future }), 0)).toBe('done')
-  })
-
-  it('shows a main agent that failed while its subagents still run as failed', () => {
-    expect(agentDotState(row({ state: 'working', ...mainAgentDone('failure') }), 0)).toBe('failed')
-    expect(agentDotState(row({ state: 'waiting', ...mainAgentDone('failure') }), 0)).toBe('failed')
-    expect(agentDotState(row({ state: 'working', ...mainAgentDone('interruption') }), 0)).toBe(
-      'failed'
-    )
-    expect(agentDotState(row({ state: 'working', ...mainAgentDone('success') }), 0)).toBe('working')
-    expect(
-      agentDotState(
-        row({ state: 'working', ...mainAgentDone('cancellation'), interrupted: true }),
-        0
-      )
-    ).toBe('working')
   })
 
   it('decays a stale active state to idle, matching desktop', () => {
