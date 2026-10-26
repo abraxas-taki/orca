@@ -5,8 +5,15 @@ import type { ConnectionState } from './types'
 
 // WorkspaceRoute supplies server context; null means unreachable, absent means desktop routing.
 export const WorkspaceServerContext = createContext<
-  { client: RpcClient | null; state: ConnectionState } | undefined
+  | { client: RpcClient | null; state: ConnectionState; desktopCapabilities: readonly string[] }
+  | undefined
 >(undefined)
+
+/** Relayed routes also need the paired desktop to forward the capability's methods. */
+export function useRelayedRouteAllows(capability: string): boolean {
+  const server = useContext(WorkspaceServerContext)
+  return server?.desktopCapabilities.includes(capability) ?? true
+}
 
 export function useWorkspaceClient(hostId: string | undefined): ReturnType<typeof useHostClient> {
   const host = useHostClient(hostId)

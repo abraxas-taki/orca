@@ -17,6 +17,7 @@ export function buildWorktreeSetLinkParams(
 export type WorktreeGitHubPRLink = {
   linkedPR: number | null
   suppressedGitHubPR: number | null
+  pushTargetBranch: string | null
 }
 
 export function buildWorktreeSetHostedReviewLinkParams(
@@ -106,7 +107,11 @@ export function unlinkMobilePr(
   )
 }
 
-const NO_GITHUB_PR_LINK: WorktreeGitHubPRLink = { linkedPR: null, suppressedGitHubPR: null }
+const NO_GITHUB_PR_LINK: WorktreeGitHubPRLink = {
+  linkedPR: null,
+  suppressedGitHubPR: null,
+  pushTargetBranch: null
+}
 
 // Persisted links recover closed/merged PRs that branch lookup no longer returns.
 export async function fetchWorktreeGitHubPRLink(
@@ -117,7 +122,11 @@ export async function fetchWorktreeGitHubPRLink(
     const reply = await worktreeSummaryRead.request(client, { worktree: `id:${worktreeId}` })
     const summary = worktreeSummaryRead.interpret(reply)
     return summary.accepted && summary.value
-      ? { linkedPR: summary.value.linkedPR, suppressedGitHubPR: summary.value.suppressedGitHubPR }
+      ? {
+          linkedPR: summary.value.linkedPR,
+          suppressedGitHubPR: summary.value.suppressedGitHubPR,
+          pushTargetBranch: summary.value.pushTargetBranch
+        }
       : NO_GITHUB_PR_LINK
   } catch {
     // A failed fallback read is a missing hint, not a fatal error.

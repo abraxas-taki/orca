@@ -13,11 +13,8 @@ import { githubHostedReviewFallbackPRNumber, prLookupHintKey } from './pr-result
 import { nextLookupGeneration } from '../lookup-generation-sequence'
 import { inflightPRRequests, prRequestGenerations } from './request-coordination'
 import { getGitHubSourceTarget, settingsForGitHubRepoOwner } from './work-item-routing'
-import {
-  findWorktreeById,
-  shouldApplyDivergedLinkedPRClear,
-  shouldClearDivergedLinkedMergedPR
-} from './worktree-refresh'
+import { findWorktreeById, shouldApplyDivergedLinkedPRClear } from './worktree-refresh'
+import { shouldClearDivergedLinkedMergedPR } from '../../../../shared/github/linked-pr-staleness'
 import { startPullRequestLookup } from './pull-request-execution'
 
 export const createPullRequestActions = (

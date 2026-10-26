@@ -8,10 +8,10 @@ import type { MobilePrActions } from '../../session/use-mobile-pr-actions'
 import { unlinkMobilePr } from '../../source-control/mobile-pr-link'
 import { ConfirmModal } from '../ConfirmModal'
 import { resolveGitHubPRMergeMethods } from '../../../../src/shared/github/pull-request-merge-methods'
-import { resolveGitHubPRMergeState } from '../../../../src/shared/github/pull-request-merge-state'
 import { MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY } from '../../../../src/shared/source-control-runtime-capabilities'
 import { useHostProtocolGates } from '../host-protocol-gates-context'
-import { PR_MERGE_STATE_COPY, resolvePrActionAvailability } from './pr-actions-state'
+import { useRelayedRouteAllows } from '../../transport/use-workspace-client'
+import { presentPrMerge, resolvePrActionAvailability } from './pr-actions-state'
 import { prActionsStyles as styles } from './pr-actions-styles'
 
 type Props = {
@@ -41,22 +41,21 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
   const state = actions.resolveState(pr.state)
   const autoMerge = actions.resolveAutoMerge(pr.autoMergeEnabled ?? false)
   const avail = resolvePrActionAvailability(state)
-  const mergeState = resolveGitHubPRMergeState({
-    ...pr,
-    state,
-    autoMergeEnabled: autoMerge || pr.autoMergeEnabled === true
-  })
-  const mergeBlockedCopy = mergeState.directMergeAvailable
-    ? null
-    : PR_MERGE_STATE_COPY[mergeState.kind]
-  // Older hosts reject this method from mobile.
+  const merge = presentPrMerge(
+    { ...pr, state, autoMergeEnabled: autoMerge || pr.autoMergeEnabled === true },
+    mergeMethods.defaultLabel
+  )
+  // Older hosts, or an older desktop relaying to a server, reject this method from mobile.
+  const relayAllowsMarkReady = useRelayedRouteAllows(MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY)
   const showMarkReady =
-    avail.canMarkReady && hostCapabilities.includes(MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY)
+    avail.canMarkReady &&
+    relayAllowsMarkReady &&
+    hostCapabilities.includes(MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY)
   const mergeBusy = actions.isBusy({ kind: 'merge' })
   const autoMergeBusy = actions.isBusy({ kind: 'autoMerge' })
   const stateBusy = actions.isBusy({ kind: 'state' })
   const unlinkBusy = unlinking || mergeBusy || autoMergeBusy || stateBusy
-  const showAutoMerge = mergeState.autoMergeAction !== null
+  const showAutoMerge = merge.showAutoMerge
   const showSecondary = avail.canClose || avail.canReopen || avail.canUnlink
   const actionError = unlinkError ?? actions.error
 
@@ -84,7 +83,7 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
     if (confirm?.kind === 'merge') {
       return {
         title: 'Merge pull request?',
-        message: `This will merge #${pr.number} into its base branch.`,
+        message: merge.confirmMessage,
         confirmLabel: 'Merge'
       }
     }
@@ -124,30 +123,26 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
           style={[
             styles.actionButton,
             styles.actionButtonMerge,
-            (mergeBusy || mergeBlockedCopy) && styles.actionButtonDisabled
+            (mergeBusy || !merge.enabled) && styles.actionButtonDisabled
           ]}
           onPress={() => {
             setUnlinkError(null)
             setConfirm({ kind: 'merge', method: effectiveMethod })
           }}
-          disabled={mergeBusy || mergeBlockedCopy !== null}
+          disabled={mergeBusy || !merge.enabled}
           accessibilityRole="button"
           accessibilityLabel="Merge pull request"
-          accessibilityHint={mergeBlockedCopy?.hint}
+          accessibilityHint={merge.hint ?? undefined}
         >
           {mergeBusy ? (
             <ActivityIndicator color={colors.onMergeGreen} />
           ) : (
             <GitMerge size={16} color={colors.onMergeGreen} strokeWidth={2.2} />
           )}
-          <Text style={[styles.actionButtonText, styles.actionButtonTextMerge]}>
-            {mergeBlockedCopy?.label ?? mergeMethods.defaultLabel}
-          </Text>
+          <Text style={[styles.actionButtonText, styles.actionButtonTextMerge]}>{merge.label}</Text>
         </Pressable>
       ) : null}
-      {avail.canMerge && mergeBlockedCopy ? (
-        <Text style={styles.actionHint}>{mergeBlockedCopy.hint}</Text>
-      ) : null}
+      {avail.canMerge && merge.hint ? <Text style={styles.actionHint}>{merge.hint}</Text> : null}
 
       {showMarkReady ? (
         <Pressable

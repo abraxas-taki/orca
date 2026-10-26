@@ -8361,7 +8361,8 @@
             "repo": "id:repo-9",
             "branch": "feature",
             "linkedPRNumber": null,
-            "fallbackPRNumber": null
+            "fallbackPRNumber": null,
+            "currentHeadOid": null
           },
           "reply": {
             "ok": true,
@@ -8611,7 +8612,8 @@
             "repo": "id:repo-9",
             "branch": "feature",
             "linkedPRNumber": null,
-            "fallbackPRNumber": null
+            "fallbackPRNumber": null,
+            "currentHeadOid": null
           },
           "reply": {
             "ok": true,
@@ -8635,7 +8637,8 @@
             "repo": "id:repo-9",
             "branch": "feature",
             "linkedPRNumber": null,
-            "fallbackPRNumber": null
+            "fallbackPRNumber": null,
+            "currentHeadOid": null
           },
           "reply": {
             "ok": true,
@@ -8661,7 +8664,8 @@
             "repo": "id:repo-9",
             "branch": "feature",
             "linkedPRNumber": null,
-            "fallbackPRNumber": null
+            "fallbackPRNumber": null,
+            "currentHeadOid": null
           },
           "reply": {
             "ok": true,
@@ -8728,7 +8732,8 @@
             "repo": "id:repo-9",
             "branch": "feature",
             "linkedPRNumber": null,
-            "fallbackPRNumber": 12
+            "fallbackPRNumber": 12,
+            "currentHeadOid": null
           },
           "paramsFollowDivergence": true,
           "reply": {
@@ -8829,7 +8834,8 @@
             "repo": "id:repo-9",
             "branch": "feature",
             "linkedPRNumber": null,
-            "fallbackPRNumber": 12
+            "fallbackPRNumber": 12,
+            "currentHeadOid": null
           },
           "paramsFollowDivergence": true,
           "reply": {

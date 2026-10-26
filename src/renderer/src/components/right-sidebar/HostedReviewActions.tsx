@@ -17,6 +17,7 @@ import type { Repo } from '../../../../shared/repo-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { resolveGitHubPRMergeMethods } from '../../../../shared/github/pull-request-merge-methods'
 import { getPullRequestMergeMethodLabel } from '@/components/github/pull-request-confirmation-copy'
+import { isGitHubPRStackDirectMergeAvailable } from '../../../../shared/github/pull-request-stack-merge'
 import { runWorktreeDelete } from '../sidebar/delete-worktree-flow'
 import { getDeleteStateForWorktreeHost } from '../sidebar/worktree-delete-state-host-match'
 import { presentGitLabMRMergeState } from './gitlab-mr-merge-state'
@@ -113,9 +114,12 @@ export default function HostedReviewActions({
               'auto.components.right.sidebar.HostedReviewActions.a32fe6dba6',
               'GitHub will merge this pull request and every pull request below it in the stack.'
             )),
-      directMergeAvailable:
-        !stackBlocker &&
-        (stackMergeScope.complete || presentation.directMergeAvailable || stackUsesMergeQueue),
+      directMergeAvailable: isGitHubPRStackDirectMergeAvailable({
+        scope: stackMergeScope,
+        blocked: stackBlocker !== null,
+        usesMergeQueue: stackUsesMergeQueue,
+        directMergeAvailable: presentation.directMergeAvailable
+      }),
       autoMergeAction: null
     }
   }, [githubPR, isGitLab, review, stackMergeLabel, stackMergeScope, stackUsesMergeQueue])

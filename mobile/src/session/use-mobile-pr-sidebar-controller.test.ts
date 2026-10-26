@@ -81,7 +81,11 @@ describe('loadPrSidebarData', () => {
   function deps(over: Partial<PrSidebarLoadDeps> = {}): PrSidebarLoadDeps {
     return {
       fetchForBranch: vi.fn(async () => ok<HostedReviewInfo | null>(ghInfo())),
-      fetchWorktreeGitHubPRLink: vi.fn(async () => ({ linkedPR: null, suppressedGitHubPR: null })),
+      fetchWorktreeGitHubPRLink: vi.fn(async () => ({
+        linkedPR: null,
+        suppressedGitHubPR: null,
+        pushTargetBranch: null
+      })),
       fetchPRForBranch: vi.fn(async () => ok<PRInfo | null>(PR)),
       fetchWorkItemDetails: vi.fn(async () => ok<GitHubWorkItemDetails | null>(DETAILS)),
       fetchPRChecks: vi.fn(async () => ok<PRCheckDetail[]>(CHECKS)),
@@ -104,7 +108,8 @@ describe('loadPrSidebarData', () => {
     expect(d.fetchPRForBranch).toHaveBeenCalledWith('w', {
       branch: 'feat',
       linkedPRNumber: null,
-      fallbackPRNumber: 7
+      fallbackPRNumber: 7,
+      currentHeadOid: 'sha-status'
     })
     expect(d.fetchPRChecks).toHaveBeenCalledWith('w', {
       prNumber: 7,
@@ -119,7 +124,8 @@ describe('loadPrSidebarData', () => {
     expect(d.fetchPRForBranch).toHaveBeenCalledWith('w', {
       branch: 'feat',
       linkedPRNumber: null,
-      fallbackPRNumber: null
+      fallbackPRNumber: null,
+      currentHeadOid: null
     })
   })
 
@@ -127,14 +133,19 @@ describe('loadPrSidebarData', () => {
     const merged = { ...PR, number: 42, state: 'merged' } as unknown as PRInfo
     const d = deps({
       fetchForBranch: vi.fn(async () => ok<HostedReviewInfo | null>(null)),
-      fetchWorktreeGitHubPRLink: vi.fn(async () => ({ linkedPR: 42, suppressedGitHubPR: null })),
+      fetchWorktreeGitHubPRLink: vi.fn(async () => ({
+        linkedPR: 42,
+        suppressedGitHubPR: null,
+        pushTargetBranch: null
+      })),
       fetchPRForBranch: vi.fn(async () => ok<PRInfo | null>(merged))
     })
     const out = await loadPrSidebarData(d, { worktreeId: 'w', branch: 'feat' })
     expect(d.fetchPRForBranch).toHaveBeenCalledWith('w', {
       branch: 'feat',
       linkedPRNumber: 42,
-      fallbackPRNumber: null
+      fallbackPRNumber: null,
+      currentHeadOid: null
     })
     expect(out).toEqual({
       kind: 'ready',
@@ -144,19 +155,58 @@ describe('loadPrSidebarData', () => {
 
   it('sends the explicit link over the branch PR, which stays only a fallback', async () => {
     const d = deps({
-      fetchWorktreeGitHubPRLink: vi.fn(async () => ({ linkedPR: 42, suppressedGitHubPR: null }))
+      fetchWorktreeGitHubPRLink: vi.fn(async () => ({
+        linkedPR: 42,
+        suppressedGitHubPR: null,
+        pushTargetBranch: null
+      }))
     })
     await loadPrSidebarData(d, { worktreeId: 'w', branch: 'feat' })
     expect(d.fetchPRForBranch).toHaveBeenCalledWith('w', {
       branch: 'feat',
       linkedPRNumber: 42,
-      fallbackPRNumber: null
+      fallbackPRNumber: null,
+      currentHeadOid: null
     })
+  })
+
+  it('re-resolves by branch when the linked merged PR no longer contains this head', async () => {
+    const stale: PRInfo = {
+      ...PR,
+      number: 42,
+      state: 'merged',
+      headSha: 'old',
+      headDivergedFromMergedPRAtOid: 'head-now'
+    }
+    const fetchPRForBranch = vi
+      .fn()
+      .mockResolvedValueOnce(ok<PRInfo | null>(stale))
+      .mockResolvedValueOnce(ok<PRInfo | null>(PR))
+    const d = deps({
+      fetchWorktreeGitHubPRLink: vi.fn(async () => ({
+        linkedPR: 42,
+        suppressedGitHubPR: null,
+        pushTargetBranch: null
+      })),
+      fetchPRForBranch
+    })
+    const out = await loadPrSidebarData(d, { worktreeId: 'w', branch: 'feat', headSha: 'head-now' })
+    expect(fetchPRForBranch).toHaveBeenLastCalledWith('w', {
+      branch: 'feat',
+      linkedPRNumber: null,
+      fallbackPRNumber: 7,
+      currentHeadOid: 'head-now'
+    })
+    expect(out).toMatchObject({ kind: 'ready', data: { pr: PR } })
   })
 
   it('hides the branch PR the user unlinked', async () => {
     const d = deps({
-      fetchWorktreeGitHubPRLink: vi.fn(async () => ({ linkedPR: null, suppressedGitHubPR: 7 }))
+      fetchWorktreeGitHubPRLink: vi.fn(async () => ({
+        linkedPR: null,
+        suppressedGitHubPR: 7,
+        pushTargetBranch: null
+      }))
     })
     expect(await loadPrSidebarData(d, { worktreeId: 'w', branch: 'feat' })).toEqual({
       kind: 'none'
@@ -169,13 +219,18 @@ describe('loadPrSidebarData', () => {
       fetchForBranch: vi.fn(async () =>
         ok<HostedReviewInfo | null>(ghInfo({ provider: 'gitlab', number: 99 }))
       ),
-      fetchWorktreeGitHubPRLink: vi.fn(async () => ({ linkedPR: null, suppressedGitHubPR: null }))
+      fetchWorktreeGitHubPRLink: vi.fn(async () => ({
+        linkedPR: null,
+        suppressedGitHubPR: null,
+        pushTargetBranch: null
+      }))
     })
     await loadPrSidebarData(d, { worktreeId: 'w', branch: 'feat' })
     expect(d.fetchPRForBranch).toHaveBeenCalledWith('w', {
       branch: 'feat',
       linkedPRNumber: null,
-      fallbackPRNumber: null
+      fallbackPRNumber: null,
+      currentHeadOid: null
     })
   })
 
@@ -241,7 +296,11 @@ describe('loadPrSidebarDetails (phase 2)', () => {
   function deps(over: Partial<PrSidebarLoadDeps> = {}): PrSidebarLoadDeps {
     return {
       fetchForBranch: vi.fn(async () => ok<HostedReviewInfo | null>(ghInfo())),
-      fetchWorktreeGitHubPRLink: vi.fn(async () => ({ linkedPR: null, suppressedGitHubPR: null })),
+      fetchWorktreeGitHubPRLink: vi.fn(async () => ({
+        linkedPR: null,
+        suppressedGitHubPR: null,
+        pushTargetBranch: null
+      })),
       fetchPRForBranch: vi.fn(async () => ok<PRInfo | null>(PR)),
       fetchWorkItemDetails: vi.fn(async () => ok<GitHubWorkItemDetails | null>(DETAILS)),
       fetchPRChecks: vi.fn(async () => ok<PRCheckDetail[]>(CHECKS)),

@@ -13,7 +13,11 @@ vi.mock('./github-pr-rpc', () => ({
   fetchWorkItemDetails: vi.fn()
 }))
 vi.mock('../source-control/mobile-pr-link', () => ({
-  fetchWorktreeGitHubPRLink: vi.fn(async () => ({ linkedPR: null, suppressedGitHubPR: null }))
+  fetchWorktreeGitHubPRLink: vi.fn(async () => ({
+    linkedPR: null,
+    suppressedGitHubPR: null,
+    pushTargetBranch: null
+  }))
 }))
 
 import {

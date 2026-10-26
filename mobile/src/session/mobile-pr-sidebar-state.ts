@@ -3,6 +3,10 @@ import type { PRInfo } from '../../../src/shared/github/pull-request-types'
 import type { GitHubWorkItemDetails } from '../../../src/shared/github/work-item-types'
 import type { GitHubPrReadOutcome, GitHubPrRepoSlug } from './github-pr-rpc'
 import { isGitHubPRSuppressed } from '../../../src/shared/worktree/github-pr-suppression'
+import {
+  shouldClearBranchMismatchedLinkedOpenPR,
+  shouldClearDivergedLinkedMergedPR
+} from '../../../src/shared/github/linked-pr-staleness'
 import type { WorktreeGitHubPRLink } from '../source-control/mobile-pr-link'
 
 export type PrSidebarData = {
@@ -49,7 +53,12 @@ export type PrSidebarLoadDeps = {
   fetchWorktreeGitHubPRLink: (worktreeId: string) => Promise<WorktreeGitHubPRLink>
   fetchPRForBranch: (
     worktreeId: string,
-    args: { branch: string; linkedPRNumber?: number | null; fallbackPRNumber?: number | null }
+    args: {
+      branch: string
+      linkedPRNumber?: number | null
+      fallbackPRNumber?: number | null
+      currentHeadOid?: string | null
+    }
   ) => Promise<GitHubPrReadOutcome<PRInfo | null>>
   fetchWorkItemDetails: (
     worktreeId: string,
@@ -79,16 +88,46 @@ export async function loadPrSidebarData(
     const branchHint =
       hintOutcome.ok && hintOutcome.result?.provider === 'github' ? hintOutcome.result.number : null
 
+    const requestHeadOid = args.headSha ?? null
     // Same as desktop: the explicit link wins; the branch's review is only a fallback.
-    const prOutcome = await deps.fetchPRForBranch(args.worktreeId, {
-      branch: args.branch,
-      linkedPRNumber: link.linkedPR,
-      fallbackPRNumber: link.linkedPR === null ? branchHint : null
-    })
+    const fetchPR = (linkedPRNumber: number | null) =>
+      deps.fetchPRForBranch(args.worktreeId, {
+        branch: args.branch,
+        linkedPRNumber,
+        fallbackPRNumber: linkedPRNumber === null ? branchHint : null,
+        currentHeadOid: requestHeadOid
+      })
+    let linkedPR = link.linkedPR
+    let prOutcome = await fetchPR(linkedPR)
+    // Desktop drops a link the branch has moved past; resolve by branch as it does after clearing.
+    if (
+      prOutcome.ok &&
+      (shouldClearDivergedLinkedMergedPR({
+        pr: prOutcome.result,
+        linkedPRNumber: link.linkedPR,
+        requestHeadOid
+      }) ||
+        shouldClearBranchMismatchedLinkedOpenPR({
+          pr: prOutcome.result,
+          linkedPRNumber: link.linkedPR,
+          branch: args.branch,
+          requestHeadOid,
+          pushTargetBranch: link.pushTargetBranch
+        }))
+    ) {
+      linkedPR = null
+      prOutcome = await fetchPR(null)
+    }
     if (!prOutcome.ok) {
       return failureState(prOutcome.error)
     }
-    if (!prOutcome.result || isGitHubPRSuppressed(link, prOutcome.result.number)) {
+    if (
+      !prOutcome.result ||
+      isGitHubPRSuppressed(
+        { linkedPR, suppressedGitHubPR: link.suppressedGitHubPR },
+        prOutcome.result.number
+      )
+    ) {
       return { kind: 'none' }
     }
     const pr = prOutcome.result
