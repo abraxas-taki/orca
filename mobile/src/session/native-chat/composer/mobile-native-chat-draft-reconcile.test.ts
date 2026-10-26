@@ -23,7 +23,7 @@ function pending(
   images: string[],
   matchingOccurrence?: number
 ): PendingImagePreviewEcho {
-  return { id, text: '', images, matchingOccurrence, afterMessageId: null }
+  return { id, text: '', images, sentAt: 0, matchingOccurrence, afterMessageId: null }
 }
 
 describe('mobile native chat image preview reconciliation', () => {

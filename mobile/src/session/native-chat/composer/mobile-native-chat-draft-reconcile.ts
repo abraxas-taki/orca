@@ -27,7 +27,7 @@ export function normalizedUserText(message: NativeChatMessage): string | null {
 
 export type PendingImagePreviewEcho = Pick<
   NativeChatPendingSend,
-  'id' | 'text' | 'afterMessageId' | 'matchingOccurrence'
+  'id' | 'text' | 'sentAt' | 'afterMessageId' | 'matchingOccurrence'
 > & { images?: string[] }
 
 export type SentImagePreview = {
