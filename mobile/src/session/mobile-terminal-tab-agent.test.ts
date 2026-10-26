@@ -112,13 +112,22 @@ describe('host pane identity', () => {
     expect(resolveMobileTerminalTabOwnedAgentId(tab, 'cursor')).toBe('cursor')
   })
 
-  it('ranks host Cursor identity like a foreground process: above launch and titles', () => {
+  it('ranks host Cursor identity above titles only for panes no hook or launch owns', () => {
     const launched = terminalTab('Terminal', { agentType: 'unknown', launchAgent: 'claude' })
     expect(resolveMobileTerminalTabOwnedAgentId(launched, 'cursor')).toBe('claude')
-    expect(resolveMobileTerminalTabAgentId(launched, 'cursor')).toBe('cursor')
+    expect(resolveMobileTerminalTabAgentId(launched, 'cursor')).toBe('claude')
     expect(
       resolveMobileTerminalTabAgentId(terminalTab('Fix Codex support - ⏳ Working ···'), 'cursor')
     ).toBe('cursor')
+  })
+
+  it('keeps a reused pane on its finished hook when terminal.list still caches Cursor', () => {
+    expect(
+      resolveMobileTerminalTabAgentId(
+        terminalTab('Terminal', { agentType: 'codex', state: 'done' }),
+        'cursor'
+      )
+    ).toBe('codex')
   })
 
   it("does not replace another agent's hook report", () => {

@@ -47,7 +47,7 @@ export function resolveMobileTerminalTabOwnedAgentId(
   return null
 }
 
-// Phones get no process, sleeping-session or sibling signals; a host-published Cursor identity stands in for Cursor's foreground process.
+// Phones get no process, sleeping-session or sibling signals; host Cursor identity stands in for an unowned pane's process, since terminal.list can keep it after the pane is reused.
 export function resolveMobileTerminalTabAgentId(
   tab: MobileTerminalTabAgentIdentity,
   hostAgentIdentity?: string | null
@@ -60,7 +60,10 @@ export function resolveMobileTerminalTabAgentId(
     title: tab.title,
     hookAgent: status?.state === 'done' ? null : hookAgent,
     focusedCompletedHookAgent: status?.state === 'done' ? hookAgent : null,
-    processAgent: hostAgentIdentity === 'cursor' ? 'cursor' : null,
+    processAgent:
+      hostAgentIdentity === 'cursor' && !resolveMobileTerminalTabOwnedAgentId(tab)
+        ? 'cursor'
+        : null,
     launchAgent: tab.launchAgent ?? undefined
   })
 }
