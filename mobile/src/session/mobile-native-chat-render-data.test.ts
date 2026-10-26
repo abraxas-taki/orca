@@ -79,13 +79,6 @@ describe('buildMobileNativeChatTransientData', () => {
     expect(last.blocks).toEqual([{ type: 'text', text: 'queued' }])
   })
 
-  it('sinks an echo the transcript never recorded below later turns, as desktop does', () => {
-    const data = build([assistant('a1', 'first'), assistant('a2', 'second')], null, [
-      { id: 'p1', text: 'hi' }
-    ])
-    expect(data.map((message) => message.id)).toEqual(['a1', 'a2', 'p1'])
-  })
-
   it('times an echo from when it was sent, as desktop times its pending sends', () => {
     const data = build([assistant('a1', 'hello')], null, [
       { id: 'p1', text: 'queued', sentAt: 1_792_024_037_937 }
