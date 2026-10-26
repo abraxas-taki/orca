@@ -40,6 +40,41 @@
         }
       }
     },
+    "13122d49bf2d": {
+      "branchCompareState": {
+        "effectiveBaseRef": "origin/dev",
+        "kind": "error",
+        "message": ""
+      },
+      "screenState": {
+        "kind": "ready",
+        "status": {
+          "branch": "feature",
+          "entries": [
+            {
+              "added": 4,
+              "area": "unstaged",
+              "path": "src/app.ts",
+              "removed": 1,
+              "status": "modified"
+            },
+            {
+              "area": "staged",
+              "oldPath": "src/older.ts",
+              "path": "src/old.ts",
+              "status": "renamed"
+            }
+          ],
+          "head": "head-oid",
+          "upstreamStatus": {
+            "ahead": 1,
+            "behind": 0,
+            "hasUpstream": true,
+            "upstreamName": "origin/feature"
+          }
+        }
+      }
+    },
     "1650cbe07807": {
       "name": "git.branchCompare#1",
       "ordinal": 11,
@@ -111,10 +146,11 @@
         }
       }
     },
-    "2cb17031e16a": {
+    "33892eec0cfe": {
       "branchCompareState": {
+        "effectiveBaseRef": "origin/dev",
         "kind": "error",
-        "message": "The host sent a reply this app could not read (git.branchCompare)"
+        "message": "transport failure"
       },
       "screenState": {
         "kind": "ready",
@@ -196,10 +232,11 @@
         }
       }
     },
-    "4533fb49ac71": {
+    "42fbfbbe70b6": {
       "branchCompareState": {
+        "effectiveBaseRef": "origin/dev",
         "kind": "error",
-        "message": "outer refused"
+        "message": "Unable to load committed changes"
       },
       "screenState": {
         "kind": "ready",
@@ -566,40 +603,6 @@
         }
       }
     },
-    "920e3ae53209": {
-      "branchCompareState": {
-        "kind": "error",
-        "message": "Unable to load committed changes"
-      },
-      "screenState": {
-        "kind": "ready",
-        "status": {
-          "branch": "feature",
-          "entries": [
-            {
-              "added": 4,
-              "area": "unstaged",
-              "path": "src/app.ts",
-              "removed": 1,
-              "status": "modified"
-            },
-            {
-              "area": "staged",
-              "oldPath": "src/older.ts",
-              "path": "src/old.ts",
-              "status": "renamed"
-            }
-          ],
-          "head": "head-oid",
-          "upstreamStatus": {
-            "ahead": 1,
-            "behind": 0,
-            "hasUpstream": true,
-            "upstreamName": "origin/feature"
-          }
-        }
-      }
-    },
     "9536c968b88a": {
       "name": "repo.list#1",
       "ordinal": 6,
@@ -708,6 +711,41 @@
         }
       }
     },
+    "9da23e082084": {
+      "branchCompareState": {
+        "effectiveBaseRef": "origin/dev",
+        "kind": "error",
+        "message": "The host sent a reply this app could not read (git.branchCompare)"
+      },
+      "screenState": {
+        "kind": "ready",
+        "status": {
+          "branch": "feature",
+          "entries": [
+            {
+              "added": 4,
+              "area": "unstaged",
+              "path": "src/app.ts",
+              "removed": 1,
+              "status": "modified"
+            },
+            {
+              "area": "staged",
+              "oldPath": "src/older.ts",
+              "path": "src/old.ts",
+              "status": "renamed"
+            }
+          ],
+          "head": "head-oid",
+          "upstreamStatus": {
+            "ahead": 1,
+            "behind": 0,
+            "hasUpstream": true,
+            "upstreamName": "origin/feature"
+          }
+        }
+      }
+    },
     "a0e527bdf205": {
       "branchCompareState": {
         "kind": "idle"
@@ -764,15 +802,11 @@
       "ordinal": 9,
       "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.show\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
     },
-    "c2212473f0c1": {
-      "name": "repo.list#1",
-      "ordinal": 10,
-      "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
-    },
-    "c526c7ec9130": {
+    "bbbad4cab794": {
       "branchCompareState": {
+        "effectiveBaseRef": "origin/dev",
         "kind": "error",
-        "message": "transport failure"
+        "message": "outer refused"
       },
       "screenState": {
         "kind": "ready",
@@ -802,6 +836,11 @@
           }
         }
       }
+    },
+    "c2212473f0c1": {
+      "name": "repo.list#1",
+      "ordinal": 10,
+      "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
     },
     "c75999ea5a6c": {
       "name": "git.branchCompare#1",
@@ -944,40 +983,6 @@
       "name": "settings.get#1",
       "ordinal": 3,
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"settings.get\"}"
-    },
-    "fd9ae55b156c": {
-      "branchCompareState": {
-        "kind": "error",
-        "message": ""
-      },
-      "screenState": {
-        "kind": "ready",
-        "status": {
-          "branch": "feature",
-          "entries": [
-            {
-              "added": 4,
-              "area": "unstaged",
-              "path": "src/app.ts",
-              "removed": 1,
-              "status": "modified"
-            },
-            {
-              "area": "staged",
-              "oldPath": "src/older.ts",
-              "path": "src/old.ts",
-              "status": "renamed"
-            }
-          ],
-          "head": "head-oid",
-          "upstreamStatus": {
-            "ahead": 1,
-            "behind": 0,
-            "hasUpstream": true,
-            "upstreamName": "origin/feature"
-          }
-        }
-      }
     }
   },
   "recording": {
@@ -1051,7 +1056,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "2cb17031e16a",
+          "state": "9da23e082084",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       },
@@ -1075,7 +1080,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "2cb17031e16a",
+          "state": "9da23e082084",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       },
@@ -1099,7 +1104,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "2cb17031e16a",
+          "state": "9da23e082084",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       },
@@ -1123,7 +1128,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "2cb17031e16a",
+          "state": "9da23e082084",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       },
@@ -1147,7 +1152,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "2cb17031e16a",
+          "state": "9da23e082084",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       },
@@ -1171,7 +1176,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4533fb49ac71",
+          "state": "bbbad4cab794",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       },
@@ -1195,7 +1200,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "920e3ae53209",
+          "state": "42fbfbbe70b6",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       },
@@ -1243,7 +1248,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "c526c7ec9130",
+          "state": "33892eec0cfe",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       },
@@ -1267,7 +1272,7 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "fd9ae55b156c",
+          "state": "13122d49bf2d",
           "effects": ["d11f484ecaf5", "a6482f604002"]
         }
       }

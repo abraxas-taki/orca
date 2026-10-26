@@ -82,7 +82,7 @@ export type MobileBranchCompareState =
   | { kind: 'loading' }
   // effectiveBaseRef is desktop's rebase and PR target, which upstream comparison can differ from.
   | { kind: 'ready'; result: MobileGitBranchCompareReply; effectiveBaseRef: string | null }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string; effectiveBaseRef?: string | null }
 
 export type MobileBranchEntryView = MobileGitBranchChangeEntry & {
   canOpen: boolean

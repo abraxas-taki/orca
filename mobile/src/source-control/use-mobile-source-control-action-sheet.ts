@@ -38,7 +38,9 @@ export function useMobileSourceControlActionSheet(
         conflictOperation: status?.conflictOperation,
         // Desktop rebases onto the effective base, not an upstream compare base; the runner resolves the same ref.
         rebaseBaseRef:
-          branchCompareState.kind === 'ready' ? branchCompareState.effectiveBaseRef : null,
+          branchCompareState.kind === 'ready' || branchCompareState.kind === 'error'
+            ? (branchCompareState.effectiveBaseRef ?? null)
+            : null,
         busyAction,
         openingPath,
         openingBranchPath,

@@ -17,7 +17,8 @@ export type BranchCompareOutcome =
       readonly effectiveBaseRef: string | null
     }
   | { readonly kind: 'unavailable' }
-  | { readonly kind: 'failed'; readonly message: string }
+  // A compare can fail after the base resolved; the rebase target stays usable.
+  | { readonly kind: 'failed'; readonly message: string; readonly effectiveBaseRef?: string | null }
 
 // Return failures because callers void this load; null means superseded and publishes nothing.
 export async function readBranchCompareOutcome(
@@ -26,12 +27,11 @@ export async function readBranchCompareOutcome(
   currency: RequestCurrency,
   compare?: MobileBranchCompareTarget
 ): Promise<BranchCompareOutcome | null> {
+  let effectiveBaseRef: string | null = null
   try {
-    const { compareBaseRef: baseRef, effectiveBaseRef } = await resolveMobileBranchBaseRefs(
-      client,
-      worktreeId,
-      compare
-    )
+    const baseRefs = await resolveMobileBranchBaseRefs(client, worktreeId, compare)
+    const baseRef = baseRefs.compareBaseRef
+    effectiveBaseRef = baseRefs.effectiveBaseRef
     // Base resolution can outlive its scope; stop before sending a superseded compare request.
     if (!currency.isCurrent()) {
       return null
@@ -52,13 +52,15 @@ export async function readBranchCompareOutcome(
     } catch (error) {
       return {
         kind: 'failed',
-        message: refusedRpcMessageOrFallback(error, 'Unable to load committed changes')
+        message: refusedRpcMessageOrFallback(error, 'Unable to load committed changes'),
+        effectiveBaseRef
       }
     }
   } catch (err) {
     return {
       kind: 'failed',
-      message: err instanceof Error ? err.message : 'Unable to load committed changes'
+      message: err instanceof Error ? err.message : 'Unable to load committed changes',
+      effectiveBaseRef
     }
   }
 }
@@ -77,5 +79,5 @@ export function nextBranchCompareState(
   }
   return outcome.kind === 'unavailable'
     ? { kind: 'idle' }
-    : { kind: 'error', message: outcome.message }
+    : { kind: 'error', message: outcome.message, effectiveBaseRef: outcome.effectiveBaseRef }
 }
