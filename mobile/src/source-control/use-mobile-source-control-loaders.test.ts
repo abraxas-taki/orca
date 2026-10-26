@@ -171,7 +171,6 @@ describe('useMobileSourceControlLoaders branch compare', () => {
     await settleCompare(calls, 'origin/main')
     expect(read.loaders?.branchCompareState).toEqual({
       kind: 'ready',
-      effectiveBaseRef: 'origin/main',
       result: expect.objectContaining({
         summary: expect.objectContaining({ baseRef: 'origin/main' })
       })
@@ -180,7 +179,6 @@ describe('useMobileSourceControlLoaders branch compare', () => {
     await settleCompare(calls, 'origin/dev')
     expect(read.loaders?.branchCompareState).toEqual({
       kind: 'ready',
-      effectiveBaseRef: 'origin/main',
       result: expect.objectContaining({
         summary: expect.objectContaining({ baseRef: 'origin/main' })
       })
@@ -210,11 +208,27 @@ describe('useMobileSourceControlLoaders branch compare', () => {
     await settleCompare(calls, 'origin/main')
     expect(read.loaders?.branchCompareState).toEqual({
       kind: 'ready',
-      effectiveBaseRef: 'origin/main',
       result: expect.objectContaining({
         summary: expect.objectContaining({ baseRef: 'origin/main' })
       })
     })
+  })
+
+  it('keeps the resolved rebase base when the compare itself fails', async () => {
+    const calls: PendingCall[] = []
+    const read: { loaders: Loaders | null } = { loaders: null }
+    await mount(fakeClient(calls), read)
+
+    await settleOldest(calls, 'git.status', STATUS_REPLY)
+    await settleBaseRefLookup(calls, 'origin/main')
+    await settleOldest(calls, 'git.branchCompare', {
+      id: 'call',
+      ok: false,
+      error: { code: 'request_aborted', message: 'request_aborted' },
+      _meta: { runtimeId: 'runtime-1' }
+    })
+    expect(read.loaders?.branchCompareState.kind).toBe('error')
+    expect(read.loaders?.rebaseBaseRef).toBe('origin/main')
   })
 
   it('sends no compare for an attempt the route detached under', async () => {

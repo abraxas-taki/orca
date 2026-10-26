@@ -67,7 +67,7 @@ function fileListState(count: number, dirty: boolean): FileListState {
     shouldShowBranchCompareSection: true,
     branchCompareSummaryText: `${count} files vs main`,
     branchEntries,
-    branchCompareState: { kind: 'ready', result: branchCompareResult, effectiveBaseRef: 'main' },
+    branchCompareState: { kind: 'ready', result: branchCompareResult },
     branchCompareResult,
     busyAction: null,
     openingPath: null,

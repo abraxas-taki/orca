@@ -11,14 +11,14 @@ import type { MobileGitBranchCompareReply } from './git-compare-reply-schema'
 import type { MobileBranchCompareState } from './mobile-source-control-screen-state'
 
 export type BranchCompareOutcome =
-  | {
-      readonly kind: 'ready'
-      readonly result: MobileGitBranchCompareReply
-      readonly effectiveBaseRef: string | null
-    }
+  | { readonly kind: 'ready'; readonly result: MobileGitBranchCompareReply }
   | { readonly kind: 'unavailable' }
-  // A compare can fail after the base resolved; the rebase target stays usable.
-  | { readonly kind: 'failed'; readonly message: string; readonly effectiveBaseRef?: string | null }
+  | { readonly kind: 'failed'; readonly message: string }
+
+// Every attempt reports the rebase target it resolved, whether or not the compare itself worked.
+export type BranchCompareAttempt = BranchCompareOutcome & {
+  readonly effectiveBaseRef: string | null
+}
 
 // Return failures because callers void this load; null means superseded and publishes nothing.
 export async function readBranchCompareOutcome(
@@ -26,7 +26,7 @@ export async function readBranchCompareOutcome(
   worktreeId: string,
   currency: RequestCurrency,
   compare?: MobileBranchCompareTarget
-): Promise<BranchCompareOutcome | null> {
+): Promise<BranchCompareAttempt | null> {
   let effectiveBaseRef: string | null = null
   try {
     const baseRefs = await resolveMobileBranchBaseRefs(client, worktreeId, compare)
@@ -37,7 +37,11 @@ export async function readBranchCompareOutcome(
       return null
     }
     if (!baseRef) {
-      return { kind: 'failed', message: 'Unable to resolve the base branch for comparison.' }
+      return {
+        kind: 'failed',
+        message: 'Unable to resolve the base branch for comparison.',
+        effectiveBaseRef
+      }
     }
     const reply = await gitBranchCompareRead.request(client, {
       worktree: `id:${worktreeId}`,
@@ -45,7 +49,7 @@ export async function readBranchCompareOutcome(
     })
     // Inspect raw refusal to degrade on missing git capability.
     if (isMobileGitUnavailableReply(reply)) {
-      return { kind: 'unavailable' }
+      return { kind: 'unavailable', effectiveBaseRef }
     }
     try {
       return { kind: 'ready', result: gitBranchCompareRead.interpret(reply), effectiveBaseRef }
@@ -71,7 +75,7 @@ export function nextBranchCompareState(
   preserveReadyOnFailure: boolean
 ): MobileBranchCompareState {
   if (outcome.kind === 'ready') {
-    return { kind: 'ready', result: outcome.result, effectiveBaseRef: outcome.effectiveBaseRef }
+    return { kind: 'ready', result: outcome.result }
   }
   // Clearing ready state to idle would claim No Changes despite retained branch commits.
   if (preserveReadyOnFailure && previous.kind === 'ready') {
@@ -79,5 +83,5 @@ export function nextBranchCompareState(
   }
   return outcome.kind === 'unavailable'
     ? { kind: 'idle' }
-    : { kind: 'error', message: outcome.message, effectiveBaseRef: outcome.effectiveBaseRef }
+    : { kind: 'error', message: outcome.message }
 }

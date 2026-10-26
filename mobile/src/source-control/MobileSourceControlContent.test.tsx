@@ -98,6 +98,7 @@ function initialState(): MobileSourceControlContentState {
     client: null,
     connState: 'connected',
     forceReconnect: null,
+    rebaseBaseRef: 'main',
     insets: { top: 0, bottom: 0, left: 0, right: 0 },
     router: {
       back: noop,
@@ -116,7 +117,7 @@ function initialState(): MobileSourceControlContentState {
     setRootRef: noop,
     worktreeLabel: 'fixture',
     screenState: { kind: 'loading' },
-    branchCompareState: { kind: 'ready', result: branchCompareResult, effectiveBaseRef: 'main' },
+    branchCompareState: { kind: 'ready', result: branchCompareResult },
     branchDiffPreview: null,
     setBranchDiffPreview: noop,
     busyAction: null,

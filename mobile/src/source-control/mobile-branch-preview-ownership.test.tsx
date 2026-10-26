@@ -55,11 +55,7 @@ describe('committed diff preview ownership', () => {
       name: 'api',
       origin: 'session',
       embedded: true,
-      branchCompareState: {
-        kind: 'ready',
-        result: { summary, entries: [entry] },
-        effectiveBaseRef: 'main'
-      },
+      branchCompareState: { kind: 'ready', result: { summary, entries: [entry] } },
       mountedRef: { current: true },
       busyActionRef: { current: null },
       setActionError: vi.fn()
