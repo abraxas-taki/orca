@@ -19,25 +19,18 @@ import {
   type NativeSyntheticEvent
 } from 'react-native'
 import { Check } from 'lucide-react-native'
-import {
-  describeLatestToolCall,
-  NATIVE_CHAT_TOOL_ACTIVITY_COPY,
-  selectActiveToolCall
-} from '../../../src/shared/native-chat/tools/native-chat-tool-activity'
-import { nativeChatToolRunIconName } from '../../../src/shared/native-chat/tools/native-chat-tool-icon'
+import { NATIVE_CHAT_TOOL_ACTIVITY_COPY } from '../../../src/shared/native-chat/tools/native-chat-tool-activity'
 import { nativeChatToolLineIdentity } from '../../../src/shared/native-chat/tools/native-chat-tool-line-identity'
 import { pairNativeChatToolResults } from '../../../src/shared/native-chat/tools/native-chat-tool-pairing'
-import { nativeChatToolRunOutcome } from '../../../src/shared/native-chat/tools/native-chat-tool-run-outcome'
+import { nativeChatToolRunHeader } from '../../../src/shared/native-chat/tools/native-chat-tool-run-header'
 import {
   NATIVE_CHAT_TOOL_RUN_SENTENCE_ENGLISH,
   nativeChatToolRunSentence
 } from '../../../src/shared/native-chat/tools/native-chat-tool-run-sentence'
-import { countToolCalls } from '../../../src/shared/native-chat/tools/native-chat-tool-summary'
 import { buildEditCards } from '../../../src/shared/native-chat/tools/native-chat-edit-cards'
-import {
-  isToolCallBlock,
-  type NativeChatBlock,
-  type NativeChatToolCallBlock
+import type {
+  NativeChatBlock,
+  NativeChatToolCallBlock
 } from '../../../src/shared/native-chat-types'
 import { buildNativeChatTaskListRows } from '../../../src/shared/native-chat-task-list-history'
 import { colors } from '../theme/mobile-theme'
@@ -209,33 +202,28 @@ export function ToolRun({
     ? asides.after.length +
       Array.from(asides.before.values()).reduce((count, rows) => count + rows.length, 0)
     : 0
-  // Use turn liveness; individual calls settling must not flicker the header between live and settled.
-  const live =
-    activeTurnIsWorking === true && !awaitingAnswer
-      ? trailing !== false
-      : selectActiveToolCall(blocks, { activeTurnIsWorking }) !== null
-  const callCount = countToolCalls(blocks)
+  const header = useMemo(
+    () =>
+      nativeChatToolRunHeader(blocks, {
+        activeTurnIsWorking,
+        trailing,
+        askPending: awaitingAnswer
+      }),
+    [activeTurnIsWorking, awaitingAnswer, blocks, trailing]
+  )
+  const { live, latestCallLabel, iconName: headerIcon } = header
   const sentence = nativeChatToolRunSentence(
-    blocks,
+    header.work,
     { live },
     NATIVE_CHAT_TOOL_RUN_SENTENCE_ENGLISH
   )
-  const latestCall = live ? blocks.findLast(isToolCallBlock) : undefined
-  const latestCallLabel = latestCall ? describeLatestToolCall(latestCall) : null
-  const outcome = nativeChatToolRunOutcome(blocks, { activeTurnIsWorking })
-  const headerIcon = nativeChatToolRunIconName(blocks.filter(isToolCallBlock))
-  const fallbackLabel =
-    callCount === 0
-      ? 'Result'
-      : callCount === 1
-        ? NATIVE_CHAT_TOOL_ACTIVITY_COPY.countOne
-        : fill(NATIVE_CHAT_TOOL_ACTIVITY_COPY.countN, callCount)
+  const fallbackLabel = fill(NATIVE_CHAT_TOOL_ACTIVITY_COPY[header.fallbackLabel], header.callCount)
   const marks = [
-    outcome.failedCallCount > 0
-      ? fill(NATIVE_CHAT_TOOL_ACTIVITY_COPY.failedCount, outcome.failedCallCount)
+    header.failedCallCount > 0
+      ? fill(NATIVE_CHAT_TOOL_ACTIVITY_COPY.failedCount, header.failedCallCount)
       : null,
-    outcome.interruptedCallCount > 0
-      ? fill(NATIVE_CHAT_TOOL_ACTIVITY_COPY.interruptedCount, outcome.interruptedCallCount)
+    header.interruptedCallCount > 0
+      ? fill(NATIVE_CHAT_TOOL_ACTIVITY_COPY.interruptedCount, header.interruptedCallCount)
       : null
   ].filter((mark) => mark !== null)
   const type = toolType(fontScale)
@@ -266,7 +254,7 @@ export function ToolRun({
           </Text>
         ) : null}
         {}
-        {!live && outcome.succeeded ? (
+        {!live && header.succeeded ? (
           <Check size={12 * fontScale} color={colors.textMuted} strokeWidth={2} />
         ) : null}
         {latestCallLabel ? (
