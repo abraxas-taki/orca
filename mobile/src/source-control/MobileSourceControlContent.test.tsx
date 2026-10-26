@@ -1,10 +1,13 @@
 import { createElement, useState } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  MobileSourceControlContent,
-  type MobileSourceControlContentState
-} from './MobileSourceControlContent'
+import { MobileSourceControlContent } from './MobileSourceControlContent'
+import type { MobileSourceControlPrimaryAction } from './mobile-source-control-primary-action'
+import type { MobileSourceControlState } from './use-mobile-source-control-state'
+
+type MobileSourceControlContentState = Omit<MobileSourceControlState, 'primaryActionArgs'> & {
+  primaryAction: MobileSourceControlPrimaryAction
+}
 import * as branchFormat from './mobile-branch-entry-format'
 import type { SectionListProps } from 'react-native'
 import type {
@@ -211,6 +214,7 @@ function Fixture({ initial }: { initial: MobileSourceControlContentState }) {
   const [state, setState] = useState(initial)
   controls.patch = (patch) => setState((previous) => ({ ...previous, ...patch }))
   return createElement(MobileSourceControlContent, {
+    primaryAction: state.primaryAction,
     state: {
       ...state,
       setCommitMessage: (next) =>

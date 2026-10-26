@@ -1,3 +1,6 @@
+/** How sure the caller is that a review exists, beyond the host's lookup outcome. */
+export type HostedReviewLookupAuthority = 'found' | 'positive_unresolved' | 'not_found' | 'unknown'
+
 /** Desktop and mobile create blockers; unproven review absence fails closed. */
 export function isHostedReviewCreateEligibilityConfirmable(input: {
   // Strings, not the closed unions: newer hosts may send reasons this build does not know.
@@ -6,7 +9,7 @@ export function isHostedReviewCreateEligibilityConfirmable(input: {
     blockedReason?: string | null
     reviewLookupOutcome?: string
   } | null
-  reviewLookup: 'found' | 'positive_unresolved' | 'not_found' | 'unknown'
+  reviewLookup: HostedReviewLookupAuthority
   hasHardRefreshError: boolean
 }): boolean {
   const eligibility = input.eligibility

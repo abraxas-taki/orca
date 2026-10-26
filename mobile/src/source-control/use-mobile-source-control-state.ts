@@ -202,16 +202,6 @@ export function useMobileSourceControlState(params: MobileSourceControlStatePara
     recordCommitFailure,
     onOpenHistory
   })
-  const createPrAction = useMobileSourceControlCreatePrAction({
-    client,
-    connState,
-    hostId,
-    worktreeId,
-    status,
-    hasUncommittedChanges: entries.length > 0,
-    busyAction,
-    createPr: runners.createPr
-  })
   // The panel adds the branch's review before building the action, so only the inputs live here.
   const primaryActionArgs = useMemo(
     (): MobileSourceControlPrimaryActionArgs => ({
@@ -249,6 +239,14 @@ export function useMobileSourceControlState(params: MobileSourceControlStatePara
       unstagedCount
     ]
   )
+  const createPrAction = useMobileSourceControlCreatePrAction({
+    client,
+    connState,
+    hostId,
+    worktreeId,
+    commitArea: primaryActionArgs,
+    createPr: runners.createPr
+  })
 
   return {
     client,

@@ -1,5 +1,4 @@
 import { isBehindOnlyUpstream, shouldForcePushWithLeaseForUpstream } from './git-upstream-status'
-import type { HostedReviewCreationEligibility } from './hosted-review'
 import { supportsHostedReviewCreation } from './hosted-review-creation-providers'
 import type { GitUpstreamStatus } from './git-status-types'
 
@@ -31,7 +30,14 @@ export function resolveCreateReviewIntentEligibility({
   hasMessage: boolean
   hasUnresolvedConflicts: boolean
   upstreamStatus: GitUpstreamStatus | undefined
-  hostedReviewCreation?: HostedReviewCreationEligibility | null
+  // Strings, not the closed unions: mobile round-trips tokens newer hosts add.
+  hostedReviewCreation?: {
+    provider: string
+    canCreate?: boolean
+    blockedReason?: string | null
+    reviewLookupOutcome?: string
+    defaultBaseRef?: string | null
+  } | null
   branchCommitsAhead?: number
   hasCurrentBranch?: boolean
 }): CreateReviewIntentEligibility {

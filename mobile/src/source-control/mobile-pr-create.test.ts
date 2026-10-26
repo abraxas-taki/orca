@@ -89,6 +89,21 @@ describe('getMobilePrCreateBlockMessage', () => {
     )
   })
 
+  it('fails closed when an older host sends no review-lookup outcome', () => {
+    expect(
+      getMobilePrCreateBlockMessage({
+        provider: 'github',
+        base: 'main',
+        title: 'Add feature',
+        body: '',
+        canCreate: true,
+        blockedReason: null
+      })
+    ).toBe(
+      'Orca could not confirm whether this branch already has a pull request. Try again in a moment.'
+    )
+  })
+
   it('stays safely blocked for a reason added by a newer desktop contract', () => {
     expect(
       getMobilePrCreateBlockMessage({

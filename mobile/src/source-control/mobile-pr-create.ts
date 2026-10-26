@@ -43,7 +43,10 @@ export function getMobilePrCreateSuccessWarning(
 
 export function getMobilePrCreateBlockMessage(prefill: MobilePrPrefill): string | null {
   const copy = hostedReviewCopy(prefill.provider)
+  // Hosts older than reviewLookupOutcome cannot prove no review exists, and mobile has no lookup of its own.
+  const reviewLookupKnown = prefill.reviewLookupOutcome !== undefined
   if (
+    reviewLookupKnown &&
     isHostedReviewCreateEligibilityConfirmable({
       eligibility: prefill,
       reviewLookup: 'unknown',
@@ -52,7 +55,10 @@ export function getMobilePrCreateBlockMessage(prefill: MobilePrPrefill): string 
   ) {
     return null
   }
-  if (prefill.reviewLookupOutcome === 'unavailable') {
+  if (
+    prefill.reviewLookupOutcome === 'unavailable' ||
+    (!reviewLookupKnown && (prefill.canCreate === true || prefill.blockedReason === 'needs_push'))
+  ) {
     return `Orca could not confirm whether this branch already has a ${copy.reviewLabel}. Try again in a moment.`
   }
   switch (prefill.blockedReason) {

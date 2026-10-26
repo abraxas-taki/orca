@@ -155,7 +155,6 @@ export function MobileSourceControlPanel({
     () => buildMobileSourceControlPrimaryAction({ ...primaryActionArgs, review }),
     [primaryActionArgs, review]
   )
-  const contentState = useMemo(() => ({ ...state, primaryAction }), [state, primaryAction])
   const isHostedRepo = prController.prSidebarIsGithubRepo
   const prSidebarKind = prController.prSidebarState.kind
   const refetchPr = prController.refetchPRSidebar
@@ -312,7 +311,7 @@ export function MobileSourceControlPanel({
 
       {showChanges ? (
         <View style={activeTab === 'changes' ? hubStyles.tabBody : hubStyles.tabBodyHidden}>
-          <MobileSourceControlContent state={contentState} />
+          <MobileSourceControlContent state={state} primaryAction={primaryAction} />
         </View>
       ) : activeTab === 'changes' ? (
         statusGate

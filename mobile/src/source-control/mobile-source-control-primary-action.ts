@@ -4,8 +4,8 @@ import {
   type SourceControlRemoteOpKind
 } from '../../../src/shared/source-control-primary-action-decision'
 import {
-  hasUsableHostedReviewPushTarget,
-  resolveHostedReviewActionUpstreamStatus
+  hasResolvableHostedReviewPushTargetLink,
+  resolveHostedReviewPushTargetForActions
 } from '../../../src/shared/hosted-review-push-target'
 import type { PRState } from '../../../src/shared/github/pull-request-types'
 import type { GitPushTarget } from '../../../src/shared/worktree/types'
@@ -86,10 +86,15 @@ export function buildMobileSourceControlPrimaryAction(
 ): MobileSourceControlPrimaryAction {
   const review = args.review ?? NO_REVIEW
   // Mobile reads upstream status untargeted, so a review with its own push target (fork checkouts) is not gated here.
-  const hasReviewLink = review.reviewNumber !== null && review.pushTarget === null
-  const canUseReviewPushTarget = hasUsableHostedReviewPushTarget({
-    upstreamStatus: args.status?.upstreamStatus,
+  const hasReviewLink =
+    review.pushTarget === null &&
+    hasResolvableHostedReviewPushTargetLink({ linkedGitHubPR: review.reviewNumber })
+  const reviewTarget = resolveHostedReviewPushTargetForActions({
+    hasHostedReviewLink: hasReviewLink,
     hasResolvableHostedReviewPushTargetLink: hasReviewLink,
+    hostedReviewState: review.prState,
+    isHostedReviewStateLoading: review.isPRStateLoading,
+    upstreamStatus: args.status?.upstreamStatus,
     branchName: args.status?.branch?.replace(/^refs\/heads\//, '')
   })
   const decision = resolveSourceControlCommitAreaPrimaryActionDecision({
@@ -103,19 +108,12 @@ export function buildMobileSourceControlPrimaryAction(
     isCommitting: args.busyAction === 'commit',
     isRemoteOperationActive: isMobileRemoteOperationActive(args.busyAction),
     inFlightRemoteOpKind: getInFlightRemoteOpKind(args.busyAction),
-    upstreamStatus: resolveHostedReviewActionUpstreamStatus({
-      hasHostedReviewLink: hasReviewLink,
-      hasResolvableHostedReviewPushTargetLink: hasReviewLink,
-      hostedReviewState: review.prState,
-      isHostedReviewStateLoading: review.isPRStateLoading,
-      canUseHostedReviewPushTarget: canUseReviewPushTarget,
-      upstreamStatus: args.status?.upstreamStatus
-    }),
+    upstreamStatus: reviewTarget.upstreamStatusForActions,
     branchCommitsAhead: getMobileBranchCommitsAhead(args),
     hasCurrentBranch: Boolean(args.status?.branch),
-    prState: review.prState,
+    prState: reviewTarget.hostedReviewStateForActions,
     isPRStateLoading: review.isPRStateLoading,
-    canPushLinkedReviewWithoutUpstream: canUseReviewPushTarget
+    canPushLinkedReviewWithoutUpstream: reviewTarget.canUseHostedReviewPushTarget
   })
   const ioBusy =
     args.busyAction !== null || args.openingPath !== null || args.openingBranchPath !== null
@@ -170,7 +168,7 @@ function getInFlightRemoteOpKind(
   }
 }
 
-function getMobileBranchCommitsAhead(
+export function getMobileBranchCommitsAhead(
   args: MobileSourceControlPrimaryActionArgs
 ): number | undefined {
   const summary = args.branchCompareResult?.summary
