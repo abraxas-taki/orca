@@ -3,6 +3,7 @@ import { ChevronRight, Circle, CircleCheck, CircleDot, ListChecks } from 'lucide
 import {
   diffNativeChatTaskLists,
   NATIVE_CHAT_TASK_LIST_COPY,
+  nativeChatCompletedTaskCount,
   nativeChatTaskChangeWords,
   nativeChatTaskLabel,
   type NativeChatTask,
@@ -132,7 +133,7 @@ export function MobileNativeChatTaskList({
   fontScale: number
   disclosureKey?: string
 }): React.JSX.Element {
-  const completed = list.tasks.filter((task) => task.status === 'completed').length
+  const completed = nativeChatCompletedTaskCount(list)
   const changes = previous ? diffNativeChatTaskLists(previous, list) : null
   const type = toolType(fontScale)
   return (
