@@ -38,7 +38,6 @@ export type MobileSourceControlActionArgs = {
   openingBranchPath: string | null
   prAvailable: boolean
   prHint?: string
-  // Mobile pushes without a review's saved push target, so a force push there could overwrite the wrong branch.
   forcePushBlockedReason?: string
   handlers: {
     commit: () => void

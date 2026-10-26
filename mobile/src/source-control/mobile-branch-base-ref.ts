@@ -23,15 +23,21 @@ export async function resolveMobileBranchCompareBaseRef(
   return (await resolveMobileBranchBaseRefs(client, worktreeId, compare)).compareBaseRef
 }
 
+export type MobileBranchBaseRefs = {
+  compareBaseRef: string | null
+  // Never rejects; reads the repo default only when an upstream compare skipped it.
+  readEffectiveBaseRef: () => Promise<string | null>
+}
+
 // Desktop's pair: the compare base can be the upstream, while PRs and rebases target the effective base.
 export async function resolveMobileBranchBaseRefs(
   client: RpcOperationSender,
   worktreeId: string,
   compare?: MobileBranchCompareTarget
-): Promise<{ compareBaseRef: string | null; effectiveBaseRef: string | null }> {
+): Promise<MobileBranchBaseRefs> {
   const repoId = getRepoIdFromWorktreeId(worktreeId)
   if (!repoId) {
-    return { compareBaseRef: null, effectiveBaseRef: null }
+    return { compareBaseRef: null, readEffectiveBaseRef: async () => null }
   }
 
   const [worktreeReply, repoReply] = await Promise.all([
@@ -48,6 +54,10 @@ export async function resolveMobileBranchBaseRefs(
     : null
 
   // Desktop's resolution; the default is fetched only when nothing is pinned.
+  const pinnedBaseRef = resolveSourceControlBaseRef({ worktreeBaseRef, repoBaseRef })
+  if (pinnedBaseRef) {
+    return { compareBaseRef: pinnedBaseRef, readEffectiveBaseRef: async () => pinnedBaseRef }
+  }
   const upstreamCompareBaseRef = resolveSourceControlCompareBaseRef({
     enabled: compare?.compareAgainstUpstream === true,
     worktreeBaseRef,
@@ -55,13 +65,14 @@ export async function resolveMobileBranchBaseRefs(
     upstreamName: compare?.upstreamName,
     fallbackBaseRef: null
   })
-  const effectiveBaseRef =
-    resolveSourceControlBaseRef({ worktreeBaseRef, repoBaseRef }) ??
-    // An upstream compare does not need the default, so its lookup failing only loses the rebase target.
-    (upstreamCompareBaseRef
-      ? await readDefaultBaseRef(client, repoId).catch(() => null)
-      : await readDefaultBaseRef(client, repoId))
-  return { compareBaseRef: upstreamCompareBaseRef ?? effectiveBaseRef, effectiveBaseRef }
+  if (upstreamCompareBaseRef) {
+    return {
+      compareBaseRef: upstreamCompareBaseRef,
+      readEffectiveBaseRef: () => readDefaultBaseRef(client, repoId).catch(() => null)
+    }
+  }
+  const defaultBaseRef = await readDefaultBaseRef(client, repoId)
+  return { compareBaseRef: defaultBaseRef, readEffectiveBaseRef: async () => defaultBaseRef }
 }
 
 async function readDefaultBaseRef(

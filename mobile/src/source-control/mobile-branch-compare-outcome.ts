@@ -3,6 +3,7 @@ import type { RequestCurrency } from '../transport/generation-scoped-request-own
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import {
   resolveMobileBranchBaseRefs,
+  type MobileBranchBaseRefs,
   type MobileBranchCompareTarget
 } from './mobile-branch-base-ref'
 import { gitBranchCompareRead } from './mobile-git-read-operations'
@@ -27,45 +28,57 @@ export async function readBranchCompareOutcome(
   currency: RequestCurrency,
   compare?: MobileBranchCompareTarget
 ): Promise<BranchCompareAttempt | null> {
-  let effectiveBaseRef: string | null = null
+  let baseRefs: MobileBranchBaseRefs
   try {
-    const baseRefs = await resolveMobileBranchBaseRefs(client, worktreeId, compare)
-    const baseRef = baseRefs.compareBaseRef
-    effectiveBaseRef = baseRefs.effectiveBaseRef
-    // Base resolution can outlive its scope; stop before sending a superseded compare request.
-    if (!currency.isCurrent()) {
-      return null
-    }
-    if (!baseRef) {
-      return {
-        kind: 'failed',
-        message: 'Unable to resolve the base branch for comparison.',
-        effectiveBaseRef
-      }
-    }
+    baseRefs = await resolveMobileBranchBaseRefs(client, worktreeId, compare)
+  } catch (err) {
+    return { ...failedCompare(err), effectiveBaseRef: null }
+  }
+  // Base resolution can outlive its scope; stop before sending a superseded compare request.
+  if (!currency.isCurrent()) {
+    return null
+  }
+  const [outcome, effectiveBaseRef] = await Promise.all([
+    readCompare(client, worktreeId, baseRefs.compareBaseRef),
+    baseRefs.readEffectiveBaseRef()
+  ])
+  return { ...outcome, effectiveBaseRef }
+}
+
+async function readCompare(
+  client: RpcOperationSender,
+  worktreeId: string,
+  baseRef: string | null
+): Promise<BranchCompareOutcome> {
+  if (!baseRef) {
+    return { kind: 'failed', message: 'Unable to resolve the base branch for comparison.' }
+  }
+  try {
     const reply = await gitBranchCompareRead.request(client, {
       worktree: `id:${worktreeId}`,
       baseRef
     })
     // Inspect raw refusal to degrade on missing git capability.
     if (isMobileGitUnavailableReply(reply)) {
-      return { kind: 'unavailable', effectiveBaseRef }
+      return { kind: 'unavailable' }
     }
     try {
-      return { kind: 'ready', result: gitBranchCompareRead.interpret(reply), effectiveBaseRef }
+      return { kind: 'ready', result: gitBranchCompareRead.interpret(reply) }
     } catch (error) {
       return {
         kind: 'failed',
-        message: refusedRpcMessageOrFallback(error, 'Unable to load committed changes'),
-        effectiveBaseRef
+        message: refusedRpcMessageOrFallback(error, 'Unable to load committed changes')
       }
     }
   } catch (err) {
-    return {
-      kind: 'failed',
-      message: err instanceof Error ? err.message : 'Unable to load committed changes',
-      effectiveBaseRef
-    }
+    return failedCompare(err)
+  }
+}
+
+function failedCompare(err: unknown): BranchCompareOutcome {
+  return {
+    kind: 'failed',
+    message: err instanceof Error ? err.message : 'Unable to load committed changes'
   }
 }
 

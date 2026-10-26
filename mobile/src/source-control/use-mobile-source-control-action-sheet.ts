@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
+import { ENGLISH_COMMIT_DROPDOWN_COPY } from '../../../src/shared/source-control-dropdown-commit-items'
 import { buildMobileSourceControlActions } from './mobile-source-control-actions'
 import type { ActionSheetAction } from '../components/ActionSheetModal'
 import { SOURCE_CONTROL_ACTION_ICONS } from './mobile-source-control-screen-state'
 import type { MobileSourceControlState } from './use-mobile-source-control-state'
 import {
   buildMobileSourceControlDecisionInputs,
+  getMobileForcePushBlockedReason,
   type MobileSourceControlReviewInputs
 } from './mobile-source-control-primary-action'
 
@@ -36,17 +38,15 @@ export function useMobileSourceControlActionSheet(
       buildMobileSourceControlActions({
         decision: buildMobileSourceControlDecisionInputs({ ...primaryActionArgs, review }),
         conflictOperation: status?.conflictOperation,
-        // Desktop rebases onto the effective base, not an upstream compare base; the runner resolves the same ref.
+        // Desktop rebases onto the effective base, not an upstream compare base.
         rebaseBaseRef,
         busyAction,
         openingPath,
         openingBranchPath,
         // Create intent may publish or push before review creation.
         prAvailable: upstreamKnown,
-        prHint: upstreamKnown ? undefined : 'Checking branch status...',
-        forcePushBlockedReason: review.pushTarget
-          ? "Force push this pull request's branch from desktop"
-          : undefined,
+        prHint: upstreamKnown ? undefined : ENGLISH_COMMIT_DROPDOWN_COPY.checkingBranchStatus,
+        forcePushBlockedReason: getMobileForcePushBlockedReason(review),
         handlers: {
           commit: () => void runActionSheetCommit(),
           commitPush: (forceWithLease) =>
@@ -70,7 +70,7 @@ export function useMobileSourceControlActionSheet(
             ]),
           fastForward: () =>
             void runActionSheetGitSequence('fast-forward', [{ method: 'git.fastForward' }]),
-          rebase: () => void runActionSheetRebase(),
+          rebase: () => void runActionSheetRebase(rebaseBaseRef),
           createPr: () => void createPr(false),
           pushAndCreatePr: () => void createPr(true),
           checkout: () => void openBranchPicker(),

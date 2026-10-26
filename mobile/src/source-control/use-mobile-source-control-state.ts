@@ -294,7 +294,6 @@ export function useMobileSourceControlState(params: MobileSourceControlStatePara
     stagedCount,
     unstagedCount,
     branchLabel,
-    upstream,
     upstreamKnown,
     syncLabel,
     primaryActionArgs,

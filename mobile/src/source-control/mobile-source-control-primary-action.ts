@@ -67,6 +67,13 @@ export function resolveMobileSourceControlReviewInputs(
   return state.kind === 'loading' ? { ...NO_REVIEW, isPRStateLoading: true } : NO_REVIEW
 }
 
+// Mobile pushes without a review's saved push target, so a force push there could overwrite the wrong branch.
+export function getMobileForcePushBlockedReason(
+  review: MobileSourceControlReviewInputs | undefined
+): string | undefined {
+  return review?.pushTarget ? "Force push this pull request's branch from desktop" : undefined
+}
+
 export type MobileSourceControlPrimaryActionArgs = {
   status: MobileGitStatusResult | null
   hasUnresolvedConflicts: boolean
@@ -127,13 +134,16 @@ export function buildMobileSourceControlPrimaryAction(
   )
   const ioBusy =
     args.busyAction !== null || args.openingPath !== null || args.openingBranchPath !== null
-  const disabled = decision.disabled || ioBusy
+  const forcePushBlockedReason = decision.requiresForceWithLease
+    ? getMobileForcePushBlockedReason(args.review)
+    : undefined
+  const disabled = decision.disabled || ioBusy || forcePushBlockedReason !== undefined
 
   return {
     kind: decision.kind,
     label: getMobilePrimaryActionLabel(decision),
     accessibilityLabel: getMobilePrimaryActionLabel(decision),
-    accessibilityHint: getMobilePrimaryActionHint(decision),
+    accessibilityHint: forcePushBlockedReason ?? getMobilePrimaryActionHint(decision),
     disabled,
     loading: isLoadingDecision(decision, args.busyAction),
     requiresForceWithLease: decision.requiresForceWithLease,

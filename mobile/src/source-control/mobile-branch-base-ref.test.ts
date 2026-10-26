@@ -78,12 +78,12 @@ describe('resolveMobileBranchCompareBaseRef', () => {
       ok({ defaultBaseRef: 'origin/main' })
     ])
 
-    await expect(
-      resolveMobileBranchBaseRefs(client, 'repo-1::/tmp/wt', {
-        compareAgainstUpstream: true,
-        upstreamName: 'origin/feature'
-      })
-    ).resolves.toEqual({ compareBaseRef: 'origin/feature', effectiveBaseRef: 'origin/main' })
+    const refs = await resolveMobileBranchBaseRefs(client, 'repo-1::/tmp/wt', {
+      compareAgainstUpstream: true,
+      upstreamName: 'origin/feature'
+    })
+    expect(refs.compareBaseRef).toBe('origin/feature')
+    await expect(refs.readEffectiveBaseRef()).resolves.toBe('origin/main')
   })
 
   it('still compares against the upstream when the default lookup fails', async () => {
@@ -93,11 +93,11 @@ describe('resolveMobileBranchCompareBaseRef', () => {
       fail('lookup failed')
     ])
 
-    await expect(
-      resolveMobileBranchBaseRefs(client, 'repo-1::/tmp/wt', {
-        compareAgainstUpstream: true,
-        upstreamName: 'origin/feature'
-      })
-    ).resolves.toEqual({ compareBaseRef: 'origin/feature', effectiveBaseRef: null })
+    const refs = await resolveMobileBranchBaseRefs(client, 'repo-1::/tmp/wt', {
+      compareAgainstUpstream: true,
+      upstreamName: 'origin/feature'
+    })
+    expect(refs.compareBaseRef).toBe('origin/feature')
+    await expect(refs.readEffectiveBaseRef()).resolves.toBeNull()
   })
 })

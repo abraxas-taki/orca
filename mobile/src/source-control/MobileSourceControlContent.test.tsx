@@ -163,7 +163,6 @@ function initialState(): MobileSourceControlContentState {
     stagedCount: 1,
     unstagedCount: 0,
     branchLabel: 'fixture',
-    upstream: undefined,
     upstreamKnown: false,
     syncLabel: null,
     primaryAction: {
