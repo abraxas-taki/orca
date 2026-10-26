@@ -10,18 +10,20 @@ export function useMobileStructuredTurnIndicator(input: {
   state: StructuredAgentSessionState
   turnId: string | null
   isWorking: boolean
+  /** Desktop holds Stop on whether it can stop, which covers a send still in flight. */
+  canStop: boolean
   hostStopping: boolean
   stopPressed: boolean
   queueCapable: boolean
   queueFollowUps: boolean
 }): NativeChatLiveTurnIndicator & { stopping: boolean } {
-  const { state, turnId, isWorking, hostStopping, stopPressed, queueCapable, queueFollowUps } = input
+  const { state, turnId, hostStopping, stopPressed, queueCapable, queueFollowUps } = input
+  const working = input.isWorking || input.canStop
   const activityText =
     selectStructuredAgentTurnActivity(state.items, turnId, state.activity)?.text ?? null
   const thinking = isStructuredAgentSessionThinking(state)
-  const stopping =
-    agentStopDisplayStatus({ working: isWorking, hostStopping, stopPressed }) === 'stopping'
-  const stopRequestInFlight = isWorking && stopPressed
+  const stopping = agentStopDisplayStatus({ working, hostStopping, stopPressed }) === 'stopping'
+  const stopRequestInFlight = working && stopPressed
   return useMemo(
     () => ({
       thinking,

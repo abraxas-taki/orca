@@ -5,7 +5,7 @@ import { useMobileStructuredStopOffer } from './use-mobile-structured-stop-offer
 
 describe('useMobileStructuredStopOffer', () => {
   let renderer: ReactTestRenderer | null = null
-  let offer: ReturnType<typeof useMobileStructuredStopOffer<[], string>> | null = null
+  let offer: { canStop: boolean; send: () => Promise<string> } | null = null
 
   afterEach(() => {
     act(() => renderer?.unmount())
@@ -14,13 +14,13 @@ describe('useMobileStructuredStopOffer', () => {
 
   function render(send: () => Promise<string>, stopsConversation: boolean): void {
     function Harness(): null {
-      offer = useMobileStructuredStopOffer({
+      const { canStop, trackSend } = useMobileStructuredStopOffer({
         sessionKey: 'chat',
         turnId: null,
         isWorking: false,
-        stopsConversation,
-        send
+        stopsConversation
       })
+      offer = { canStop, send: trackSend(send) }
       return null
     }
     act(() => {

@@ -406,7 +406,7 @@ export function MobileNativeChatView({
           canStop
             ? {
                 onStop,
-                held: agentWorking === true && turnIndicator?.stopRequestInFlight === true
+                held: turnIndicator?.stopRequestInFlight === true
               }
             : null
         }
