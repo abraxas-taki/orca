@@ -88,7 +88,6 @@ export function buildMobileSourceControlPrimaryAction(
   // Mobile reads upstream status untargeted, so a review with its own push target (fork checkouts) is not gated here.
   const hasReviewLink = review.reviewNumber !== null && review.pushTarget === null
   const canUseReviewPushTarget = hasUsableHostedReviewPushTarget({
-    pushTarget: review.pushTarget ?? undefined,
     upstreamStatus: args.status?.upstreamStatus,
     hasResolvableHostedReviewPushTargetLink: hasReviewLink,
     branchName: args.status?.branch?.replace(/^refs\/heads\//, '')

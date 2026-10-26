@@ -1,7 +1,6 @@
 import type { MobileHostedReviewEligibilityReply } from './hosted-review-reply-schema'
 import { supportsHostedReviewCreation } from '../../../src/shared/hosted-review-creation-providers'
 import { hostedReviewCopy } from './hosted-review-copy'
-import { isHostedReviewCreateEligibilityConfirmable } from '../../../src/shared/hosted-review-create-confirmation'
 import { getMobilePrCreateBlockMessage } from './mobile-pr-create'
 
 export type MobileCreatePrEligibilityState =
@@ -91,13 +90,8 @@ export function buildMobileCreatePrAction({
   const stale = eligibilityState.kind === 'loading'
   const pushFirst = eligibility.blockedReason === 'needs_push'
 
-  if (
-    isHostedReviewCreateEligibilityConfirmable({
-      eligibility,
-      reviewLookup: 'unknown',
-      hasHardRefreshError: false
-    })
-  ) {
+  // Entry follows desktop's intent rule: needs_push prepares first and the gate rechecks before create.
+  if (eligibility.canCreate || pushFirst) {
     const disabled = busy || stale
     return {
       visible: true,
