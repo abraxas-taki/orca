@@ -1,6 +1,9 @@
 import type { NativeChatMessage } from '../../../../shared/native-chat-types'
 import { setBoundedScopeCacheEntry } from '../../../../shared/native-chat-scope-cache'
-import type { NativeChatPendingSend } from '../../../../shared/native-chat-pending-sends'
+import {
+  NATIVE_CHAT_PENDING_SEND_LIMIT,
+  type NativeChatPendingSend
+} from '../../../../shared/native-chat-pending-sends'
 import type { NativeChatLaunchPrompt } from '@/lib/native-chat-launch-prompt'
 import {
   advancedNativeChatUserContentCounts,
@@ -14,7 +17,6 @@ export type NativeChatPendingSendScope = {
   agent: string
 }
 
-const PENDING_SEND_LIMIT = 8
 const pendingSendCache = new Map<string, NativeChatPendingSend[]>()
 let pendingSendCounter = 0
 
@@ -30,7 +32,7 @@ export function writePendingSendCache(
   scope: NativeChatPendingSendScope,
   pending: NativeChatPendingSend[]
 ): NativeChatPendingSend[] {
-  const next = pending.slice(-PENDING_SEND_LIMIT)
+  const next = pending.slice(-NATIVE_CHAT_PENDING_SEND_LIMIT)
   const key = pendingSendScopeKey(scope)
   if (next.length === 0) {
     pendingSendCache.delete(key)

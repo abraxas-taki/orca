@@ -4,6 +4,7 @@ import {
   nativeChatPendingContentKey
 } from '../../../../src/shared/native-chat-pending-occurrence'
 import {
+  NATIVE_CHAT_PENDING_SEND_LIMIT,
   prunePendingSends,
   visibleNativeChatPendingSends,
   type NativeChatPendingSend
@@ -56,7 +57,7 @@ export function appendMobileNativeChatPending(
     ...origin.boundary,
     ...(images?.length ? { images } : {})
   })
-  return { ...previous, [key]: [...current, entry] }
+  return { ...previous, [key]: [...current, entry].slice(-NATIVE_CHAT_PENDING_SEND_LIMIT) }
 }
 
 export function mergeWaitingSessionPending(

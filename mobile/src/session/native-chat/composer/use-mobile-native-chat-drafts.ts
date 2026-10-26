@@ -14,7 +14,10 @@ import {
   mergeSentImagePreviews,
   migrateImagePreviewMessageIds
 } from './mobile-native-chat-draft-reconcile'
-import { normalizeNativeChatUserText as normalizeReconcileText } from '../../../../../src/shared/native-chat-image-transcript-markers'
+import {
+  normalizeImageTranscriptMessages,
+  normalizeNativeChatUserText as normalizeReconcileText
+} from '../../../../../src/shared/native-chat-image-transcript-markers'
 import { useMobileNativeChatUnconfirmedSends } from '../use-mobile-native-chat-unconfirmed-sends'
 import {
   appendMobileNativeChatPending,
@@ -219,6 +222,8 @@ export function useMobileNativeChatDrafts(args: {
     ? (pendingBySession[pendingKey] ?? NO_PENDING_MESSAGES)
     : NO_PENDING_MESSAGES
   const pending = combineMobileNativeChatPending(sessionPending, waitingForSession)
+  // Desktop matches echoes against image-normalized rows; a photo's source row folds into its caption.
+  const echoRows = useMemo(() => normalizeImageTranscriptMessages(messages), [messages])
   useEffect(() => {
     if (!pendingKey) {
       return
@@ -241,7 +246,7 @@ export function useMobileNativeChatDrafts(args: {
     }
     setPendingBySession((previous) => {
       const current = previous[pendingKey] ?? []
-      const next = retireLandedMobileNativeChatPending(messages, current, landedImagePendingIds)
+      const next = retireLandedMobileNativeChatPending(echoRows, current, landedImagePendingIds)
       if (next === current) {
         return previous
       }
@@ -252,10 +257,10 @@ export function useMobileNativeChatDrafts(args: {
       delete remaining[pendingKey]
       return remaining
     })
-  }, [messages, pending, pendingKey, transcriptSettled])
+  }, [echoRows, messages, pending, pendingKey, transcriptSettled])
   const visiblePending = useMemo(
-    () => visibleMobileNativeChatPending(messages, pending),
-    [messages, pending]
+    () => visibleMobileNativeChatPending(echoRows, pending),
+    [echoRows, pending]
   )
 
   return {

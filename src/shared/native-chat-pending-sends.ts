@@ -14,6 +14,9 @@ import {
   type NativeChatUserRow
 } from './native-chat-pending-occurrence'
 
+// Bounds reconciliation cost; each open send rescans the transcript.
+export const NATIVE_CHAT_PENDING_SEND_LIMIT = 8
+
 export type NativeChatPendingSend = {
   id: string
   /** Definite send outcome; absent while the send is simply awaiting its transcript row. */
