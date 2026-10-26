@@ -1,6 +1,6 @@
 import {
-  encodeTerminalShiftEnter,
-  TERMINAL_CTRL_BACKSPACE_INPUT
+  TERMINAL_CTRL_BACKSPACE_INPUT,
+  TERMINAL_KITTY_SHIFT_ENTER_INPUT
 } from '../../../src/shared/terminal-modified-enter-encoding'
 import {
   SPECIAL_KEY_LABELS,
@@ -184,9 +184,9 @@ function buildShortcutBytes(key: string, modifiers: TerminalShortcutModifier[]):
     return modifiers.includes('alt') ? `${ESC}${bytes}` : bytes
   }
   if (key === 'enter') {
-    // Saved keys carry no pane, so encode as desktop does before KKP or modifyOtherKeys is negotiated.
+    // Saved keys carry no pane; the send path encodes this for the pane's negotiated keyboard modes.
     if (hasOnlyModifier(modifiers, 'shift')) {
-      return encodeTerminalShiftEnter({ canSendCsiU: false, modifyOtherKeys: 0 })
+      return TERMINAL_KITTY_SHIFT_ENTER_INPUT
     }
     const bytes = '\r'
     return modifiers.includes('alt') ? `${ESC}${bytes}` : bytes

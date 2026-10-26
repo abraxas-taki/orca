@@ -75,7 +75,7 @@ export type TerminalDocumentTerminal = {
     registerOscHandler: (
       ident: number,
       callback: (data: string) => boolean
-    ) => TerminalDocumentDisposable
+    ) => { dispose: () => void }
   }
   readonly textarea?: {
     readOnly: boolean

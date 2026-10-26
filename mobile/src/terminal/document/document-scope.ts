@@ -1,3 +1,4 @@
+import { TerminalKittyKeyboardModeTracker } from '../../../../src/shared/terminal-kitty-keyboard-mode-tracker'
 import type { TerminalLaidOutCellBox } from '../terminal-cell-box'
 import { DEFAULT_TERMINAL_THEME } from '../terminal-webview-html/theme'
 import {
@@ -59,6 +60,7 @@ export type TerminalDocumentState = {
   trackedMouseTrackingMode: string
   sgrMouseMode: boolean
   sgrMousePixelsMode: boolean
+  keyboardModes: TerminalKittyKeyboardModeTracker
   scrollIndicatorHideTimer: ReturnType<typeof setTimeout> | null
   handledMessageIds: number[]
   currentTextScale: number
@@ -141,6 +143,8 @@ export type TerminalDocumentModes = {
   sgrMouseMode: boolean
   sgrMousePixelsMode: boolean
   applicationCursorKeysMode: boolean
+  kittyKeyboardFlags: number
+  modifyOtherKeys: number
 }
 
 export type TerminalWriteQueueEntry = string | (() => void) | undefined
@@ -169,7 +173,9 @@ function createTerminalDocumentState(): TerminalDocumentState {
       mouseTrackingMode: 'none',
       sgrMouseMode: false,
       sgrMousePixelsMode: false,
-      applicationCursorKeysMode: false
+      applicationCursorKeysMode: false,
+      kittyKeyboardFlags: 0,
+      modifyOtherKeys: 0
     },
     everReady: false,
     mouseEncodingKnown: false,
@@ -177,6 +183,7 @@ function createTerminalDocumentState(): TerminalDocumentState {
     trackedMouseTrackingMode: 'none',
     sgrMouseMode: false,
     sgrMousePixelsMode: false,
+    keyboardModes: new TerminalKittyKeyboardModeTracker(),
     scrollIndicatorHideTimer: null,
     handledMessageIds: [],
     currentTextScale: 1,

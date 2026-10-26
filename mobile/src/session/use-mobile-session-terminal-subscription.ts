@@ -202,7 +202,8 @@ export function useMobileSessionTerminalSubscription(
               return
             }
             const frame = terminalFrameRef.current
-            ref.init({ cols, rows, initialData, preserveScroll: true, oscLinks, frame })
+            const kittyFlags = data.kittyKeyboardFlags
+            ref.init({ cols, rows, initialData, preserveScroll: true, oscLinks, kittyFlags, frame })
             initializedHandlesRef.current.add(handle)
             if (data.displayMode) {
               const displayMode = data.displayMode as MobileDisplayMode
@@ -274,6 +275,7 @@ export function useMobileSessionTerminalSubscription(
                 initialData: serialized,
                 preserveScroll: true,
                 oscLinks,
+                kittyFlags: data.kittyKeyboardFlags,
                 frame: terminalFrameRef.current
               })
             } else {

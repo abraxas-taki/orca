@@ -13,6 +13,8 @@ export type TerminalModes = {
   sgrMouseMode: boolean
   sgrMousePixelsMode: boolean
   applicationCursorKeysMode: boolean
+  kittyKeyboardFlags: number
+  modifyOtherKeys: number
 }
 
 export type TerminalKeyboardAvoidanceMetrics = {
@@ -99,6 +101,8 @@ export type TerminalInit = {
   initialData?: string
   preserveScroll?: boolean
   oscLinks?: TerminalOscLinkRange[]
+  // The host snapshot's proven Kitty keyboard flags, unvalidated.
+  kittyFlags?: unknown
   frame: TerminalFrame | null
 }
 

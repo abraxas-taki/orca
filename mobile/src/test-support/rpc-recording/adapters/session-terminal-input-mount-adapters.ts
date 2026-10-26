@@ -13,7 +13,9 @@ const PTY_MODES: TerminalModes = {
   mouseTrackingMode: 'none',
   sgrMouseMode: false,
   sgrMousePixelsMode: false,
-  applicationCursorKeysMode: false
+  applicationCursorKeysMode: false,
+  kittyKeyboardFlags: 0,
+  modifyOtherKeys: 0
 }
 
 // Use the real draft store and per-recording pasteboard so refused sends restore recorded input.
@@ -179,6 +181,7 @@ function mountTerminalInputSend(
         connStateRef: { current: 'connected' },
         liveInputRef: { current: null },
         commandInputRef: { current: null },
+        ptyModesRef: { current: new Map([[HANDLE, PTY_MODES]]) },
         liveInputFocusTimerRef: { current: null },
         sendLiveTerminalInputRef: { current: null },
         sessionTabActionSheetKeyboardHideSubRef: { current: null },

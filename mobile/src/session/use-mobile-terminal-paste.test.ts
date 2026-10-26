@@ -178,7 +178,9 @@ describe('mobile clipboard text paste', () => {
               mouseTrackingMode: 'none',
               sgrMouseMode: false,
               sgrMousePixelsMode: false,
-              applicationCursorKeysMode: false
+              applicationCursorKeysMode: false,
+              kittyKeyboardFlags: 0,
+              modifyOtherKeys: 0
             }
           ]
         ])

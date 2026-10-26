@@ -1,3 +1,5 @@
+export const TERMINAL_KITTY_SHIFT_ENTER_INPUT = '\x1b[13;2u'
+
 /** Ctrl+Backspace deletes the previous word, like readline's Ctrl+W. */
 export const TERMINAL_CTRL_BACKSPACE_INPUT = '\x17'
 
@@ -17,7 +19,7 @@ export function encodeTerminalShiftEnter({
   modifyOtherKeys: number
 }): string {
   if (canSendCsiU) {
-    return '\x1b[13;2u'
+    return TERMINAL_KITTY_SHIFT_ENTER_INPUT
   }
   return encodeModifyOtherKeysEnter(modifyOtherKeys, 2) ?? '\x1b\r'
 }

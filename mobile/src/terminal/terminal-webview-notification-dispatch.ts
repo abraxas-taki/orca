@@ -45,7 +45,9 @@ export function dispatchTerminalWebViewNotification(
       mouseTrackingMode,
       sgrMouseMode: !!msg.sgrMouseMode,
       sgrMousePixelsMode: !!msg.sgrMousePixelsMode,
-      applicationCursorKeysMode: !!msg.applicationCursorKeysMode
+      applicationCursorKeysMode: !!msg.applicationCursorKeysMode,
+      kittyKeyboardFlags: typeof msg.kittyKeyboardFlags === 'number' ? msg.kittyKeyboardFlags : 0,
+      modifyOtherKeys: typeof msg.modifyOtherKeys === 'number' ? msg.modifyOtherKeys : 0
     })
   } else if (msg.type === 'terminal-input') {
     const bytes = typeof msg.bytes === 'string' ? msg.bytes : ''

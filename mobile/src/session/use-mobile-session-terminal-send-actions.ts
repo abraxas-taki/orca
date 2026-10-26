@@ -15,7 +15,7 @@ import {
   TERMINAL_INPUT_SEND_OPTIONS
 } from '../terminal/terminal-send-request'
 import { normalizeTerminalTextInput } from '../terminal/terminal-text-input-normalization'
-import { applyTerminalCursorKeyMode } from '../terminal/terminal-cursor-key-mode'
+import { encodeTerminalKeyForModes } from '../terminal/terminal-key-mode-encoding'
 import { useTerminalTextFieldSubmitBinding } from '../terminal/use-terminal-text-field-submit-binding'
 import { useAgentSendKeyboardDismissal } from './use-agent-send-keyboard-dismissal'
 import type { MobileSessionTab } from './mobile-session-route-types'
@@ -166,19 +166,16 @@ export function useMobileSessionTerminalSendActions(scope: MobileSessionTerminal
       activeHandle: activeHandleRef.current,
       activeSessionTabType: activeSessionTabTypeRef.current,
       connState: connStateRef.current,
-      bytes: applyTerminalCursorKeyMode(
-        input.bytes,
-        ptyModesRef.current.get(targetHandle)?.applicationCursorKeysMode
-      ),
+      bytes: encodeTerminalKeyForModes(input.bytes, ptyModesRef.current.get(targetHandle)),
       deviceToken: deviceTokenRef.current
     })
   }
 
   const sendLiveTerminalInput = useCallback(
     async (handle: string, bytes: string): Promise<boolean> => {
-      const text = applyTerminalCursorKeyMode(
+      const text = encodeTerminalKeyForModes(
         normalizeTerminalTextInput(bytes),
-        ptyModesRef.current.get(handle)?.applicationCursorKeysMode
+        ptyModesRef.current.get(handle)
       )
       if (text.length === 0) {
         return false

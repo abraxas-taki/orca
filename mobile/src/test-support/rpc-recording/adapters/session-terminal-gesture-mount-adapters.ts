@@ -18,7 +18,9 @@ const PTY_MODES: TerminalModes = {
   mouseTrackingMode: 'any',
   sgrMouseMode: true,
   sgrMousePixelsMode: false,
-  applicationCursorKeysMode: false
+  applicationCursorKeysMode: false,
+  kittyKeyboardFlags: 0,
+  modifyOtherKeys: 0
 }
 
 // Record send/clear outcomes and queue accounting without a WebView; local clear rendering is outside this oracle.

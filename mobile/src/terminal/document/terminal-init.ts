@@ -26,6 +26,7 @@ import { cancelSelect } from './selection-mode'
 import { resetEvictionCounter } from './selection-state-and-eviction'
 import { beginTerminalSurfaceSwap, commitTerminalSurfaceSwap } from './surface-swap'
 import { attachTermObservers } from './term-observers'
+import { TerminalKittyKeyboardModeTracker } from '../../../../src/shared/terminal-kitty-keyboard-mode-tracker'
 import { applyTerminalTheme } from './terminal-theme'
 import { attachWebglAddon, cancelWebglContextRecovery } from './webgl-recovery'
 import { afterWritesDrained, enqueueWrite, pumpWrites, resetWriteQueue } from './write-queue'
@@ -90,7 +91,8 @@ export function init(
   nextTheme: Parameters<typeof applyTerminalTheme>[1],
   nextFontScale: unknown,
   preserveScroll: boolean,
-  nextOscLinks: unknown
+  nextOscLinks: unknown,
+  kittyKeyboardFlags: unknown
 ) {
   // Replay replaces the scroll target; retire momentum and pending drags belonging to the old one.
   stopSurfaceTouchGestures(scope)
@@ -136,7 +138,16 @@ export function init(
     mouseTrackingMode: 'none',
     sgrMouseMode: false,
     sgrMousePixelsMode: false,
-    applicationCursorKeysMode: false
+    applicationCursorKeysMode: false,
+    kittyKeyboardFlags: 0,
+    modifyOtherKeys: 0
+  }
+  // Seed like desktop's snapshot path: replayed modes, then the host's proven Kitty flags.
+  scope.keyboardModes = new TerminalKittyKeyboardModeTracker()
+  scope.keyboardModes.resetForSnapshot()
+  scope.keyboardModes.scanReplay(typeof initialData === 'string' ? initialData : '')
+  if (typeof kittyKeyboardFlags === 'number') {
+    scope.keyboardModes.restoreSnapshotFlags(kittyKeyboardFlags)
   }
   const replayData = normalizeInitialData(initialData)
   // Mirror only replayed modes after normal-buffer prefixes are discarded.
@@ -210,6 +221,7 @@ export function init(
 
 export function write(scope: TerminalDocumentScope, data: string) {
   updateMouseModeFromData(scope, data, true)
+  scope.keyboardModes.scan(data)
   enqueueWrite(scope, data)
   pumpWrites(scope, scope.terminalGeneration)
   // Refit once after first live output reveals a wider line; later chunks preserve manual zoom.
