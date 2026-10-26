@@ -125,7 +125,7 @@ type Props = ComposerTrayProps & {
   onCollapsePrompt?: () => void
   collapsedPrompt?: { title: string; expand: () => void } | null
   question?: MobileChatQuestion | null
-  onAnswerQuestion?: (text: string) => Promise<boolean>
+  onAnswerQuestion?: (text: string, prompt?: MobileChatQuestion['prompt']) => Promise<boolean>
   permission?: MobileChatPermission | null
   promptKey?: string | null
   onRespondPermission?: (send: string) => Promise<boolean>

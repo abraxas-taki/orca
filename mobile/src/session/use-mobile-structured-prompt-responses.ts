@@ -21,6 +21,7 @@ import type {
   StructuredAgentSessionMutate,
   StructuredAgentSessionMutationResult
 } from './mobile-structured-agent-session-rpc'
+import type { MobileChatQuestion } from './mobile-native-chat-question'
 
 export function useMobileStructuredPromptResponses(args: {
   stateRef: { readonly current: StructuredAgentSessionState }
@@ -30,7 +31,7 @@ export function useMobileStructuredPromptResponses(args: {
   onSendError: (message: string) => void
 }): {
   respondPermission: (optionId: string) => Promise<boolean>
-  respondQuestion: (answer: string) => Promise<boolean>
+  respondQuestion: (answer: string, rendered?: MobileChatQuestion['prompt']) => Promise<boolean>
 } {
   const { mutate, onSendError, questionAnswersSupported, stateRef } = args
 
@@ -90,12 +91,17 @@ export function useMobileStructuredPromptResponses(args: {
   )
 
   const respondQuestion = useCallback(
-    async (answer: string): Promise<boolean> => {
+    async (answer: string, rendered?: MobileChatQuestion['prompt']): Promise<boolean> => {
       const prompt = actionableStructuredQuestion(stateRef.current)
       if (prompt?.body.questions) {
-        // The grouped card hands over its whole answer set in the shared answer encoding.
+        // Claude reuses question ids across prompts, so answers must match the prompt they were picked on.
         const answers = decodeAgentSessionQuestionAnswers(answer)
-        if (!answers || !isValidAgentSessionQuestionAnswers(prompt.body.questions, answers)) {
+        if (
+          !answers ||
+          rendered?.itemId !== prompt.itemId ||
+          rendered.expectedRevision !== prompt.revision ||
+          !isValidAgentSessionQuestionAnswers(prompt.body.questions, answers)
+        ) {
           return false
         }
         const result = await sendAnswers(

@@ -77,7 +77,11 @@ export type MobileNativeChatController = {
   nativeChatBackgroundTasks: MobileStructuredBackgroundTasks | null
   nativeChatFilePaths: string[]
   loadNativeChatFiles: (query: string) => void
-  handleNativeChatQuestionAnswer?: (text: string) => Promise<boolean>
+  /** A grouped structured answer names the prompt it was rendered for. */
+  handleNativeChatQuestionAnswer?: (
+    text: string,
+    prompt?: MobileChatQuestion['prompt']
+  ) => Promise<boolean>
   handleNativeChatSend: (text: string, images?: string[]) => Promise<boolean>
   // Preserve unknown outcomes to heal orphaned image pastes; share their deadline with text and retain the original pre-paste sentAt.
   handleNativeChatSendWithOutcome: (

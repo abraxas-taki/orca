@@ -41,7 +41,7 @@ export function MobileNativeChatPromptCard({
   permission?: MobileChatPermission | null
   onRespondPermission?: (send: string) => Promise<boolean>
   question?: MobileChatQuestion | null
-  onAnswerQuestion?: (text: string) => Promise<boolean>
+  onAnswerQuestion?: (text: string, prompt?: MobileChatQuestion['prompt']) => Promise<boolean>
 }): React.JSX.Element | null {
   const card =
     ask && requiresTerminal ? (
@@ -91,7 +91,7 @@ export function MobileNativeChatPromptCard({
       <MobileNativeChatStructuredAsk
         key={mobileChatQuestionKey(question)}
         questions={question.questions}
-        onAnswer={async (answers) => (await onAnswerQuestion?.(answers)) ?? false}
+        onAnswer={async (answers) => (await onAnswerQuestion?.(answers, question.prompt)) ?? false}
         onCancel={onCancelPrompt && (() => onCancelPrompt(question.prompt))}
       />
     ) : question ? (

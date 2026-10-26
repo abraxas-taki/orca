@@ -265,6 +265,24 @@ describe('useMobileStructuredPromptResponses', () => {
       }
     )
 
+    const RENDERED_GROUP = { itemId: 'item-g', expectedRevision: 1 }
+
+    it('refuses grouped answers picked on a prompt that has since been replaced', async () => {
+      const { mutate, sent } = recordingMutate()
+      mount(groupedPrompt('item-g', 2), mutate, true)
+
+      const answered = await hook().respondQuestion(
+        encodeAgentSessionQuestionAnswers([
+          { questionId: 'q1', optionIds: ['q1:choice-1'] },
+          { questionId: 'q2', optionIds: ['q2:choice-1'] }
+        ]),
+        RENDERED_GROUP
+      )
+
+      expect(answered).toBe(false)
+      expect(sent).toEqual([])
+    })
+
     it.each([true, false])('submits a grouped question once (answers: %s)', async (supported) => {
       const prompt = groupedPrompt('item-g', 1)
       const { mutate, sent } = recordingMutate()
@@ -275,7 +293,7 @@ describe('useMobileStructuredPromptResponses', () => {
         { questionId: 'q2', optionIds: ['q2:choice-1'] }
       ]
       await act(async () => {
-        await hook().respondQuestion(encodeAgentSessionQuestionAnswers(answers))
+        await hook().respondQuestion(encodeAgentSessionQuestionAnswers(answers), RENDERED_GROUP)
       })
 
       expect(sentFields(sent)).toEqual({
@@ -314,7 +332,7 @@ describe('useMobileStructuredPromptResponses', () => {
         { questionId: 'q2', optionIds: [], other: LONG_ANSWER }
       ]
       await act(async () => {
-        await hook().respondQuestion(encodeAgentSessionQuestionAnswers(answers))
+        await hook().respondQuestion(encodeAgentSessionQuestionAnswers(answers), RENDERED_GROUP)
       })
 
       if (!expectSent) {
