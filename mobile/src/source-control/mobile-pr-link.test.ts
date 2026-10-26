@@ -54,14 +54,14 @@ describe('fetchWorktreeGitHubPRLink', () => {
         client({ worktree: { linkedPR: null, suppressedGitHubPR: 12 } }),
         'w'
       )
-    ).toEqual({ linkedPR: null, suppressedGitHubPR: 12, pushTarget: null })
+    ).toMatchObject({ linkedPR: null, suppressedGitHubPR: 12, pushTarget: null })
   })
 
   it('returns nulls when unset, null, or non-numeric', async () => {
-    expect(await fetchWorktreeGitHubPRLink(client({ worktree: {} }), 'w')).toEqual(none)
-    expect(await fetchWorktreeGitHubPRLink(client({ worktree: { linkedPR: 'x' } }), 'w')).toEqual(
-      none
-    )
+    expect(await fetchWorktreeGitHubPRLink(client({ worktree: {} }), 'w')).toMatchObject(none)
+    expect(
+      await fetchWorktreeGitHubPRLink(client({ worktree: { linkedPR: 'x' } }), 'w')
+    ).toMatchObject(none)
   })
 
   it('returns nulls when the request fails or rejects', async () => {

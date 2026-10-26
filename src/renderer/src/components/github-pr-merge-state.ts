@@ -1,12 +1,10 @@
 import {
   resolveGitHubPRMergeState,
-  type GitHubPRAutoMergeActionDecision,
+  type GitHubPRAutoMergeActionIntent,
   type GitHubPRMergeStateInput,
   type GitHubPRMergeStateKind
 } from '../../../shared/github/pull-request-merge-state'
 import { translate } from '@/i18n/i18n'
-
-export type { GitHubPRMergeStateInput } from '../../../shared/github/pull-request-merge-state'
 
 export type GitHubPRAutoMergeAction = {
   kind: 'enable' | 'disable'
@@ -29,15 +27,14 @@ const WARNING_TONE = 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:te
 const DANGER_TONE = 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-200'
 
 function presentAutoMergeAction(
-  action: GitHubPRAutoMergeActionDecision | null
+  intent: GitHubPRAutoMergeActionIntent | null
 ): GitHubPRAutoMergeAction | null {
-  if (!action) {
-    return null
-  }
-  switch (action.intent) {
+  switch (intent) {
+    case null:
+      return null
     case 'disable_auto_merge':
       return {
-        kind: action.kind,
+        kind: 'disable',
         label: translate('auto.components.github.pr.merge.state.48d75ae118', 'Disable auto-merge'),
         tooltip: translate(
           'auto.components.github.pr.merge.state.62703b1dc4',
@@ -46,7 +43,7 @@ function presentAutoMergeAction(
       }
     case 'merge_when_ready':
       return {
-        kind: action.kind,
+        kind: 'enable',
         label: translate('auto.components.github.pr.merge.state.b169f943e1', 'Merge when ready'),
         tooltip: translate(
           'auto.components.github.pr.merge.state.331ebe1170',
@@ -55,7 +52,7 @@ function presentAutoMergeAction(
       }
     case 'enable_auto_merge':
       return {
-        kind: action.kind,
+        kind: 'enable',
         label: translate('auto.components.github.pr.merge.state.4ab19a62ef', 'Enable auto-merge'),
         tooltip: translate(
           'auto.components.github.pr.merge.state.8f6cb3772f',

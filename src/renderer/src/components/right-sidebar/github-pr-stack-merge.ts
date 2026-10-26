@@ -6,8 +6,6 @@ import {
 } from '../../../../shared/github/pull-request-stack-merge'
 import { translate } from '@/i18n/i18n'
 
-export { isGitHubPRStackMergeQueueRequired } from '../../../../shared/github/pull-request-stack-merge'
-
 export type GitHubPRStackMergeScope = SharedGitHubPRStackMergeScope & { label: string }
 
 export function getGitHubPRStackMergeScope(

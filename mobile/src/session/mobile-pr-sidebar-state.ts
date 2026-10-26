@@ -143,8 +143,11 @@ export async function loadPrSidebarData(
     // Desktop drops a link the branch has moved past, then resolves by branch.
     if (staleLink) {
       linkedPR = null
-      await deps.clearWorktreeReviewLink(args.worktreeId, staleLink)
-      prOutcome = await fetchPR(null)
+      // The refetch sends no link, so it need not wait for the clear to land.
+      ;[, prOutcome] = await Promise.all([
+        deps.clearWorktreeReviewLink(args.worktreeId, staleLink),
+        fetchPR(null)
+      ])
     }
     if (!prOutcome.ok) {
       return failureState(prOutcome.error)

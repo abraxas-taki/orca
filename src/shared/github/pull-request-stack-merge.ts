@@ -74,12 +74,31 @@ export function getGitHubPRStackMergeBlocker(
   return null
 }
 
-// A stack merge lands every PR below this one, so the stack's own readiness replaces this PR's merge state.
-export function isGitHubPRStackDirectMergeAvailable(args: {
+export type GitHubPRStackMergeDecision = {
   scope: GitHubPRStackMergeScope
-  blocked: boolean
+  blocker: GitHubPRStackMergeBlocker | null
   usesMergeQueue: boolean
   directMergeAvailable: boolean
-}): boolean {
-  return !args.blocked && (args.scope.complete || args.directMergeAvailable || args.usesMergeQueue)
+}
+
+// A stack merge lands every PR below this one, so the stack's readiness replaces this PR's merge state.
+export function resolveGitHubPRStackMergeDecision(args: {
+  stack: GitHubPRStack
+  reviewMergeQueueRequired: boolean | null | undefined
+  stackMergeQueueRequired: boolean | null | undefined
+  directMergeAvailable: boolean
+}): GitHubPRStackMergeDecision {
+  const scope = getGitHubPRStackMergeScope(args.stack)
+  const blocker = getGitHubPRStackMergeBlocker(scope)
+  const usesMergeQueue = isGitHubPRStackMergeQueueRequired(
+    args.reviewMergeQueueRequired,
+    args.stackMergeQueueRequired
+  )
+  return {
+    scope,
+    blocker,
+    usesMergeQueue,
+    directMergeAvailable:
+      !blocker && (scope.complete || args.directMergeAvailable || usesMergeQueue)
+  }
 }

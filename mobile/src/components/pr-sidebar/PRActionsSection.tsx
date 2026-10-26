@@ -9,8 +9,7 @@ import { unlinkMobilePr } from '../../source-control/mobile-pr-link'
 import { ConfirmModal } from '../ConfirmModal'
 import { resolveGitHubPRMergeMethods } from '../../../../src/shared/github/pull-request-merge-methods'
 import { MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY } from '../../../../src/shared/source-control-runtime-capabilities'
-import { useHostProtocolGates } from '../host-protocol-gates-context'
-import { useRelayedRouteAllows } from '../../transport/use-workspace-client'
+import { useRouteCapability } from '../../transport/use-workspace-client'
 import { presentPrMerge, resolvePrActionAvailability } from './pr-actions-state'
 import { prActionsStyles as styles } from './pr-actions-styles'
 
@@ -42,7 +41,6 @@ export function PRActionsSection({
   // Local unlink errors — unlink is not routed through the actions engine.
   const [unlinkError, setUnlinkError] = useState<string | null>(null)
 
-  const { hostCapabilities } = useHostProtocolGates()
   // Use repo’s default merge method to keep mobile one-tap without narrow method picker.
   const mergeMethods = resolveGitHubPRMergeMethods(pr.mergeMethodSettings ?? null)
   const effectiveMethod = mergeMethods.defaultMethod
@@ -54,11 +52,8 @@ export function PRActionsSection({
     mergeMethods.defaultLabel
   )
   // Older hosts, or an older desktop relaying to a server, reject this method from mobile.
-  const relayAllowsMarkReady = useRelayedRouteAllows(MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY)
-  const showMarkReady =
-    avail.canMarkReady &&
-    relayAllowsMarkReady &&
-    hostCapabilities.includes(MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY)
+  const routeCanMarkReady = useRouteCapability(MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY)
+  const showMarkReady = avail.canMarkReady && routeCanMarkReady
   const mergeBusy = actions.isBusy({ kind: 'merge' })
   const autoMergeBusy = actions.isBusy({ kind: 'autoMerge' })
   const stateBusy = actions.isBusy({ kind: 'state' })
@@ -155,7 +150,7 @@ export function PRActionsSection({
           <Text style={styles.actionHint}>{merge.hint}</Text>
           {/* No mobile surface polls PR state, so a blocked Merge needs its own recheck. */}
           <Pressable
-            onPress={onRecheck}
+            onPress={() => onRecheck()}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Recheck merge status"

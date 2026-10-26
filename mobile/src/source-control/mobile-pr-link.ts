@@ -1,5 +1,4 @@
 import type { RpcSendParams } from '../transport/rpc-params-contract'
-import type { GitPushTarget } from '../../../src/shared/worktree/types'
 import { CLEARED_HOSTED_REVIEW_SELECTION_UPDATES } from '../../../src/shared/worktree/hosted-review-links'
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import type { RpcOperationSender } from '../transport/rpc-operation-sender'
@@ -20,11 +19,10 @@ function buildWorktreeSetLinkParams(
   return { worktree: `id:${worktreeId}`, linkedPR }
 }
 
-export type WorktreeGitHubPRLink = {
-  linkedPR: number | null
-  suppressedGitHubPR: number | null
-  pushTarget: GitPushTarget | null
-}
+export type WorktreeGitHubPRLink = Pick<
+  MobileWorktreeSummary,
+  'linkedPR' | 'suppressedGitHubPR' | 'pushTarget'
+>
 
 export function buildWorktreeSetHostedReviewLinkParams(
   worktreeId: string,
@@ -142,14 +140,7 @@ export async function fetchWorktreeGitHubPRLink(
   client: RpcOperationSender,
   worktreeId: string
 ): Promise<WorktreeGitHubPRLink> {
-  const summary = await readWorktreeSummary(client, worktreeId)
-  return summary
-    ? {
-        linkedPR: summary.linkedPR,
-        suppressedGitHubPR: summary.suppressedGitHubPR,
-        pushTarget: summary.pushTarget
-      }
-    : NO_GITHUB_PR_LINK
+  return (await readWorktreeSummary(client, worktreeId)) ?? NO_GITHUB_PR_LINK
 }
 
 async function readWorktreeSummary(

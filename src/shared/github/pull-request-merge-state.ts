@@ -28,20 +28,15 @@ export type GitHubPRMergeStateKind =
   | 'checks_passed'
   | 'checking'
 
-export type GitHubPRAutoMergeActionKind =
+export type GitHubPRAutoMergeActionIntent =
   | 'disable_auto_merge'
   | 'merge_when_ready'
   | 'enable_auto_merge'
 
-export type GitHubPRAutoMergeActionDecision = {
-  kind: 'enable' | 'disable'
-  intent: GitHubPRAutoMergeActionKind
-}
-
 export type GitHubPRMergeStateDecision = {
   kind: GitHubPRMergeStateKind
   directMergeAvailable: boolean
-  autoMergeAction: GitHubPRAutoMergeActionDecision | null
+  autoMergeAction: GitHubPRAutoMergeActionIntent | null
 }
 
 function checksState(item: GitHubPRMergeStateInput): CheckStatus | 'none' | undefined {
@@ -57,17 +52,17 @@ function hasFullMergeMetadata(item: GitHubPRMergeStateInput): boolean {
 
 function resolveAutoMergeAction(
   item: GitHubPRMergeStateInput
-): GitHubPRAutoMergeActionDecision | null {
+): GitHubPRAutoMergeActionIntent | null {
   if (!canShowGitHubPRAutoMergeControl(item)) {
     return null
   }
   if (item.autoMergeEnabled === true) {
-    return { kind: 'disable', intent: 'disable_auto_merge' }
+    return 'disable_auto_merge'
   }
   if (item.mergeQueueRequired === true) {
-    return { kind: 'enable', intent: 'merge_when_ready' }
+    return 'merge_when_ready'
   }
-  return { kind: 'enable', intent: 'enable_auto_merge' }
+  return 'enable_auto_merge'
 }
 
 function resolveMergeStateKind(item: GitHubPRMergeStateInput): GitHubPRMergeStateKind {

@@ -4,10 +4,7 @@ import {
   type GitHubPRMergeStateKind
 } from '../../../../src/shared/github/pull-request-merge-state'
 import {
-  getGitHubPRStackMergeBlocker,
-  getGitHubPRStackMergeScope,
-  isGitHubPRStackDirectMergeAvailable,
-  isGitHubPRStackMergeQueueRequired,
+  resolveGitHubPRStackMergeDecision,
   type GitHubPRStackMergeBlocker
 } from '../../../../src/shared/github/pull-request-stack-merge'
 
@@ -115,13 +112,15 @@ export function presentPrMerge(pr: PRInfo, defaultMethodLabel: string): PrMergeP
       showAutoMerge: decision.autoMergeAction !== null
     }
   }
-  const scope = getGitHubPRStackMergeScope(pr.stack)
-  const blocker = getGitHubPRStackMergeBlocker(scope)
-  const usesMergeQueue = isGitHubPRStackMergeQueueRequired(pr.mergeQueueRequired, null)
-  const enabled = isGitHubPRStackDirectMergeAvailable({
+  const {
     scope,
-    blocked: blocker !== null,
+    blocker,
     usesMergeQueue,
+    directMergeAvailable: enabled
+  } = resolveGitHubPRStackMergeDecision({
+    stack: pr.stack,
+    reviewMergeQueueRequired: pr.mergeQueueRequired,
+    stackMergeQueueRequired: undefined,
     directMergeAvailable: decision.directMergeAvailable
   })
   const stackLabel = `${usesMergeQueue ? 'Queue' : 'Merge'} through #${pr.number} · ${scope.count} ${scope.count === 1 ? 'PR' : 'PRs'}`

@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import { useHostProtocolGates } from '../components/host-protocol-gates-context'
 import { useHostClient } from './host-client-hooks'
 import type { RpcClient } from './rpc-client'
 import type { ConnectionState } from './types'
@@ -9,10 +10,14 @@ export const WorkspaceServerContext = createContext<
   | undefined
 >(undefined)
 
-/** Relayed routes also need the paired desktop to forward the capability's methods. */
-export function useRelayedRouteAllows(capability: string): boolean {
+/** The route's host has the capability; a relayed route also needs the paired desktop to forward it. */
+export function useRouteCapability(capability: string): boolean {
+  const { hostCapabilities } = useHostProtocolGates()
   const server = useContext(WorkspaceServerContext)
-  return server?.desktopCapabilities.includes(capability) ?? true
+  return (
+    hostCapabilities.includes(capability) &&
+    (server?.desktopCapabilities.includes(capability) ?? true)
+  )
 }
 
 export function useWorkspaceClient(hostId: string | undefined): ReturnType<typeof useHostClient> {
