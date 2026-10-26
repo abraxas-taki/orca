@@ -2,7 +2,8 @@ import type { PRCheckDetail } from '../../../src/shared/github/check-types'
 import type { PRInfo } from '../../../src/shared/github/pull-request-types'
 import type { GitHubWorkItemDetails } from '../../../src/shared/github/work-item-types'
 import type { GitHubPrReadOutcome, GitHubPrRepoSlug } from './github-pr-rpc'
-import { resolveLinkedPrNumber } from './mobile-pr-sidebar-resolve'
+import { isGitHubPRSuppressed } from '../../../src/shared/worktree/github-pr-suppression'
+import type { WorktreeGitHubPRLink } from '../source-control/mobile-pr-link'
 
 export type PrSidebarData = {
   pr: PRInfo
@@ -45,10 +46,10 @@ export type PrSidebarLoadDeps = {
     GitHubPrReadOutcome<import('../../../src/shared/hosted-review').HostedReviewInfo | null>
   >
   // Resolve persisted links in parallel so closed/merged PRs add no serial read.
-  fetchWorktreeLinkedPR: (worktreeId: string) => Promise<number | null>
+  fetchWorktreeGitHubPRLink: (worktreeId: string) => Promise<WorktreeGitHubPRLink>
   fetchPRForBranch: (
     worktreeId: string,
-    args: { branch: string; linkedPRNumber?: number | null }
+    args: { branch: string; linkedPRNumber?: number | null; fallbackPRNumber?: number | null }
   ) => Promise<GitHubPrReadOutcome<PRInfo | null>>
   fetchWorkItemDetails: (
     worktreeId: string,
@@ -71,22 +72,23 @@ export async function loadPrSidebarData(
   }
 ): Promise<PrSidebarState> {
   try {
-    const [hintOutcome, linkedPR] = await Promise.all([
+    const [hintOutcome, link] = await Promise.all([
       deps.fetchForBranch(args.worktreeId, { branch: args.branch }),
-      deps.fetchWorktreeLinkedPR(args.worktreeId)
+      deps.fetchWorktreeGitHubPRLink(args.worktreeId)
     ])
     const branchHint =
       hintOutcome.ok && hintOutcome.result?.provider === 'github' ? hintOutcome.result.number : null
-    const linkedPRNumber = resolveLinkedPrNumber(branchHint, linkedPR)
 
+    // Same as desktop: the explicit link wins; the branch's review is only a fallback.
     const prOutcome = await deps.fetchPRForBranch(args.worktreeId, {
       branch: args.branch,
-      linkedPRNumber
+      linkedPRNumber: link.linkedPR,
+      fallbackPRNumber: link.linkedPR === null ? branchHint : null
     })
     if (!prOutcome.ok) {
       return failureState(prOutcome.error)
     }
-    if (!prOutcome.result) {
+    if (!prOutcome.result || isGitHubPRSuppressed(link, prOutcome.result.number)) {
       return { kind: 'none' }
     }
     const pr = prOutcome.result

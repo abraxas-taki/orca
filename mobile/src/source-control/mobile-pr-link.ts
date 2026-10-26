@@ -14,6 +14,11 @@ export function buildWorktreeSetLinkParams(
   return { worktree: `id:${worktreeId}`, linkedPR }
 }
 
+export type WorktreeGitHubPRLink = {
+  linkedPR: number | null
+  suppressedGitHubPR: number | null
+}
+
 export function buildWorktreeSetHostedReviewLinkParams(
   worktreeId: string,
   provider: string,
@@ -88,28 +93,34 @@ export async function linkMobileHostedReview(
   return setWorktreeReviewLink(client, params, 'Failed to update linked review')
 }
 
+// Like desktop, suppress the unlinked PR so branch discovery does not bring it straight back.
 export function unlinkMobilePr(
   client: RpcOperationSender,
-  worktreeId: string
+  worktreeId: string,
+  prNumber: number
 ): Promise<MobilePrLinkOutcome> {
   return setWorktreeReviewLink(
     client,
-    buildWorktreeSetLinkParams(worktreeId, null),
+    { ...buildWorktreeSetLinkParams(worktreeId, null), suppressedGitHubPR: prNumber },
     'Failed to update linked pull request'
   )
 }
 
+const NO_GITHUB_PR_LINK: WorktreeGitHubPRLink = { linkedPR: null, suppressedGitHubPR: null }
+
 // Persisted links recover closed/merged PRs that branch lookup no longer returns.
-export async function fetchWorktreeLinkedPR(
+export async function fetchWorktreeGitHubPRLink(
   client: RpcOperationSender,
   worktreeId: string
-): Promise<number | null> {
+): Promise<WorktreeGitHubPRLink> {
   try {
     const reply = await worktreeSummaryRead.request(client, { worktree: `id:${worktreeId}` })
     const summary = worktreeSummaryRead.interpret(reply)
-    return summary.accepted ? (summary.value?.linkedPR ?? null) : null
+    return summary.accepted && summary.value
+      ? { linkedPR: summary.value.linkedPR, suppressedGitHubPR: summary.value.suppressedGitHubPR }
+      : NO_GITHUB_PR_LINK
   } catch {
     // A failed fallback read is a missing hint, not a fatal error.
-    return null
+    return NO_GITHUB_PR_LINK
   }
 }

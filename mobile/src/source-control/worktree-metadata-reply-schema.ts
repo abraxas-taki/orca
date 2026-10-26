@@ -6,7 +6,8 @@ export const worktreeSummaryReplySchema = z.object({
   worktree: z
     .object({
       baseRef: salvagedOptional('baseRef', z.string()),
-      linkedPR: salvagedOptional('linkedPR', z.number())
+      linkedPR: salvagedOptional('linkedPR', z.number()),
+      suppressedGitHubPR: salvagedOptional('suppressedGitHubPR', z.number())
     })
 
     .nullable()

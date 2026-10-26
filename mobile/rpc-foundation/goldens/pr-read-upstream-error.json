@@ -27,10 +27,53 @@
         "ok": false
       }
     },
-    "105da5cd526f": {
+    "0d0fbc89f3b9": {
+      "name": "github.prForBranch#1",
+      "ordinal": 1,
+      "args": [
+        {
+          "name": "method",
+          "value": "github.prForBranch"
+        },
+        {
+          "name": "params",
+          "value": {
+            "branch": "feature",
+            "fallbackPRNumber": {
+              "$rpc": "null"
+            },
+            "linkedPRNumber": {
+              "$rpc": "null"
+            },
+            "repo": "id:repo-9"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "fetchedAt": 0,
+            "kind": "upstream-error",
+            "message": "GitHub API rate limit exceeded"
+          }
+        }
+      }
+    },
+    "32e9e4a2e5cc": {
       "name": "github.prForBranch#3",
       "ordinal": 6,
-      "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"github.prForBranch\",\"params\":{\"repo\":\"id:repo-9\",\"branch\":\"feature\",\"linkedPRNumber\":null}}"
+      "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"github.prForBranch\",\"params\":{\"repo\":\"id:repo-9\",\"branch\":\"feature\",\"linkedPRNumber\":null,\"fallbackPRNumber\":null}}"
     },
     "331d7e1af815": {
       "pr-for-branch": {
@@ -38,7 +81,12 @@
         "ok": false
       }
     },
-    "5e0834317a77": {
+    "342e63ad500d": {
+      "name": "github.prForBranch#1",
+      "ordinal": 2,
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.prForBranch\",\"params\":{\"repo\":\"id:repo-9\",\"branch\":\"feature\",\"linkedPRNumber\":null,\"fallbackPRNumber\":null}}"
+    },
+    "52969562876f": {
       "name": "github.prForBranch#3",
       "ordinal": 5,
       "args": [
@@ -50,6 +98,9 @@
           "name": "params",
           "value": {
             "branch": "feature",
+            "fallbackPRNumber": {
+              "$rpc": "null"
+            },
             "linkedPRNumber": {
               "$rpc": "null"
             },
@@ -87,12 +138,21 @@
         }
       }
     },
-    "a8f0b6b47b20": {
-      "name": "github.prForBranch#1",
-      "ordinal": 2,
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.prForBranch\",\"params\":{\"repo\":\"id:repo-9\",\"branch\":\"feature\",\"linkedPRNumber\":null}}"
+    "a20885c9a270": {
+      "name": "github.prForBranch#2",
+      "ordinal": 4,
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"github.prForBranch\",\"params\":{\"repo\":\"id:repo-9\",\"branch\":\"feature\",\"linkedPRNumber\":null,\"fallbackPRNumber\":null}}"
     },
-    "c68a6156959e": {
+    "fe9c1046b91d": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "error": "GitHub API rate limit exceeded",
+        "ok": false
+      }
+    },
+    "fec5fc25e79d": {
       "name": "github.prForBranch#2",
       "ordinal": 3,
       "args": [
@@ -104,6 +164,9 @@
           "name": "params",
           "value": {
             "branch": "feature",
+            "fallbackPRNumber": {
+              "$rpc": "null"
+            },
             "linkedPRNumber": {
               "$rpc": "null"
             },
@@ -133,60 +196,6 @@
           }
         }
       }
-    },
-    "e01f872befeb": {
-      "name": "github.prForBranch#1",
-      "ordinal": 1,
-      "args": [
-        {
-          "name": "method",
-          "value": "github.prForBranch"
-        },
-        {
-          "name": "params",
-          "value": {
-            "branch": "feature",
-            "linkedPRNumber": {
-              "$rpc": "null"
-            },
-            "repo": "id:repo-9"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "id": "frame-1",
-          "ok": true,
-          "result": {
-            "fetchedAt": 0,
-            "kind": "upstream-error",
-            "message": "GitHub API rate limit exceeded"
-          }
-        }
-      }
-    },
-    "f775ee87e2e7": {
-      "name": "github.prForBranch#2",
-      "ordinal": 4,
-      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"github.prForBranch\",\"params\":{\"repo\":\"id:repo-9\",\"branch\":\"feature\",\"linkedPRNumber\":null}}"
-    },
-    "fe9c1046b91d": {
-      "status": "fulfilled",
-      "startedAt": 0,
-      "settledAt": 0,
-      "value": {
-        "error": "GitHub API rate limit exceeded",
-        "ok": false
-      }
     }
   },
   "recording": {
@@ -195,8 +204,8 @@
       {
         "id": "upstream",
         "observation": {
-          "sender": ["e01f872befeb"],
-          "payloads": ["a8f0b6b47b20"],
+          "sender": ["0d0fbc89f3b9"],
+          "payloads": ["342e63ad500d"],
           "settlements": {
             "upstream": "fe9c1046b91d"
           },
@@ -207,8 +216,8 @@
       {
         "id": "malformed",
         "observation": {
-          "sender": ["e01f872befeb", "c68a6156959e"],
-          "payloads": ["a8f0b6b47b20", "f775ee87e2e7"],
+          "sender": ["0d0fbc89f3b9", "fec5fc25e79d"],
+          "payloads": ["342e63ad500d", "a20885c9a270"],
           "settlements": {
             "upstream": "fe9c1046b91d",
             "malformed": "0bd591f1a6ca"
@@ -220,8 +229,8 @@
       {
         "id": "no-pr",
         "observation": {
-          "sender": ["e01f872befeb", "c68a6156959e", "5e0834317a77"],
-          "payloads": ["a8f0b6b47b20", "f775ee87e2e7", "105da5cd526f"],
+          "sender": ["0d0fbc89f3b9", "fec5fc25e79d", "52969562876f"],
+          "payloads": ["342e63ad500d", "a20885c9a270", "32e9e4a2e5cc"],
           "settlements": {
             "upstream": "fe9c1046b91d",
             "malformed": "0bd591f1a6ca",

@@ -23,7 +23,8 @@ export function prSidebarMountAdapters(
       const deps: PrSidebarLoadDeps = {
         fetchForBranch: (worktreeId, args) =>
           reads.fetchHostedReviewForBranch(client, worktreeId, args),
-        fetchWorktreeLinkedPR: (worktreeId) => link.fetchWorktreeLinkedPR(client, worktreeId),
+        fetchWorktreeGitHubPRLink: (worktreeId) =>
+          link.fetchWorktreeGitHubPRLink(client, worktreeId),
         fetchPRForBranch: (worktreeId, args) => reads.fetchPRForBranch(client, worktreeId, args),
         fetchWorkItemDetails: (worktreeId, args) =>
           reads.fetchWorkItemDetails(client, worktreeId, args),

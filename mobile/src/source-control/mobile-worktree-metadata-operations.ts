@@ -6,6 +6,7 @@ import { worktreeSummaryReplySchema } from './worktree-metadata-reply-schema'
 export type MobileWorktreeSummary = {
   readonly baseRef: string | null
   readonly linkedPR: number | null
+  readonly suppressedGitHubPR: number | null
 }
 
 // Both consumers treat unreadable metadata as no hint; normalize malformed baseRef/linkedPR to null before fallback.
@@ -13,7 +14,11 @@ const worktreeSummarySchema: z.ZodType<MobileWorktreeSummary | null, unknown> =
   worktreeSummaryReplySchema
     .transform((value): MobileWorktreeSummary | null =>
       value.worktree
-        ? { baseRef: value.worktree.baseRef ?? null, linkedPR: value.worktree.linkedPR ?? null }
+        ? {
+            baseRef: value.worktree.baseRef ?? null,
+            linkedPR: value.worktree.linkedPR ?? null,
+            suppressedGitHubPR: value.worktree.suppressedGitHubPR ?? null
+          }
         : null
     )
     .catch(null)

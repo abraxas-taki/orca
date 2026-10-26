@@ -91,6 +91,11 @@ export const prActionsStyles = StyleSheet.create({
   togglePillTextOn: {
     color: colors.textPrimary
   },
+  actionHint: {
+    color: colors.textSecondary,
+    fontSize: typography.metaSize,
+    lineHeight: 18
+  },
   actionError: {
     color: colors.statusRed,
     fontSize: typography.metaSize,

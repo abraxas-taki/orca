@@ -3,7 +3,7 @@ import type { RpcClient } from '../transport/rpc-client'
 import {
   buildWorktreeSetHostedReviewLinkParams,
   buildWorktreeSetLinkParams,
-  fetchWorktreeLinkedPR,
+  fetchWorktreeGitHubPRLink,
   linkMobilePr
 } from './mobile-pr-link'
 
@@ -56,35 +56,39 @@ describe('buildWorktreeSetHostedReviewLinkParams', () => {
   })
 })
 
-describe('fetchWorktreeLinkedPR', () => {
+describe('fetchWorktreeGitHubPRLink', () => {
   const client = (result: unknown, okFlag = true) =>
     ({
       sendRequest: vi.fn(async () =>
         okFlag ? { ok: true, result } : { ok: false, error: { message: 'x' } }
       )
     }) as unknown as Pick<RpcClient, 'sendRequest'>
+  const none = { linkedPR: null, suppressedGitHubPR: null }
 
-  it('returns the linkedPR number when present', async () => {
-    expect(await fetchWorktreeLinkedPR(client({ worktree: { linkedPR: 12 } }), 'w')).toBe(12)
+  it('returns the linked and suppressed PR numbers when present', async () => {
+    expect(
+      await fetchWorktreeGitHubPRLink(
+        client({ worktree: { linkedPR: null, suppressedGitHubPR: 12 } }),
+        'w'
+      )
+    ).toEqual({ linkedPR: null, suppressedGitHubPR: 12 })
   })
 
-  it('returns null when unset, null, or non-numeric', async () => {
-    expect(await fetchWorktreeLinkedPR(client({ worktree: {} }), 'w')).toBeNull()
-    expect(await fetchWorktreeLinkedPR(client({ worktree: { linkedPR: null } }), 'w')).toBeNull()
-    expect(await fetchWorktreeLinkedPR(client({ worktree: { linkedPR: 'x' } }), 'w')).toBeNull()
+  it('returns nulls when unset, null, or non-numeric', async () => {
+    expect(await fetchWorktreeGitHubPRLink(client({ worktree: {} }), 'w')).toEqual(none)
+    expect(await fetchWorktreeGitHubPRLink(client({ worktree: { linkedPR: 'x' } }), 'w')).toEqual(
+      none
+    )
   })
 
-  it('returns null when the request fails', async () => {
-    expect(await fetchWorktreeLinkedPR(client(null, false), 'w')).toBeNull()
-  })
-
-  it('returns null when the request rejects (no escaping rejection)', async () => {
+  it('returns nulls when the request fails or rejects', async () => {
+    expect(await fetchWorktreeGitHubPRLink(client(null, false), 'w')).toEqual(none)
     const rejecting = {
       sendRequest: vi.fn(async () => {
         throw new Error('transport closed')
       })
     } as unknown as Pick<RpcClient, 'sendRequest'>
-    expect(await fetchWorktreeLinkedPR(rejecting, 'w')).toBeNull()
+    expect(await fetchWorktreeGitHubPRLink(rejecting, 'w')).toEqual(none)
   })
 })
 

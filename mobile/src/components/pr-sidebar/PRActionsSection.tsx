@@ -7,8 +7,11 @@ import type { RpcClient } from '../../transport/rpc-client'
 import type { MobilePrActions } from '../../session/use-mobile-pr-actions'
 import { unlinkMobilePr } from '../../source-control/mobile-pr-link'
 import { ConfirmModal } from '../ConfirmModal'
-import { canShowGitHubPRAutoMergeControl } from '../../../../src/shared/github/pull-request-auto-merge-availability'
-import { resolveMobilePrMergeMethod, resolvePrActionAvailability } from './pr-actions-state'
+import { resolveGitHubPRMergeMethods } from '../../../../src/shared/github/pull-request-merge-methods'
+import { resolveGitHubPRMergeState } from '../../../../src/shared/github/pull-request-merge-state'
+import { MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY } from '../../../../src/shared/source-control-runtime-capabilities'
+import { useHostProtocolGates } from '../host-protocol-gates-context'
+import { PR_MERGE_STATE_COPY, resolvePrActionAvailability } from './pr-actions-state'
 import { prActionsStyles as styles } from './pr-actions-styles'
 
 type Props = {
@@ -31,21 +34,29 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
   // Local unlink errors — unlink is not routed through the actions engine.
   const [unlinkError, setUnlinkError] = useState<string | null>(null)
 
+  const { hostCapabilities } = useHostProtocolGates()
   // Use repo’s default merge method to keep mobile one-tap without narrow method picker.
-  const effectiveMethod = resolveMobilePrMergeMethod(pr.mergeMethodSettings)
+  const mergeMethods = resolveGitHubPRMergeMethods(pr.mergeMethodSettings ?? null)
+  const effectiveMethod = mergeMethods.defaultMethod
   const state = actions.resolveState(pr.state)
   const autoMerge = actions.resolveAutoMerge(pr.autoMergeEnabled ?? false)
   const avail = resolvePrActionAvailability(state)
+  const mergeState = resolveGitHubPRMergeState({
+    ...pr,
+    state,
+    autoMergeEnabled: autoMerge || pr.autoMergeEnabled === true
+  })
+  const mergeBlockedCopy = mergeState.directMergeAvailable
+    ? null
+    : PR_MERGE_STATE_COPY[mergeState.kind]
+  // Older hosts reject this method from mobile.
+  const showMarkReady =
+    avail.canMarkReady && hostCapabilities.includes(MOBILE_GITHUB_MARK_PR_READY_RUNTIME_CAPABILITY)
   const mergeBusy = actions.isBusy({ kind: 'merge' })
   const autoMergeBusy = actions.isBusy({ kind: 'autoMerge' })
   const stateBusy = actions.isBusy({ kind: 'state' })
   const unlinkBusy = unlinking || mergeBusy || autoMergeBusy || stateBusy
-  const showAutoMerge =
-    avail.canAutoMerge &&
-    canShowGitHubPRAutoMergeControl({
-      ...pr,
-      autoMergeEnabled: autoMerge || pr.autoMergeEnabled === true
-    })
+  const showAutoMerge = mergeState.autoMergeAction !== null
   const showSecondary = avail.canClose || avail.canReopen || avail.canUnlink
   const actionError = unlinkError ?? actions.error
 
@@ -56,7 +67,7 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
     setUnlinking(true)
     setUnlinkError(null)
     try {
-      const outcome = await unlinkMobilePr(client, worktreeId)
+      const outcome = await unlinkMobilePr(client, worktreeId, pr.number)
       if (outcome.ok) {
         onUnlinked()
       } else {
@@ -67,7 +78,7 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
     } finally {
       setUnlinking(false)
     }
-  }, [client, onUnlinked, unlinking, worktreeId])
+  }, [client, onUnlinked, pr.number, unlinking, worktreeId])
 
   const confirmCopy = (): { title: string; message: string; confirmLabel: string } => {
     if (confirm?.kind === 'merge') {
@@ -113,15 +124,16 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
           style={[
             styles.actionButton,
             styles.actionButtonMerge,
-            mergeBusy && styles.actionButtonDisabled
+            (mergeBusy || mergeBlockedCopy) && styles.actionButtonDisabled
           ]}
           onPress={() => {
             setUnlinkError(null)
             setConfirm({ kind: 'merge', method: effectiveMethod })
           }}
-          disabled={mergeBusy}
+          disabled={mergeBusy || mergeBlockedCopy !== null}
           accessibilityRole="button"
           accessibilityLabel="Merge pull request"
+          accessibilityHint={mergeBlockedCopy?.hint}
         >
           {mergeBusy ? (
             <ActivityIndicator color={colors.onMergeGreen} />
@@ -129,8 +141,31 @@ export function PRActionsSection({ pr, actions, client, worktreeId, onUnlinked }
             <GitMerge size={16} color={colors.onMergeGreen} strokeWidth={2.2} />
           )}
           <Text style={[styles.actionButtonText, styles.actionButtonTextMerge]}>
-            Merge pull request
+            {mergeBlockedCopy?.label ?? mergeMethods.defaultLabel}
           </Text>
+        </Pressable>
+      ) : null}
+      {avail.canMerge && mergeBlockedCopy ? (
+        <Text style={styles.actionHint}>{mergeBlockedCopy.hint}</Text>
+      ) : null}
+
+      {showMarkReady ? (
+        <Pressable
+          style={[
+            styles.actionButton,
+            styles.secondaryButton,
+            stateBusy && styles.actionButtonDisabled
+          ]}
+          onPress={() => {
+            setUnlinkError(null)
+            actions.markReadyForReview()
+          }}
+          disabled={stateBusy}
+          accessibilityRole="button"
+          accessibilityLabel="Mark pull request ready for review"
+        >
+          {stateBusy ? <ActivityIndicator color={colors.textSecondary} /> : null}
+          <Text style={styles.actionButtonText}>Ready for review</Text>
         </Pressable>
       ) : null}
 
