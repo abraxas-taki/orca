@@ -140,6 +140,7 @@ export type TerminalDocumentModes = {
   mouseTrackingMode: string
   sgrMouseMode: boolean
   sgrMousePixelsMode: boolean
+  applicationCursorKeysMode: boolean
 }
 
 export type TerminalWriteQueueEntry = string | (() => void) | undefined
@@ -167,7 +168,8 @@ function createTerminalDocumentState(): TerminalDocumentState {
       altScreen: false,
       mouseTrackingMode: 'none',
       sgrMouseMode: false,
-      sgrMousePixelsMode: false
+      sgrMousePixelsMode: false,
+      applicationCursorKeysMode: false
     },
     everReady: false,
     mouseEncodingKnown: false,

@@ -17,7 +17,11 @@ import {
 } from './mouse-mode-decset-scan'
 import { captureInitialOscLinkTexts } from './osc-link-tap'
 import { attachOsc52ClipboardBridge } from './osc52-clipboard-bridge'
-import { attachTerminalQueryReplyBridge, resetTerminalDataReplyAuthority } from './query-reply'
+import {
+  attachProgramStatusQueryReplies,
+  attachTerminalQueryReplyBridge,
+  resetTerminalDataReplyAuthority
+} from './query-reply'
 import { cancelSelect } from './selection-mode'
 import { resetEvictionCounter } from './selection-state-and-eviction'
 import { beginTerminalSurfaceSwap, commitTerminalSurfaceSwap } from './surface-swap'
@@ -48,6 +52,7 @@ function openTerminal(scope: TerminalDocumentScope, cols: number, rows: number) 
   })
   scope.term = term
   attachOsc52ClipboardBridge(scope, term)
+  attachProgramStatusQueryReplies(scope, term)
   term.open(scope.surface!)
   attachWebglAddon(scope, true)
   try {
@@ -130,7 +135,8 @@ export function init(
     altScreen: false,
     mouseTrackingMode: 'none',
     sgrMouseMode: false,
-    sgrMousePixelsMode: false
+    sgrMousePixelsMode: false,
+    applicationCursorKeysMode: false
   }
   const replayData = normalizeInitialData(initialData)
   // Mirror only replayed modes after normal-buffer prefixes are discarded.

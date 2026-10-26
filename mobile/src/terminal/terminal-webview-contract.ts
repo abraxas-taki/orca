@@ -12,6 +12,7 @@ export type TerminalModes = {
   mouseTrackingMode: TerminalMouseTrackingMode
   sgrMouseMode: boolean
   sgrMousePixelsMode: boolean
+  applicationCursorKeysMode: boolean
 }
 
 export type TerminalKeyboardAvoidanceMetrics = {

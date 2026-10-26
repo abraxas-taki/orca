@@ -1,4 +1,8 @@
 import {
+  encodeTerminalShiftEnter,
+  TERMINAL_CTRL_BACKSPACE_INPUT
+} from '../../../src/shared/terminal-modified-enter-encoding'
+import {
   SPECIAL_KEY_LABELS,
   TERMINAL_ACCESSORY_KEY_DEFINITIONS,
   TERMINAL_SHORTCUT_SPECIAL_KEY_DEFINITIONS
@@ -180,10 +184,17 @@ function buildShortcutBytes(key: string, modifiers: TerminalShortcutModifier[]):
     return modifiers.includes('alt') ? `${ESC}${bytes}` : bytes
   }
   if (key === 'enter') {
+    // Saved keys carry no pane, so encode as desktop does before KKP or modifyOtherKeys is negotiated.
+    if (hasOnlyModifier(modifiers, 'shift')) {
+      return encodeTerminalShiftEnter({ canSendCsiU: false, modifyOtherKeys: 0 })
+    }
     const bytes = '\r'
     return modifiers.includes('alt') ? `${ESC}${bytes}` : bytes
   }
   if (key === 'backspace') {
+    if (hasOnlyModifier(modifiers, 'ctrl')) {
+      return TERMINAL_CTRL_BACKSPACE_INPUT
+    }
     const bytes = modifiers.includes('ctrl') ? '\b' : '\x7f'
     return modifiers.includes('alt') ? `${ESC}${bytes}` : bytes
   }
@@ -191,6 +202,13 @@ function buildShortcutBytes(key: string, modifiers: TerminalShortcutModifier[]):
     return buildPrintableShortcutBytes(key, modifiers)
   }
   return null
+}
+
+function hasOnlyModifier(
+  modifiers: TerminalShortcutModifier[],
+  modifier: TerminalShortcutModifier
+): boolean {
+  return modifiers.length === 1 && modifiers[0] === modifier
 }
 
 function buildPrintableShortcutBytes(

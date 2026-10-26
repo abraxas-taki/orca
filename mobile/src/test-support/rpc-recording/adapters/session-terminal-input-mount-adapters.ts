@@ -12,7 +12,8 @@ const PTY_MODES: TerminalModes = {
   altScreen: false,
   mouseTrackingMode: 'none',
   sgrMouseMode: false,
-  sgrMousePixelsMode: false
+  sgrMousePixelsMode: false,
+  applicationCursorKeysMode: false
 }
 
 // Use the real draft store and per-recording pasteboard so refused sends restore recorded input.

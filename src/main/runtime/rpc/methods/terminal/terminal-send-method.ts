@@ -80,7 +80,8 @@ export const TERMINAL_SEND_METHODS = [
       if (
         params.inputKind === 'query-reply' &&
         leaf?.ptyId &&
-        !runtime.isMobileTerminalQueryReplyAuthority(leaf.ptyId, queryReplyClientId!)
+        (!runtime.isMobileTerminalQueryReplyAuthority(leaf.ptyId, queryReplyClientId!) ||
+          !runtime.shouldForwardTerminalQueryReply(leaf.ptyId, params.text!))
       ) {
         return {
           send: {
