@@ -229,7 +229,8 @@ function Harness(props: HarnessProps) {
     sendSurfaceId: 'surface',
     sessionId: null,
     getSendCompletionGeneration: () => 0,
-    keyboardInset: 0
+    keyboardInset: 0,
+    hostName: null
   })
 }
 export async function render(props: HarnessProps = lastProps ?? {}) {
