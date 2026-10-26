@@ -123,16 +123,19 @@ describe('RepositorySourceControlAiEnablement', () => {
 
 describe('RepositorySourceControlAiActionRows', () => {
   it.each([
-    { agent: 'codex', detected: ['codex'] },
-    { agent: 'opencode', detected: ['opencode'] },
-    { agent: 'codex', detected: ['claude'] }
+    { agent: 'codex', detected: ['codex'], surface: undefined },
+    { agent: 'codex', detected: ['codex'], surface: 'terminal' },
+    { agent: 'codex', detected: ['codex'], surface: 'chat' },
+    { agent: 'opencode', detected: ['opencode'], surface: undefined },
+    { agent: 'codex', detected: ['claude'], surface: undefined }
   ] as const)(
-    'keeps saved $agent controls bound across detection returning $detected',
-    async ({ agent, detected }) => {
+    'keeps saved $agent/$surface controls bound across detection returning $detected',
+    async ({ agent, detected, surface }) => {
       useAppStore.getState().clearLocalDetectedAgents()
       const settings = useAppStore.getState().settings!
       const recipe = {
         agentId: agent,
+        surface,
         launchPreferences: {
           agentId: agent,
           permissionMode: 'ask' as const,
@@ -236,10 +239,9 @@ describe('RepositorySourceControlAiActionRows', () => {
         expect(card.textContent).not.toContain('Model')
         expect(card.textContent).not.toContain('Effort')
         expect(card.textContent).toContain('Permissions')
-        expect(card.textContent).toContain('Arguments')
         expect(
           card.querySelector<HTMLTextAreaElement>('textarea[aria-label="Arguments"]')?.value
-        ).toBe('--saved-cli')
+        ).toBe(surface === 'chat' ? undefined : '--saved-cli')
         expect(
           Array.from(card.querySelectorAll('textarea')).some(
             (field) => field.value === 'kept-template'
@@ -255,7 +257,11 @@ describe('RepositorySourceControlAiActionRows', () => {
         for (const card of cards) {
           const input = card.querySelector<HTMLTextAreaElement>('textarea[aria-label="Arguments"]')
           expect(input?.value).toBe(
-            experimentalNativeChat && agent !== 'opencode' ? undefined : '--saved-cli'
+            surface === 'terminal'
+              ? '--saved-cli'
+              : surface === 'chat' || (experimentalNativeChat && agent !== 'opencode')
+                ? undefined
+                : '--saved-cli'
           )
         }
       }

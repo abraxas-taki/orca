@@ -105,6 +105,7 @@ export function SourceControlActionRecipeRow<ActionId extends AiActionId>({
   const showArguments = shouldShowSourceControlActionArguments({
     agent: actual.status === 'ready' ? actual.agent : null,
     settings,
+    launchKind: surface,
     chatAgents: chatProviderAgents(LOCAL_EXECUTION_HOST_ID, undefined)
   })
   const expectedAgent = resolveAgentArgsPlaceholderAgent(selectedAgent, defaultTuiAgent)

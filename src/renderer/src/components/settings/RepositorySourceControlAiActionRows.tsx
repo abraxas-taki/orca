@@ -294,6 +294,7 @@ export function RepositorySourceControlAiActionRows({
                     showArguments={shouldShowSourceControlActionArguments({
                       agent: actual.status === 'ready' ? actual.agent : null,
                       settings,
+                      launchKind: recipe.surface,
                       chatAgents: chatProviderAgents(LOCAL_EXECUTION_HOST_ID, undefined)
                     })}
                     agent={pickerAgent}
