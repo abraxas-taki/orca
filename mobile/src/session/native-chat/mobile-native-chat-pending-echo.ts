@@ -1,5 +1,8 @@
 import type { NativeChatMessage } from '../../../../src/shared/native-chat-types'
-import { assignNativeChatPendingOccurrence } from '../../../../src/shared/native-chat-pending-occurrence'
+import {
+  assignNativeChatPendingOccurrence,
+  nativeChatPendingContentKey
+} from '../../../../src/shared/native-chat-pending-occurrence'
 import {
   prunePendingSends,
   visibleNativeChatPendingSends,
@@ -90,11 +93,24 @@ export function retireLandedMobileNativeChatPending(
   landedImagePendingIds: ReadonlySet<string>
 ): MobileNativeChatPendingMessage[] {
   const kept = new Set(prunePendingSends(current, messages))
-  const next = current.filter(
-    (item) =>
-      !landedImagePendingIds.has(item.id) && (kept.has(item) || Boolean(item.images?.length))
-  )
-  return next.length === current.length ? current : next
+  let changed = false
+  const next = current.flatMap((item) => {
+    if (landedImagePendingIds.has(item.id)) {
+      changed = true
+      // The preview now lives on its row; a caption stays a plain send so it can retire with glued neighbours.
+      if (!kept.has(item) || nativeChatPendingContentKey(item) === 'empty') {
+        return []
+      }
+      const { images: _bound, ...caption } = item
+      return [caption]
+    }
+    if (kept.has(item) || item.images?.length) {
+      return [item]
+    }
+    changed = true
+    return []
+  })
+  return changed ? next : current
 }
 
 export function visibleMobileNativeChatPending(

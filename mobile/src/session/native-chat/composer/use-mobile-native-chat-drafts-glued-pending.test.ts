@@ -205,6 +205,29 @@ describe('useMobileNativeChatDrafts glued pending sends', () => {
     expect(renderedPendingTexts(partial, state)).toEqual(['again'])
   })
 
+  it('retires a captioned photo and the send glued after it once the reply lands', async () => {
+    const history = [assistantTurn('m1', 'ready', 1000)]
+    await mount(history)
+    act(() => {
+      const origin = state?.captureSendOrigin('look at this', SENT_AT)
+      if (origin) {
+        state?.acceptSend(origin, 'look at this', ['file:///a.jpg'])
+      }
+      send('is it still working?')
+    })
+
+    const glued = [
+      ...history,
+      imageTurn('m2', '/tmp/a.png', 5000),
+      userTurn('m3', 'look at this[Image #1] is it still working?', 5000)
+    ]
+    await update(glued)
+    const replied = [...glued, assistantTurn('m4', 'yes', 6000)]
+    await update(replied)
+    expect(state?.pending).toEqual([])
+    expect(renderedPendingTexts(replied, state)).toEqual([])
+  })
+
   // Hydrating rows give no boundary, so these sends match only rows newer than their send time.
   describe('sends issued while the transcript is still hydrating', () => {
     const loadedHistory = [userTurn('m1', 'run the tests again', 1000)]

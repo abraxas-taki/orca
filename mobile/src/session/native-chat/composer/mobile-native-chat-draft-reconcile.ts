@@ -111,6 +111,24 @@ export function migrateImagePreviewMessageIds(
   return nextSession ? { ...previous, [sessionKey]: nextSession } : previous
 }
 
+// A boundary on an image-source row lives on in the prompt row it folded into.
+function foldedBoundaryIndex(
+  messages: readonly NativeChatMessage[],
+  normalizedIndexById: ReadonlyMap<string, number>,
+  boundaryId: string | null | undefined
+): number | undefined {
+  if (!boundaryId) {
+    return -1
+  }
+  const direct = normalizedIndexById.get(boundaryId)
+  if (direct !== undefined) {
+    return direct
+  }
+  const rawIndex = messages.findIndex((message) => message.id === boundaryId)
+  const promptId = rawIndex === -1 ? null : imagePreviewReplacementMessageId(messages, rawIndex)
+  return promptId ? normalizedIndexById.get(promptId) : undefined
+}
+
 // Carry phone-local preview URIs onto authoritative rows because host paths/marker-only turns cannot display those photos.
 export function findLandedImagePreviewEchoes(
   messages: readonly NativeChatMessage[],
@@ -155,7 +173,7 @@ export function findLandedImagePreviewEchoes(
       const imageCount = message.blocks.filter(isImageRefBlock).length
       return message.blocks.length === 0 || imageCount >= entry.images!.length
     })
-    const tailIndex = entry.afterMessageId ? messageIndexById.get(entry.afterMessageId) : -1
+    const tailIndex = foldedBoundaryIndex(messages, messageIndexById, entry.afterMessageId)
     // Same boundary-relative occurrence as the shared pending rule, so older identical rows cannot bind.
     const candidate = candidates.filter(
       (message) => tailIndex === undefined || (messageIndexById.get(message.id) ?? -1) > tailIndex

@@ -143,15 +143,13 @@ export function useMobileNativeChatDrafts(args: {
       if (!draftKey) {
         return null
       }
-      const loadedTail = messagesRef.current.at(-1)
-      // Hydrating rows may be another tab's, so only settled history is a boundary; otherwise send time is.
-      const tail = transcriptSettled ? loadedTail : undefined
+      const tail = messagesRef.current.at(-1)
       return {
         draftKey,
         draftEditGeneration: readMobileNativeChatDraftEditGeneration(draftKey),
         pendingKey,
         normalizedText: normalizeReconcileText(text),
-        baselineTailMessageId: loadedTail?.id ?? null,
+        baselineTailMessageId: tail?.id ?? null,
         boundary: {
           afterMessageId: tail?.id ?? null,
           afterMessageTimestamp: tail?.timestamp ?? null,

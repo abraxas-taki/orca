@@ -163,6 +163,24 @@ describe('mobile native chat image preview reconciliation', () => {
     ])
   })
 
+  it('binds past an older identical photo whose source row was the send boundary', () => {
+    const messages = [
+      userText('old-source', '[Image: source: /tmp/old.png]'),
+      userText('old-prompt', 'look[Image #1]'),
+      userText('new-source', '[Image: source: /tmp/new.png]'),
+      userText('new-prompt', 'look[Image #1]')
+    ]
+    const preview = {
+      ...pending('pending', ['file:///new.jpg']),
+      text: 'look',
+      afterMessageId: 'old-source'
+    }
+
+    expect(findLandedImagePreviewEchoes(messages, [preview])).toEqual([
+      { pendingId: 'pending', messageId: 'new-prompt', images: ['file:///new.jpg'] }
+    ])
+  })
+
   it('moves an early standalone preview to the later folded prompt id', () => {
     const sessionKey = 'host\0worktree\0tab\0session'
     const previous = { [sessionKey]: { source: ['file:///a.jpg'] } }
