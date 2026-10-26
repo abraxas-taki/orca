@@ -11,8 +11,7 @@ export function canUseRepoWideTrust(
   repoId: string
 ): boolean {
   // Why: with the id on two hosts, trusting one row's script could run the other's unseen.
-  const hasDuplicateRepoId = repos.filter((repo) => repo.id === repoId).length > 1
-  return Boolean(trust[repoId]?.all) && !hasDuplicateRepoId
+  return Boolean(trust[repoId]?.all) && repos.filter((repo) => repo.id === repoId).length < 2
 }
 
 /** Returns `trust` itself when the approval is already recorded. */

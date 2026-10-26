@@ -5,9 +5,7 @@ import { readFile } from 'node:fs/promises'
 import type { Repo } from '../../shared/repo-types'
 import { getEffectiveHooks, hasHooksFile, hasUnrecognizedOrcaYamlKeys, loadHooks } from '../hooks'
 import { getEffectiveSetupRunPolicy } from '../effective-hook-config'
-import { resolveHookCommandSourcePolicy } from '../../shared/hook-command-source-policy'
 import { getSetupConfig, getSetupTrustContent } from '../../shared/orca-hook-setup-config'
-import type { OrcaHooks } from '../../shared/orca-yaml-hook-types'
 import { isENOENT } from '../ipc/filesystem/filesystem-path-containment'
 import { isFolderRepo } from '../../shared/repo-kind'
 import { inspectSetupScriptImportCandidates } from '../../shared/setup-script-imports'
@@ -35,14 +33,19 @@ export class RuntimeRepositoryHooksCommands {
     const hasFile = hasHooksFile(repo.path)
     const hooks = getEffectiveHooks(repo)
     const sharedHooks = hasFile ? loadHooks(repo.path) : null
+    const setupConfig = isFolderRepo(repo) ? null : getSetupConfig(repo, sharedHooks)
     return {
       hasHooksFile: hasFile,
       hooks,
       setupRunPolicy: getEffectiveSetupRunPolicy(repo),
       source: hasFile ? ('orca.yaml' as const) : hooks ? ('legacy' as const) : null,
       // Why: `hooks` drops defaultTabs, so clients gate the setup choice on this instead.
-      setupConfig: isFolderRepo(repo) ? null : getSetupConfig(repo, sharedHooks),
-      setupTrust: setupTrust(repo, sharedHooks)
+      setupConfig,
+      // Local-only setup runs the user's own script, which needs no orca.yaml trust.
+      setupTrust:
+        setupConfig && setupConfig.source !== 'local'
+          ? setupTrust(getSetupTrustContent(sharedHooks))
+          : undefined
     }
   }
 
@@ -87,16 +90,6 @@ export class RuntimeRepositoryHooksCommands {
   }
 }
 
-function setupTrust(
-  repo: Repo,
-  yamlHooks: OrcaHooks | null
-): { contentHash: string; scriptContent: string } | undefined {
-  const scriptContent = getSetupTrustContent(yamlHooks)
-  const sourcePolicy = resolveHookCommandSourcePolicy(repo.hookSettings?.commandSourcePolicy, {
-    hasLocalScript: Boolean(repo.hookSettings?.scripts.setup?.trim())
-  })
-  if (!scriptContent || sourcePolicy === 'local-only') {
-    return undefined
-  }
+function setupTrust(scriptContent: string): { contentHash: string; scriptContent: string } {
   return { contentHash: createHash('sha256').update(scriptContent).digest('hex'), scriptContent }
 }

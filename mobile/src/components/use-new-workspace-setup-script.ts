@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getRepoExecutionHostId } from '../../../src/shared/execution-host'
 import type { RpcClient } from '../transport/rpc-client'
-import { getDefaultSetupDecision } from '../../../src/shared/orca-hook-setup-config'
 import { normalizeSetupHookTrust, readRepoHooksSetupCommand } from '../tasks/setup-hook-trust'
 import { newWorkspaceSetupHooksRead } from './new-workspace-operations'
 import type { WorkspaceCreateSetupDecision } from '../tasks/workspace-create-params'
@@ -87,7 +86,7 @@ export function useNewWorkspaceSetupScript(args: {
             runPolicy
           },
           setupDecisionChoice: null,
-          runSetup: getDefaultSetupDecision(Boolean(command), runPolicy) !== 'skip',
+          runSetup: runPolicy !== 'skip-by-default',
           ...(command && runPolicy === 'ask' ? { showAdvanced: true } : {})
         })
       })

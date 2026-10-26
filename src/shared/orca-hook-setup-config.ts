@@ -20,11 +20,16 @@ function getDefaultTabCommandEntries(yamlHooks: OrcaHooks | null): string[] {
     .filter((entry): entry is string => entry !== null)
 }
 
+function joinSetupTrustContent(yamlSetup: string | undefined, defaultTabEntries: string[]): string {
+  return [yamlSetup, ...defaultTabEntries].filter(Boolean).join('\n\n')
+}
+
 /** The orca.yaml commands a setup trust approval covers: setup plus every defaultTabs command. */
 export function getSetupTrustContent(yamlHooks: OrcaHooks | null): string {
-  return [yamlHooks?.scripts?.setup?.trim(), ...getDefaultTabCommandEntries(yamlHooks)]
-    .filter(Boolean)
-    .join('\n\n')
+  return joinSetupTrustContent(
+    yamlHooks?.scripts?.setup?.trim(),
+    getDefaultTabCommandEntries(yamlHooks)
+  )
 }
 
 function getSetupConfigKind(
@@ -51,8 +56,6 @@ export function getSetupConfig(
     | undefined,
   yamlHooks: OrcaHooks | null
 ): SetupConfig | null {
-  const yamlSetup = yamlHooks?.scripts?.setup?.trim()
-  const hasDefaultTabCommands = getDefaultTabCommandEntries(yamlHooks).length > 0
   const localSetup = repo?.hookSettings?.scripts?.setup?.trim()
   const sourcePolicy = resolveHookCommandSourcePolicy(repo?.hookSettings?.commandSourcePolicy, {
     hasLocalScript: Boolean(localSetup)
@@ -62,7 +65,10 @@ export function getSetupConfig(
     return localSetup ? { source: 'local', command: localSetup, kind: 'setup' } : null
   }
 
-  const yamlCommand = getSetupTrustContent(yamlHooks)
+  const yamlSetup = yamlHooks?.scripts?.setup?.trim()
+  const defaultTabEntries = getDefaultTabCommandEntries(yamlHooks)
+  const hasDefaultTabCommands = defaultTabEntries.length > 0
+  const yamlCommand = joinSetupTrustContent(yamlSetup, defaultTabEntries)
   if (sourcePolicy === 'run-both' && localSetup) {
     // Why: the host still runs the local script here, so the create must still ask about it.
     return yamlCommand
