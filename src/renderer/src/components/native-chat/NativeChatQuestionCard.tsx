@@ -11,6 +11,11 @@ import { useNativeChatQuestionAutoAdvance } from './use-native-chat-question-aut
 import { useNativeChatQuestionKeys } from './use-native-chat-question-keys'
 import { isEditableTarget } from '@/lib/editable-target'
 import type { AgentJournalFreeTextInput } from '../../../../shared/agent-session-journal-types'
+import {
+  askConfirmAction,
+  askConfirmLabel,
+  toggleAskOption
+} from '../../../../shared/native-chat-ask-card-rules'
 
 export type NativeChatQuestionCardProps = {
   prompt: AskPrompt
@@ -33,6 +38,12 @@ export type NativeChatQuestionCardProps = {
 
 // Reserve a non-option index so single-select holds either an option or typed text.
 const TYPED_ANSWER = -1
+
+const CONFIRM_LABEL = {
+  submit: () => translate('components.native-chat.question.send', 'Submit'),
+  next: () => translate('components.native-chat.question.next', 'Next'),
+  skip: () => translate('components.native-chat.question.skip', 'Skip')
+} as const
 
 /** Single-select advances after a pick; multi-select confirms explicitly, and multi-question prompts retain earlier answers. */
 export function NativeChatQuestionCard({
@@ -141,11 +152,7 @@ export function NativeChatQuestionCard({
   const pickOption = (optionIndex: number): void => {
     const cur = selections[index] ?? []
     const picked = !cur.includes(optionIndex)
-    const chosen = !picked
-      ? cur.filter((pickedIndex) => pickedIndex !== optionIndex)
-      : q.multiSelect
-        ? [...cur, optionIndex].sort((a, b) => a - b)
-        : [optionIndex]
+    const chosen = toggleAskOption(cur, optionIndex, q.multiSelect)
     const next = selections.map((s, i) => (i === index ? chosen : s))
     setSelections(next)
     autoAdvance.cancel()
@@ -155,17 +162,13 @@ export function NativeChatQuestionCard({
   }
   useNativeChatQuestionKeys(cardRef, shouldFocus && !isSubmitting, q.options.length, pickOption)
 
-  // Only the final question submits; an empty final Skip dismisses, while empty Enter preserves the prompt.
   const confirm = (fromKeyboard = false): void => {
     autoAdvance.cancel()
-    if (!isLast) {
-      advanceOrSubmit(selections, otherText)
-      return
-    }
     const anyAnswered = prompt.questions.some((_, i) => answerFor(i).length > 0 || acceptsEmpty(i))
-    if (anyAnswered) {
-      submitAll(selections, otherText)
-    } else if (!fromKeyboard) {
+    const action = askConfirmAction({ isLast, anyAnswered, fromKeyboard })
+    if (action === 'advance' || action === 'submit') {
+      advanceOrSubmit(selections, otherText)
+    } else if (action === 'cancel') {
       onCancel()
     }
   }
@@ -353,11 +356,7 @@ export function NativeChatQuestionCard({
               >
                 {isSubmitting
                   ? translate('components.native-chat.question.sending', 'Sending…')
-                  : currentAnswered
-                    ? isLast
-                      ? translate('components.native-chat.question.send', 'Submit')
-                      : translate('components.native-chat.question.next', 'Next')
-                    : translate('components.native-chat.question.skip', 'Skip')}
+                  : CONFIRM_LABEL[askConfirmLabel(currentAnswered, isLast)]()}
               </button>
             </div>
           </div>

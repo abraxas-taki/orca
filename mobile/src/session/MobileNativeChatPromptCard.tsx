@@ -5,6 +5,7 @@ import { MobileNativeChatAsk } from './MobileNativeChatAsk'
 import { MobileNativeChatPermission } from './MobileNativeChatPermission'
 import type { MobileChatPermission } from './mobile-native-chat-permission'
 import { MobileNativeChatQuestion } from './MobileNativeChatQuestion'
+import { MobileNativeChatStructuredAsk } from './MobileNativeChatStructuredAsk'
 import { mobileChatQuestionKey, type MobileChatQuestion } from './mobile-native-chat-question'
 import { MobileNativeChatPromptStrip } from './MobileNativeChatPromptStrip'
 
@@ -85,6 +86,13 @@ export function MobileNativeChatPromptCard({
         onRespond={async (send) => (await onRespondPermission?.(send)) ?? false}
         onCancel={onCancelPrompt}
         onCollapse={onCollapsePrompt}
+      />
+    ) : question?.questions ? (
+      <MobileNativeChatStructuredAsk
+        key={mobileChatQuestionKey(question)}
+        questions={question.questions}
+        onAnswer={async (answers) => (await onAnswerQuestion?.(answers)) ?? false}
+        onCancel={onCancelPrompt && (() => onCancelPrompt(question.prompt))}
       />
     ) : question ? (
       <MobileNativeChatQuestion

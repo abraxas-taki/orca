@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import type { AgentSessionPromptResult } from '../../../src/shared/agent-session-wire'
 import type { AgentJournalQuestionItem } from '../../../src/shared/agent-session-journal-types'
 import {
   AGENT_SESSION_RESPONSE_OPTION_ID_MAX_LENGTH,
+  decodeAgentSessionQuestionAnswers,
+  isValidAgentSessionQuestionAnswers,
   legacyAgentSessionSelectedOptionId,
   type AgentSessionQuestionAnswer
 } from '../../../src/shared/agent-session-question-answer'
@@ -19,31 +21,18 @@ import type {
   StructuredAgentSessionMutate,
   StructuredAgentSessionMutationResult
 } from './mobile-structured-agent-session-rpc'
-import {
-  advanceGroupedQuestion,
-  groupedQuestionPromptKey,
-  type GroupedQuestionDraft
-} from './mobile-structured-grouped-question'
 
 export function useMobileStructuredPromptResponses(args: {
   stateRef: { readonly current: StructuredAgentSessionState }
-  sessionKey: string
   mutate: StructuredAgentSessionMutate
   // Older hosts require answers packed into optionId.
   questionAnswersSupported: boolean | null
   onSendError: (message: string) => void
 }): {
-  groupedDraft: GroupedQuestionDraft | null
   respondPermission: (optionId: string) => Promise<boolean>
   respondQuestion: (answer: string) => Promise<boolean>
 } {
-  const { mutate, onSendError, questionAnswersSupported, sessionKey, stateRef } = args
-  // Tag grouped drafts with the session so a switch cannot expose stale answers before an effect.
-  const [collected, setCollected] = useState<{
-    sessionKey: string
-    draft: GroupedQuestionDraft
-  } | null>(null)
-  const groupedDraft = collected?.sessionKey === sessionKey ? collected.draft : null
+  const { mutate, onSendError, questionAnswersSupported, stateRef } = args
 
   const respondPermission = useCallback(
     async (optionId: string): Promise<boolean> => {
@@ -104,35 +93,18 @@ export function useMobileStructuredPromptResponses(args: {
     async (answer: string): Promise<boolean> => {
       const prompt = actionableStructuredQuestion(stateRef.current)
       if (prompt?.body.questions) {
-        const promptKey = groupedQuestionPromptKey(prompt.itemId, prompt.revision)
-        const grouped = advanceGroupedQuestion({
-          response: answer,
-          questions: prompt.body.questions,
-          draft: groupedDraft,
-          promptKey
-        })
-        if (!grouped) {
+        // The grouped card hands over its whole answer set in the shared answer encoding.
+        const answers = decodeAgentSessionQuestionAnswers(answer)
+        if (!answers || !isValidAgentSessionQuestionAnswers(prompt.body.questions, answers)) {
           return false
-        }
-        if (grouped.kind === 'advance') {
-          setCollected({ sessionKey, draft: grouped.draft })
-          return true
         }
         const result = await sendAnswers(
           { itemId: prompt.itemId, expectedRevision: prompt.revision },
           prompt.body,
-          grouped.answers
+          answers
         )
         if (!result) {
           return false
-        }
-        if (result.status !== 'rejected') {
-          // Once submitted, retries must restart at the first question.
-          setCollected((current) =>
-            current?.sessionKey === sessionKey && current.draft.promptKey === promptKey
-              ? null
-              : current
-          )
         }
         if (result.status === 'unknown') {
           onSendError('Answer unconfirmed — check chat before retrying')
@@ -158,8 +130,8 @@ export function useMobileStructuredPromptResponses(args: {
       }
       return result.status === 'accepted'
     },
-    [groupedDraft, onSendError, sendAnswers, sessionKey, stateRef]
+    [onSendError, sendAnswers, stateRef]
   )
 
-  return { groupedDraft, respondPermission, respondQuestion }
+  return { respondPermission, respondQuestion }
 }
