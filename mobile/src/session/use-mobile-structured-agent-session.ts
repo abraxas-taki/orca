@@ -69,7 +69,7 @@ export function useMobileStructuredAgentSession(
   // Gate queueing by capability while accepting published cards from every host.
   const queueCapable = hostSupport?.queuedMessages === true
   const commandsWait = queueCapable && hostSupport?.queuedCommands === true
-  const queueFollowUps = useMobileNativeChatQueueFollowUps(client, connected, sessionId)
+  const queueFollowUps = useMobileNativeChatQueueFollowUps(client, connected && enabled, sessionId)
   const promptCancelSupported = hostSupport?.promptCancel ?? null
   const hostAnswersRepeatedStops = hostSupport?.quietRepeatedStop ?? null
   const hostStopsConversation = hostSupport?.conversationStop ?? null
@@ -197,7 +197,7 @@ export function useMobileStructuredAgentSession(
     onSendError,
     sendOptions: hostSupport?.sendOptions === true ? options.sendSelection : undefined
   })
-  const sendQueues = mobileStructuredSendQueues(queueCapable, queueFollowUps, state)
+  const sendQueues = stopping && mobileStructuredSendQueues(queueCapable, queueFollowUps, state)
   const turnIndicator = useMemo(
     () => ({
       thinking,

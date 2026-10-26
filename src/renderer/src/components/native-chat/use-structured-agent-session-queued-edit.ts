@@ -12,6 +12,7 @@ import type { AgentJournalSubmission } from '../../../../shared/agent-session-jo
 import { agentSessionSendBodyFingerprint } from '../../../../shared/structured-agent-session-send-mutation'
 import {
   queuedCardOnScreen,
+  queuedEditChangedNotice,
   queuedEditDirty,
   queuedEditInput,
   queuedEditSaveHeld,
@@ -19,7 +20,7 @@ import {
   queuedMessageEditableText,
   queuedMessageWithEdit
 } from '../../../../shared/queued-message-edit'
-import { queuedEditChangedNotice, queuedEditNotice } from './queued-message-edit-notices'
+import { queuedEditNotice } from './queued-message-edit-notices'
 import {
   handOffQueuedEdit,
   queuedEditImageFields,
@@ -248,7 +249,11 @@ export function useStructuredAgentSessionQueuedEdit(args: {
         gone(edit)
       } else if (status === 'changed') {
         // Preserve typing after a competing edit, then reopen on the newer text; removal alone needs no handoff.
-        toast.error(queuedEditChangedNotice(handOffQueuedEdit(edit), latest.current.promptOpen))
+        toast.error(
+          queuedEditNotice(
+            queuedEditChangedNotice(handOffQueuedEdit(edit), latest.current.promptOpen)
+          )
+        )
         reopen.current = { scope, messageId: edit.messageId, stale: edit.baseFingerprint }
         close()
       } else {

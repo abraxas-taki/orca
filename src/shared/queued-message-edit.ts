@@ -92,7 +92,7 @@ export function queuedEditTextWithAddedImages(draft: QueuedMessageEditDraft): st
 
 /** The text an edit's typing is measured against: the card's own, its markers following the
  *  images removed so far, so a removal alone is not typing. */
-export function queuedEditBaseText(
+function queuedEditBaseText(
   body: AgentJournalMessageItem,
   kept: readonly { id: string }[]
 ): string | null {
@@ -241,7 +241,7 @@ export function queuedEditChangedNotice(handedOff: boolean, promptOpen: boolean)
 }
 
 /** Sent means handed off with this body; holds/differs describe the current card, gone its removal; null queue proves nothing. */
-export type QueuedEditStanding = 'sent' | 'gone' | 'holds' | 'differs'
+type QueuedEditStanding = 'sent' | 'gone' | 'holds' | 'differs'
 
 export function queuedEditStanding(
   view: {

@@ -1,7 +1,6 @@
 import { translate } from '@/i18n/i18n'
 import {
   QUEUED_EDIT_NOTICE_COPY as COPY,
-  queuedEditChangedNotice as queuedEditChangedNoticeKey,
   type QueuedEditNotice
 } from '../../../../shared/queued-message-edit'
 
@@ -23,8 +22,4 @@ const NOTICES: Record<QueuedEditNotice, () => string> = {
 
 export function queuedEditNotice(key: QueuedEditNotice): string {
   return NOTICES[key]()
-}
-
-export function queuedEditChangedNotice(handedOff: boolean, promptOpen: boolean): string {
-  return queuedEditNotice(queuedEditChangedNoticeKey(handedOff, promptOpen))
 }

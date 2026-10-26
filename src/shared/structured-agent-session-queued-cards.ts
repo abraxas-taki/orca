@@ -13,7 +13,11 @@ import { structuredAgentSessionAttemptFailureParts } from './structured-agent-se
 import type { AgentJournalItemBody, AgentJournalSubmission } from './agent-session-journal-types'
 import { pendingPromptsAllUnanswerableHere } from './agent-session-approval-subject'
 import type { NativeChatImageRefBlock } from './native-chat-types'
-import type { AgentSessionQueuedMessage, AgentSessionQueuePause } from './agent-session-wire'
+import {
+  QUEUED_MESSAGE_PAUSED_SEND_FAILED,
+  type AgentSessionQueuedMessage,
+  type AgentSessionQueuePause
+} from './agent-session-wire'
 import {
   readAgentMessageSource,
   type AgentMessageSource
@@ -116,7 +120,7 @@ export function projectQueuedMessageCards(
 }
 
 /** Later sends queue behind commands even with follow-ups off; individually held cards do not block them. */
-export function commandCardWaiting(
+function commandCardWaiting(
   queuedMessages: readonly AgentSessionQueuedMessage[] | null | undefined
 ): boolean {
   return (queuedMessages ?? []).some(
@@ -135,6 +139,13 @@ export function structuredAgentSessionQueueEnabled(
     (queueFollowUps || commandCardWaiting(session.queuedMessages)) &&
     !pendingPromptsAllUnanswerableHere(prompts)
   )
+}
+
+/** A returned card, or one whose own send failed, needs the person; the rest wait their turn. */
+export function queuedMessageCardNeedsAttention(
+  card: Pick<QueuedMessageCard, 'state' | 'pausedReason'>
+): boolean {
+  return card.state === 'returned' || card.pausedReason === QUEUED_MESSAGE_PAUSED_SEND_FAILED
 }
 
 /** Offer Resume only while the queue pause holds a card it could actually send. */

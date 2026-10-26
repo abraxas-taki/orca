@@ -10,6 +10,7 @@ import {
 import {
   projectQueuedMessageCards,
   queuedMessageCardLine,
+  queuedMessageCardNeedsAttention,
   queuedMessageReturnedNotice,
   type QueuedMessageCard
 } from '../../../src/shared/structured-agent-session-queued-cards'
@@ -46,8 +47,8 @@ function queuedMessageCardCaption(
         : "Couldn't send — tap Send to retry"
     case 'behind-returned':
       return 'Waiting — a message ahead needs attention'
+    // The phone draws no card for a send still on its way.
     case 'sending':
-      return 'Sending…'
     case 'turn':
     case 'queue-paused':
       return null
@@ -67,8 +68,7 @@ export function mobileQueuedMessageCards(
   return projectQueuedMessageCards(queuedMessages, submissions, facts).map((card) => ({
     ...card,
     line: queuedMessageCardLine(card),
-    needsAttention:
-      card.state === 'returned' || card.pausedReason === QUEUED_MESSAGE_PAUSED_SEND_FAILED,
+    needsAttention: queuedMessageCardNeedsAttention(card),
     caption: queuedMessageCardCaption(card, facts.agentName, facts.statedFailures ?? []),
     attribution: agentMessageAttribution('From', card.from)
   }))

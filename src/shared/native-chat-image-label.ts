@@ -20,7 +20,7 @@ export function isNativeChatPastedImagePath(path: string): boolean {
 /** What a chat image is called where it is not drawn: its alt text, else its file's name. */
 export function nativeChatImageLabel(
   block: NativeChatImageRefBlock,
-  copy: NativeChatImageLabelCopy = NATIVE_CHAT_IMAGE_LABEL_ENGLISH
+  copy: NativeChatImageLabelCopy
 ): string {
   return (
     block.alt?.trim() ||

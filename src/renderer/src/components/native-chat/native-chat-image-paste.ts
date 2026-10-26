@@ -1,7 +1,6 @@
 import { isImageDropPath } from '../terminal-pane/terminal-drop-image-path'
 import { NATIVE_CHAT_PASTE_FOLDER } from '../../../../shared/native-chat-paste-folder'
 import { isNativeChatPastedImagePath } from '../../../../shared/native-chat-image-label'
-export { isNativeChatPastedImagePath }
 export {
   getAgentImageHandling,
   type AgentImageHandling

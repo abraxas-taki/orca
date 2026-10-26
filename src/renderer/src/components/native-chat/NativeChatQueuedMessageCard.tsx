@@ -26,6 +26,7 @@ import { QUEUED_MESSAGE_PAUSED_SEND_FAILED } from '../../../../shared/agent-sess
 import { isMacPlatform } from './native-chat-shortcut'
 import {
   queuedMessageCardLine,
+  queuedMessageCardNeedsAttention,
   queuedMessageCardSteers,
   queuedMessageReturnedNotice,
   type QueuedMessageCard
@@ -182,7 +183,7 @@ export function NativeChatQueuedMessageCard({
       className="px-2.5 py-1.5"
     >
       <div className="flex items-center gap-2">
-        {returned || card.pausedReason === QUEUED_MESSAGE_PAUSED_SEND_FAILED ? (
+        {queuedMessageCardNeedsAttention(card) ? (
           <AlertCircle className="size-3.5 shrink-0 text-destructive" aria-hidden />
         ) : (
           <ListEnd className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
