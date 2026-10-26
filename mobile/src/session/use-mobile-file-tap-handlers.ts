@@ -94,8 +94,11 @@ export function useMobileFileTapHandlers<T extends FileTapSessionTab>(
   const handleFileTap = useCallback(
     (handle: string, candidates: readonly ParsedFileLinkLocation[]) => {
       const current = optionsRef.current
-      const first = candidates[0]
-      if (handle !== current.activeHandleRef.current || !current.client || !first) {
+      if (
+        handle !== current.activeHandleRef.current ||
+        !current.client ||
+        candidates.length === 0
+      ) {
         return
       }
       const activationSeq = ++activationSeqRef.current
@@ -105,7 +108,6 @@ export function useMobileFileTapHandlers<T extends FileTapSessionTab>(
         worktreeId: current.worktreeId,
         worktreeName: current.worktreeName,
         terminalHandle: handle,
-        ...first,
         cwd: current.terminalCwdRef.current.get(handle) ?? null,
         candidates,
         pushPreviewRoute: (href) => routerRef.current.push(href),

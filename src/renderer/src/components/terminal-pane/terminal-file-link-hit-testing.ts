@@ -4,6 +4,7 @@ import {
 } from './terminal-path-exists-cache'
 import type { IBufferLine } from '@xterm/xterm'
 import { findTerminalFileLinksAtBufferPosition } from '../../../../shared/terminal-link-buffer-hit-testing'
+import { terminalLogicalLinkHasOscLink } from '../../../../shared/terminal-osc-link-cells'
 import {
   getTerminalFileContext,
   openDetectedFilePath,
@@ -72,7 +73,12 @@ export function openFilePathLinkAtBufferPosition(
       cachedExists: deps.pathExistsCache
         ? readTerminalPathExistence(deps.pathExistsCache, target.cacheKey)
         : undefined,
-      hasOscLink: parsed.hasOscLink
+      hasOscLink: terminalLogicalLinkHasOscLink(
+        buffer,
+        parsed.logicalLine,
+        parsed.startIndex,
+        parsed.endIndex
+      )
     })
   }
 

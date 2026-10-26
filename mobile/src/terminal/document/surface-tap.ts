@@ -24,29 +24,28 @@ export function notifyTerminalSurfaceTap(
     notify(scope, { type: 'terminal-file-tap', candidates: [tappedOscLink.fileTap] })
     return
   }
-  const cell = viewportToCell(scope, originX, originY)
-  const term = scope.term
-  // Desktop's link detectors take 1-based cells and rebuild rows that wrap.
-  const position = cell && term ? { x: cell.col + 1, y: cell.row + 1 } : null
-  const tappedUrl =
-    tappedOscLink && tappedOscLink.kind === 'url'
-      ? tappedOscLink.url
-      : position && term
-        ? findTerminalHttpLinkAtBufferPosition(term.buffer.active, position, term.cols)
-        : null
-  if (tappedUrl) {
-    notify(scope, { type: 'open-url', url: tappedUrl })
+  if (tappedOscLink && tappedOscLink.kind === 'url') {
+    notify(scope, { type: 'open-url', url: tappedOscLink.url })
     return
   }
-  const fileCandidates =
-    position && term
-      ? uniqueFileTapCandidates(
-          findTerminalFileLinksAtBufferPosition(term.buffer.active, position, term.cols)
-        )
-      : []
-  if (fileCandidates.length > 0) {
-    notify(scope, { type: 'terminal-file-tap', candidates: fileCandidates })
-    return
+  const cell = viewportToCell(scope, originX, originY)
+  const term = scope.term
+  if (cell && term) {
+    // Desktop's link detectors take 1-based cells and rebuild rows that wrap.
+    const position = { x: cell.col + 1, y: cell.row + 1 }
+    const buffer = term.buffer.active
+    const url = findTerminalHttpLinkAtBufferPosition(buffer, position, term.cols)
+    if (url) {
+      notify(scope, { type: 'open-url', url })
+      return
+    }
+    const candidates = uniqueFileTapCandidates(
+      findTerminalFileLinksAtBufferPosition(buffer, position, term.cols)
+    )
+    if (candidates.length > 0) {
+      notify(scope, { type: 'terminal-file-tap', candidates })
+      return
+    }
   }
   const clickInput = buildMouseClickInput(scope, originX, originY)
   if (clickInput) {
@@ -63,13 +62,13 @@ export function notifyTerminalSurfaceTap(
   }
 }
 
+// One reading per path, the first, as desktop's existence probes keep.
 function uniqueFileTapCandidates(links: readonly ParsedFileLinkLocation[]) {
   const seen = new Set<string>()
   const candidates: ParsedFileLinkLocation[] = []
   for (const { pathText, line, column } of links) {
-    const key = `${pathText}:${line}:${column}`
-    if (!seen.has(key)) {
-      seen.add(key)
+    if (!seen.has(pathText)) {
+      seen.add(pathText)
       candidates.push({ pathText, line, column })
     }
   }

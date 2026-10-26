@@ -16,7 +16,9 @@ import {
 /** 1-based buffer cell, matching xterm link ranges. */
 export type TerminalLinkBufferPosition = { x: number; y: number }
 
-export type TerminalFileLinkAtBufferPosition = ParsedTerminalFileLink & { hasOscLink: boolean }
+export type TerminalFileLinkAtBufferPosition = ParsedTerminalFileLink & {
+  logicalLine: WrappedLogicalLine
+}
 
 export function findTerminalHttpLinkAtBufferPosition(
   buffer: TerminalLinkBuffer,
@@ -72,15 +74,7 @@ export function findTerminalFileLinksAtBufferPosition(
       if (!range || !rangeContainsBufferPosition(range, position, terminalColumns)) {
         continue
       }
-      links.push({
-        ...parsed,
-        hasOscLink: terminalLogicalLinkHasOscLink(
-          buffer,
-          logicalLine,
-          parsed.startIndex,
-          parsed.endIndex
-        )
-      })
+      links.push({ ...parsed, logicalLine })
     }
   }
   return links

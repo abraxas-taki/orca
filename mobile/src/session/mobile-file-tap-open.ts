@@ -27,13 +27,10 @@ export type OpenMobileFileTapOptions<T extends FileTapSessionTab> = {
   worktreeId: string
   worktreeName?: string
   terminalHandle?: string | null
-  pathText: string
   cwd?: string | null
   nativeChatContext?: RuntimeNativeChatFileContext | null
-  line: number | null
-  column: number | null
-  // Replaces pathText/line/column with every reading of a terminal tap; like desktop, the longest that exists opens.
-  candidates?: readonly ParsedFileLinkLocation[]
+  // Every reading of the tapped text; like desktop, the longest that exists opens.
+  candidates: readonly ParsedFileLinkLocation[]
   pushPreviewRoute: (href: ReturnType<typeof createMobileFilePreviewHref>) => void
   openBrowser: (url: string) => void
   triggerOpenFeedback: () => void
@@ -113,29 +110,30 @@ function reportOpenFailure<T extends FileTapSessionTab>(
 async function openMobileFileTapAsync<T extends FileTapSessionTab>(
   options: OpenMobileFileTapOptions<T>
 ): Promise<void> {
-  const targets: readonly ParsedFileLinkLocation[] = options.candidates?.length
-    ? options.candidates
-    : [options]
-  const responses = await mapWithConcurrency(targets, FILE_TAP_RESOLVE_CONCURRENCY, (target) =>
-    // Why: a reading the host cannot answer must not hide a sibling.
-    requestFileTapResolution(options, target.pathText).catch(() => null)
+  const readings = await mapWithConcurrency(
+    options.candidates,
+    FILE_TAP_RESOLVE_CONCURRENCY,
+    async (target) => ({
+      target,
+      // Why: a reading the host cannot answer must not hide a sibling.
+      resolved: existingFileTapResolution(
+        await requestFileTapResolution(options, target.pathText).catch(() => null)
+      )
+    })
   )
-  const resolutions = responses.map(existingFileTapResolution)
-  let foundIndex = -1
-  for (let index = 0; index < targets.length; index++) {
-    if (
-      resolutions[index] &&
-      (foundIndex === -1 || targets[index].pathText.length > targets[foundIndex].pathText.length)
-    ) {
-      foundIndex = index
-    }
-  }
-  const target = targets[foundIndex]
-  const resolved = resolutions[foundIndex]
-  if (!target || !resolved) {
+  const found = readings.reduce<(typeof readings)[number] | undefined>(
+    (best, reading) =>
+      reading.resolved && (!best || reading.target.pathText.length > best.target.pathText.length)
+        ? reading
+        : best,
+    undefined
+  )
+  if (!found?.resolved) {
     reportOpenFailure(options)
     return
   }
+  const { target } = found
+  const resolved = found.resolved
   // Not a failure: the user moved off the source tab mid-resolve.
   if (!shouldActivateOpenedMobileSessionTab(options.getActivationState(false))) {
     return

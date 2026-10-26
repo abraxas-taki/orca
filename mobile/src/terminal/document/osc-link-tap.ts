@@ -6,10 +6,8 @@ import type {
   TerminalInitialOscLink,
   TerminalOscLinkService
 } from './document-scope'
-import { isWindowsAbsolutePathLike } from '../../../../src/shared/cross-platform-path'
 import type { ParsedFileLinkLocation } from '../../../../src/shared/file-link-location'
-import { resolveTerminalFileUrlTarget } from '../../../../src/shared/terminal-file-url-target'
-import { findExactTerminalFileLink } from '../../../../src/shared/terminal-links'
+import { classifyTerminalOscLinkTarget } from '../../../../src/shared/terminal-osc-link-target'
 
 export type TerminalOscLinkTarget =
   | { kind: 'url'; url: string }
@@ -86,38 +84,18 @@ export function terminalOscLinkTarget(uri: unknown): TerminalOscLinkTarget | nul
   if (typeof uri !== 'string') {
     return null
   }
-  // Mirror desktop's OSC 8 routing; the host resolves paths, so no cwd is needed here.
-  const windowsPath = isWindowsAbsolutePathLike(uri) ? oscFileTarget(uri) : null
-  if (windowsPath) {
-    return windowsPath
+  // The phone can't tell the host's platform; the host's resolver decides Windows and UNC paths.
+  const target = classifyTerminalOscLinkTarget(uri, { windowsPathsFirst: true, allowUncHost: true })
+  if (target?.kind === 'url') {
+    return target
   }
-  let parsed: URL
-  try {
-    parsed = new URL(uri)
-  } catch {
-    return oscFileTarget(uri)
-  }
-  if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-    return { kind: 'url', url: parsed.toString() }
-  }
-  if (parsed.protocol !== 'file:') {
-    return null
-  }
-  // Desktop allows UNC hosts only on Windows; the phone can't tell, so the host's resolver decides.
-  const resolved = resolveTerminalFileUrlTarget(parsed, { allowUncHost: true })
-  return resolved
-    ? {
-        kind: 'file',
-        fileTap: { pathText: resolved.filePath, line: resolved.line, column: resolved.column }
-      }
-    : null
-}
-
-function oscFileTarget(uri: string): TerminalOscLinkTarget | null {
-  const link = findExactTerminalFileLink(uri)
-  return link
-    ? { kind: 'file', fileTap: { pathText: link.pathText, line: link.line, column: link.column } }
-    : null
+  const fileTap =
+    target?.kind === 'file-url'
+      ? { pathText: target.target.filePath, line: target.target.line, column: target.target.column }
+      : target?.kind === 'path'
+        ? { pathText: target.link.pathText, line: target.link.line, column: target.link.column }
+        : null
+  return fileTap ? { kind: 'file', fileTap } : null
 }
 
 export function captureInitialOscLinkTexts(scope: TerminalDocumentScope) {
