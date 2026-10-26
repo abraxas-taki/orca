@@ -18,8 +18,12 @@ function userText(id: string, text: string): NativeChatMessage {
   }
 }
 
-function pending(id: string, images: string[], expectedOccurrence = 1): PendingImagePreviewEcho {
-  return { id, text: '', images, expectedOccurrence, baselineTailMessageId: null }
+function pending(
+  id: string,
+  images: string[],
+  matchingOccurrence?: number
+): PendingImagePreviewEcho {
+  return { id, text: '', images, matchingOccurrence, afterMessageId: null }
 }
 
 describe('mobile native chat image preview reconciliation', () => {
@@ -42,7 +46,7 @@ describe('mobile native chat image preview reconciliation', () => {
     }
 
     expect(
-      findLandedImagePreviewEchoes(messages, [{ ...preview, baselineTailMessageId: 'prompt' }])
+      findLandedImagePreviewEchoes(messages, [{ ...preview, afterMessageId: 'prompt' }])
     ).toEqual([])
     expect(findLandedUnconfirmedSends(messages, [unconfirmed])).toEqual([unconfirmed])
     expect(findLandedImagePreviewEchoes(messages, [preview])).toEqual([

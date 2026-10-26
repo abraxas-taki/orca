@@ -206,13 +206,12 @@ export function MobileNativeChatView({
   const { data } = useMemo(
     () =>
       buildMobileNativeChatTransientData({
-        messages,
         folded,
         streaming,
         pending,
         imagePreviewsByMessageId
       }),
-    [messages, folded, streaming, pending, imagePreviewsByMessageId]
+    [folded, streaming, pending, imagePreviewsByMessageId]
   )
   const tail = useMobileNativeChatTailFollow({ hasItems: data.length > 0, scopeKey: sendSurfaceId })
   const { jumpToTail, recordScrollMetrics, scrollMayLoadEarlier } = tail

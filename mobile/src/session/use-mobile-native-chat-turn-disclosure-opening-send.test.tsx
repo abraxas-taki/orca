@@ -104,7 +104,6 @@ function Harness(props: {
     props.submissions
   )
   const { data } = buildMobileNativeChatTransientData({
-    messages,
     folded: foldMobileNativeChatMessages(messages, 'claude'),
     streaming: null,
     pending: []

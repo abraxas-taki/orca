@@ -58,7 +58,6 @@ function drawn(state: StructuredAgentSessionState): Drawn {
   const { items, messages } = phoneTranscript(state)
   const folded = foldMobileNativeChatMessages(messages, 'claude')
   const { data } = buildMobileNativeChatTransientData({
-    messages,
     folded,
     streaming: null,
     pending: []
@@ -86,7 +85,6 @@ function listed(state: StructuredAgentSessionState): string[] {
   const { items, messages } = phoneTranscript(state)
   const folded = foldMobileNativeChatMessages(messages, 'claude')
   const { data } = buildMobileNativeChatTransientData({
-    messages,
     folded,
     streaming: null,
     pending: []

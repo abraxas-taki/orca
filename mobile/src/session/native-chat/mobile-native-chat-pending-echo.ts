@@ -1,14 +1,14 @@
-import { normalizeNativeChatUserText as normalizeReconcileText } from '../../../../src/shared/native-chat-image-transcript-markers'
+import type { NativeChatMessage } from '../../../../src/shared/native-chat-types'
+import { assignNativeChatPendingOccurrence } from '../../../../src/shared/native-chat-pending-occurrence'
+import {
+  prunePendingSends,
+  visibleNativeChatPendingSends,
+  type NativeChatPendingSend
+} from '../../../../src/shared/native-chat-pending-sends'
 
-export type MobileNativeChatPendingMessage = {
-  id: string
-  text: string
-  expectedOccurrence: number
+export type MobileNativeChatPendingMessage = NativeChatPendingSend & {
+  // Phone-local preview URIs; these echoes retire only once their preview binds to a transcript row.
   images?: string[]
-  baselineTailMessageId: string | null
-  // Unresolved hydration may still show another tab’s rows; rebase onto this session’s first authoritative history before matching.
-  baselineResolved: boolean
-  sentAt?: number
 }
 
 export type MobileNativeChatSendOrigin = {
@@ -16,9 +16,11 @@ export type MobileNativeChatSendOrigin = {
   draftEditGeneration: number
   pendingKey: string | null
   normalizedText: string
-  baselineOccurrences: number
   baselineTailMessageId: string | null
-  baselineResolved: boolean
+  boundary: Pick<
+    NativeChatPendingSend,
+    'afterMessageId' | 'afterMessageTimestamp' | 'afterEmptyTranscriptSessionId'
+  >
   sentAt: number
 }
 
@@ -44,34 +46,14 @@ export function appendMobileNativeChatPending(
   images?: string[]
 ): PendingByKey {
   const current = previous[key] ?? []
-  const earlierOutstanding = current.filter(
-    (pending) =>
-      normalizeReconcileText(pending.text) === origin.normalizedText &&
-      pending.expectedOccurrence > origin.baselineOccurrences
-  ).length
-  // Image ordinal selection and counting must share the empty-text discriminator.
-  const expectedImageEchoOrdinal =
-    current.filter(
-      (pending) => normalizeReconcileText(pending.text) === '' && pending.images?.length
-    ).length + 1
-  return {
-    ...previous,
-    [key]: [
-      ...current,
-      {
-        id,
-        text,
-        expectedOccurrence:
-          origin.normalizedText === ''
-            ? expectedImageEchoOrdinal
-            : origin.baselineOccurrences + earlierOutstanding + 1,
-        baselineTailMessageId: origin.baselineTailMessageId,
-        baselineResolved: origin.baselineResolved,
-        sentAt: origin.sentAt,
-        ...(images?.length ? { images } : {})
-      }
-    ]
-  }
+  const entry = assignNativeChatPendingOccurrence<MobileNativeChatPendingMessage>(current, {
+    id,
+    text,
+    sentAt: origin.sentAt,
+    ...origin.boundary,
+    ...(images?.length ? { images } : {})
+  })
+  return { ...previous, [key]: [...current, entry] }
 }
 
 export function mergeWaitingSessionPending(
@@ -100,4 +82,26 @@ export function removeWaitingSessionPending(
   const next = { ...previous }
   delete next[draftKey]
   return next
+}
+
+export function retireLandedMobileNativeChatPending(
+  messages: readonly NativeChatMessage[],
+  current: MobileNativeChatPendingMessage[],
+  landedImagePendingIds: ReadonlySet<string>
+): MobileNativeChatPendingMessage[] {
+  const kept = new Set(prunePendingSends(current, messages))
+  const next = current.filter(
+    (item) =>
+      !landedImagePendingIds.has(item.id) && (kept.has(item) || Boolean(item.images?.length))
+  )
+  return next.length === current.length ? current : next
+}
+
+export function visibleMobileNativeChatPending(
+  messages: readonly NativeChatMessage[],
+  current: MobileNativeChatPendingMessage[]
+): MobileNativeChatPendingMessage[] {
+  const visible = new Set(visibleNativeChatPendingSends(current, messages))
+  const next = current.filter((item) => visible.has(item) || Boolean(item.images?.length))
+  return next.length === current.length ? current : next
 }
