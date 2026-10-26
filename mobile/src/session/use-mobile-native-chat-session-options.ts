@@ -24,9 +24,15 @@ import {
   createNativeChatPtySessionOptions,
   type NativeChatPtySessionOptionsSurface
 } from '../../../src/shared/native-chat-pty-session-options'
-import { clearNativeChatSessionOptionCacheForTests } from '../../../src/shared/native-chat-session-option-cache'
+import {
+  clearNativeChatSessionOptionCacheForTests,
+  writeNativeChatSessionOptionCache
+} from '../../../src/shared/native-chat-session-option-cache'
 import { retireMissingModelMutation } from '../../../src/shared/native-chat-discovered-catalog-models'
-import { matchNativeChatCatalogModelId } from '../../../src/shared/native-chat-session-option-state'
+import {
+  createNativeChatSessionOptionRecord,
+  matchNativeChatCatalogModelId
+} from '../../../src/shared/native-chat-session-option-state'
 import { setBoundedScopeCacheEntry } from '../../../src/shared/native-chat-scope-cache'
 import { sayNativeChatSessionOptionEnglish } from '../../../src/shared/native-chat-session-option-labels'
 
@@ -49,10 +55,21 @@ const getEmptySnapshot = (): SessionOptionDescriptor[] => EMPTY_SNAPSHOT
 
 // Kept across remounts: a repeated hook model is not fresh evidence, and reapplying it would revert a newer pick.
 const appliedReportByIdentity = new Map<string, string>()
+// A tab that starts another agent starts over, as a new session there carries none of the old one's picks.
+const agentByScope = new Map<string, string>()
+
+function forgetScope(scopeKey: string, keys: Iterable<string>, drop: (key: string) => void): void {
+  for (const key of keys) {
+    if (key.startsWith(`${scopeKey}\0`)) {
+      drop(key)
+    }
+  }
+}
 
 export function clearMobileSessionOptionRecordsForTests(): void {
   clearNativeChatSessionOptionCacheForTests()
   appliedReportByIdentity.clear()
+  agentByScope.clear()
 }
 
 export function useMobileNativeChatSessionOptions(args: {
@@ -94,6 +111,14 @@ export function useMobileNativeChatSessionOptions(args: {
     if (!identity || !agent || !scopeKey) {
       return null
     }
+    if (agentByScope.get(scopeKey) !== agent) {
+      forgetScope(scopeKey, surfaces.keys(), (key) => surfaces.delete(key))
+      forgetScope(scopeKey, appliedReportByIdentity.keys(), (key) =>
+        appliedReportByIdentity.delete(key)
+      )
+      writeNativeChatSessionOptionCache(scopeKey, createNativeChatSessionOptionRecord(agent))
+      setBoundedScopeCacheEntry(agentByScope, scopeKey, agent)
+    }
     const surfaceKey = `${identity}\0${canSwitchOmpModel}`
     const midSession = getAgentSessionOptionCatalog(agent)?.modelApply.midSession
     // Phone-only: desktop confirms a Claude model switch on its terminal screen; the phone cannot, so it never saves one as a launch default.
@@ -126,7 +151,11 @@ export function useMobileNativeChatSessionOptions(args: {
           }
         },
         persistSelection: (pick) => {
-          if (!modelSwitchUnconfirmable || pick.optionId !== 'model') {
+          // A pick that lands after the phone moved to another host's chat must not become that host's default.
+          if (
+            activeIdentityRef.current === identity &&
+            (!modelSwitchUnconfirmable || pick.optionId !== 'model')
+          ) {
             latest.current.writeSettings?.({
               type: 'apply-picks',
               agent,

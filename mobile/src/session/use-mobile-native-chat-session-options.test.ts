@@ -163,6 +163,17 @@ describe('useMobileNativeChatSessionOptions', () => {
     })
   })
 
+  it('starts over when the tab runs another agent and then a fresh session', async () => {
+    mount({ reportedModel: 'claude-sonnet-5' })
+    await act(async () => {
+      await api!.setOption('model', 'opus')
+    })
+    update({ agent: 'codex', reportedModel: null })
+    update({ agent: 'claude', reportedModel: 'claude-sonnet-5' })
+    expect(api!.snapshot[0]).toMatchObject({ valueSource: 'reported' })
+    expect(api!.snapshot[0]!.kind).toMatchObject({ currentValue: 'sonnet' })
+  })
+
   it('shows a pick that lands after the user left the chat and came back', async () => {
     let resolveModel!: (outcome: MobileNativeChatSendOutcome) => void
     dispatchCommand.mockImplementationOnce(
