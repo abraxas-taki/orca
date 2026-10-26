@@ -4,7 +4,11 @@ import {
   assignNativeChatPendingOccurrence,
   countLeadingPendingTextsGluedToUserText
 } from './native-chat-pending-occurrence'
-import { pendingSendsAsMessages, prunePendingSends } from './native-chat-pending-sends'
+import {
+  pendingSendsAsMessages,
+  prunePendingSends,
+  type NativeChatPendingSend
+} from './native-chat-pending-sends'
 
 function message(
   id: string,
@@ -23,7 +27,7 @@ function message(
 
 describe('pending send occurrence reconciliation', () => {
   it('keeps the next identical echo after pruning an earlier occurrence', () => {
-    const first = assignNativeChatPendingOccurrence([], {
+    const first = assignNativeChatPendingOccurrence<NativeChatPendingSend>([], {
       id: 'p1',
       text: 'repeat',
       sentAt: 100,
