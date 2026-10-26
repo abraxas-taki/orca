@@ -176,11 +176,15 @@ async function ensureLocalChangesCommitted(
   const committed = await commitMobileHostedReviewStagedChanges(client, worktreeId, message)
   if (!committed.ok) {
     // Hooks may rewrite files during a failed commit; restage them so a retry commits what they wrote.
-    const failedStatus = await readMobileHostedReviewGitStatus(client, worktreeId)
-    if (failedStatus.ok) {
+    // Best effort: the commit failure, not this recovery, is what the caller reports.
+    const failedStatus = await readMobileHostedReviewGitStatus(client, worktreeId).catch(() => null)
+    if (
+      failedStatus?.ok &&
+      mobileHostedReviewBranchStillMatches(input.branch, failedStatus.status)
+    ) {
       const restagePaths = getStageablePaths(failedStatus.status?.entries ?? [])
       if (restagePaths.length > 0) {
-        await stageMobileHostedReviewPaths(client, worktreeId, restagePaths)
+        await stageMobileHostedReviewPaths(client, worktreeId, restagePaths).catch(() => null)
       }
     }
     return { ...committed, committed: false, status: currentStatus, commitMessage: message }

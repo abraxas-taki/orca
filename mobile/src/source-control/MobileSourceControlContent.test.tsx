@@ -1,14 +1,16 @@
 import { createElement, useState } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { MobileSourceControlContent } from './MobileSourceControlContent'
+import {
+  MobileSourceControlContent,
+  type MobileSourceControlContentState
+} from './MobileSourceControlContent'
 import * as branchFormat from './mobile-branch-entry-format'
 import type { SectionListProps } from 'react-native'
 import type {
   MobileBranchEntryView,
   MobileGitStatusEntryView
 } from './mobile-source-control-screen-state'
-import type { MobileSourceControlState } from './use-mobile-source-control-state'
 
 vi.mock('react-native', () => ({
   ActivityIndicator: 'ActivityIndicator',
@@ -71,7 +73,7 @@ const unusedAsync = async (): Promise<never> => {
   throw new Error('unused action')
 }
 
-function initialState(): MobileSourceControlState {
+function initialState(): MobileSourceControlContentState {
   const branchEntries = Array.from({ length: 20 }, (_, index) => ({
     path: `src/file-${index}.ts`,
     status: 'modified' as const,
@@ -201,11 +203,11 @@ function initialState(): MobileSourceControlState {
 }
 
 let renderer: ReactTestRenderer | null = null
-const controls: { patch: ((patch: Partial<MobileSourceControlState>) => void) | null } = {
+const controls: { patch: ((patch: Partial<MobileSourceControlContentState>) => void) | null } = {
   patch: null
 }
 
-function Fixture({ initial }: { initial: MobileSourceControlState }) {
+function Fixture({ initial }: { initial: MobileSourceControlContentState }) {
   const [state, setState] = useState(initial)
   controls.patch = (patch) => setState((previous) => ({ ...previous, ...patch }))
   return createElement(MobileSourceControlContent, {
@@ -225,7 +227,7 @@ function render(initial = initialState()) {
     renderer = create(createElement(Fixture, { initial }))
   })
 }
-function patch(values: Partial<MobileSourceControlState>) {
+function patch(values: Partial<MobileSourceControlContentState>) {
   act(() => {
     controls.patch?.(values)
   })

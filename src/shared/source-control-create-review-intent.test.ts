@@ -172,14 +172,7 @@ describe('resolveCreatePrIntentRemoteStep', () => {
         upstreamStatus: { hasUpstream: false, ahead: 0, behind: 0 },
         branchCommitsAhead: 2,
         hasCurrentBranch: true,
-        hostedReviewCreation: {
-          provider: 'github',
-          review: null,
-          canCreate: false,
-          blockedReason: 'no_upstream',
-          nextAction: 'publish',
-          reviewLookupOutcome: 'not_found'
-        }
+        hostedReviewCreation: { canCreate: false, blockedReason: 'no_upstream' }
       })
     ).toBe('publish')
 
@@ -187,14 +180,7 @@ describe('resolveCreatePrIntentRemoteStep', () => {
       resolveCreatePrIntentRemoteStep({
         upstreamStatus: { hasUpstream: true, ahead: 2, behind: 0 },
         hasCurrentBranch: true,
-        hostedReviewCreation: {
-          provider: 'github',
-          review: null,
-          canCreate: false,
-          blockedReason: 'needs_push',
-          nextAction: 'push',
-          reviewLookupOutcome: 'not_found'
-        }
+        hostedReviewCreation: { canCreate: false, blockedReason: 'needs_push' }
       })
     ).toBe('push')
 
@@ -208,14 +194,7 @@ describe('resolveCreatePrIntentRemoteStep', () => {
         },
         branchCommitsAhead: 3,
         hasCurrentBranch: true,
-        hostedReviewCreation: {
-          provider: 'github',
-          review: null,
-          canCreate: false,
-          blockedReason: 'needs_sync',
-          nextAction: 'sync',
-          reviewLookupOutcome: 'not_found'
-        }
+        hostedReviewCreation: { canCreate: false, blockedReason: 'needs_sync' }
       })
     ).toBe('force_push')
   })
@@ -226,14 +205,7 @@ describe('resolveCreatePrIntentRemoteStep', () => {
       resolveCreatePrIntentRemoteStep({
         upstreamStatus: { hasUpstream: true, ahead: 1, behind: 1 },
         hasCurrentBranch: true,
-        hostedReviewCreation: {
-          provider: 'github',
-          review: null,
-          canCreate: false,
-          blockedReason: 'needs_sync',
-          nextAction: 'sync',
-          reviewLookupOutcome: 'not_found'
-        }
+        hostedReviewCreation: { canCreate: false, blockedReason: 'needs_sync' }
       })
     ).toBe('blocked')
 
@@ -242,14 +214,7 @@ describe('resolveCreatePrIntentRemoteStep', () => {
       resolveCreatePrIntentRemoteStep({
         upstreamStatus: { hasUpstream: true, ahead: 0, behind: 3 },
         hasCurrentBranch: true,
-        hostedReviewCreation: {
-          provider: 'github',
-          review: null,
-          canCreate: false,
-          blockedReason: 'needs_sync',
-          nextAction: 'sync',
-          reviewLookupOutcome: 'not_found'
-        }
+        hostedReviewCreation: { canCreate: false, blockedReason: 'needs_sync' }
       })
     ).toBe('fast_forward')
 
@@ -258,14 +223,7 @@ describe('resolveCreatePrIntentRemoteStep', () => {
         upstreamStatus: { hasUpstream: false, ahead: 0, behind: 0 },
         branchCommitsAhead: 0,
         hasCurrentBranch: true,
-        hostedReviewCreation: {
-          provider: 'github',
-          review: null,
-          canCreate: false,
-          blockedReason: 'no_upstream',
-          nextAction: 'publish',
-          reviewLookupOutcome: 'not_found'
-        }
+        hostedReviewCreation: { canCreate: false, blockedReason: 'no_upstream' }
       })
     ).toBe('blocked')
   })

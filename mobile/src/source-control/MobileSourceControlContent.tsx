@@ -11,8 +11,16 @@ import type { MobileSourceControlPrimaryAction } from './mobile-source-control-p
 import { styles } from './mobile-source-control-styles'
 import { hubStyles } from './mobile-source-control-hub-styles'
 
+// The panel builds the primary action once it knows the branch's review.
+export type MobileSourceControlContentState = Omit<
+  MobileSourceControlState,
+  'primaryActionArgs'
+> & {
+  primaryAction: MobileSourceControlPrimaryAction
+}
+
 type Props = {
-  state: MobileSourceControlState & { primaryAction: MobileSourceControlPrimaryAction }
+  state: MobileSourceControlContentState
 }
 
 export function MobileSourceControlContent({ state }: Props) {
