@@ -1,6 +1,5 @@
-import type { NativeChatMessage } from '../../../../shared/native-chat-types'
-import type { NativeChatLaunchDraft } from '@/lib/native-chat-launch-prompt'
-import { LIFECYCLE_CLOCK_SKEW_SLACK_MS } from '../../../../shared/native-chat-clock-skew'
+import type { NativeChatMessage } from './native-chat-types'
+import { LIFECYCLE_CLOCK_SKEW_SLACK_MS } from './native-chat-clock-skew'
 
 /** A new tail turn proves resolution without timestamps; older-history prepends cannot advance it. */
 export type NativeChatLaunchDraftTurnBaseline = {
@@ -9,7 +8,7 @@ export type NativeChatLaunchDraftTurnBaseline = {
 }
 
 export function nativeChatLaunchDraftTurnBaseline(
-  messages: NativeChatMessage[]
+  messages: readonly NativeChatMessage[]
 ): NativeChatLaunchDraftTurnBaseline {
   const userTurns = messages.filter((message) => message.role === 'user')
   return {
@@ -20,8 +19,8 @@ export function nativeChatLaunchDraftTurnBaseline(
 
 // Resolve on user turns not provably older than the seed, allowing missing timestamps and host-clock slack; text matching misses TUI edits.
 export function launchDraftResolvedByTranscript(
-  entry: Pick<NativeChatLaunchDraft, 'createdAt'>,
-  messages: NativeChatMessage[],
+  entry: { createdAt: number },
+  messages: readonly NativeChatMessage[],
   baseline?: NativeChatLaunchDraftTurnBaseline | null
 ): boolean {
   const provablyOlder = (message: NativeChatMessage): boolean =>
