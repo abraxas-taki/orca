@@ -18837,7 +18837,8 @@
         "clearAfterRetry": "이전 메시지를 다시 시도한 다음 /clear를 실행하세요.",
         "compactAfterRetry": "이전 메시지를 다시 시도한 다음 /compact를 실행하세요.",
         "clearAfterSending": "이전 메시지를 아직 보내는 중입니다. 전송이 끝나면 /clear를 실행하세요.",
-        "compactAfterSending": "이전 메시지를 아직 보내는 중입니다. 전송이 끝나면 /compact를 실행하세요."
+        "compactAfterSending": "이전 메시지를 아직 보내는 중입니다. 전송이 끝나면 /compact를 실행하세요.",
+        "pendingWork": "이 명령을 사용하기 전에 보류 중인 작업과 메시지가 완료될 때까지 기다리십시오."
       },
       "composer": {
         "imageUnsupported": "이 에이전트는 이미지 붙여넣기를 지원하지 않습니다.",
@@ -19278,9 +19279,6 @@
         "ranN": "{{value0}} 하위 에이전트를 실행했습니다.",
         "tokens": "{{value0}} 토큰",
         "unnamed": "하위 에이전트"
-      },
-      "conversationCommand": {
-        "pendingWork": "이 명령을 사용하기 전에 보류 중인 작업과 메시지가 완료될 때까지 기다리십시오."
       },
       "drop": {
         "messageTitle": "놓아서 이 메시지에 첨부",

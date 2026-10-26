@@ -18802,7 +18802,8 @@
         "clearAfterRetry": "请先重试您之前的消息，然后再运行 /clear。",
         "compactAfterRetry": "请先重试您之前的消息，然后再运行 /compact。",
         "clearAfterSending": "您之前的消息仍在发送中。发送完成后再运行 /clear。",
-        "compactAfterSending": "您之前的消息仍在发送中。发送完成后再运行 /compact。"
+        "compactAfterSending": "您之前的消息仍在发送中。发送完成后再运行 /compact。",
+        "pendingWork": "在使用此命令之前，请等待挂起的工作和消息完成。"
       },
       "composer": {
         "imageUnsupported": "此智能体不支持粘贴图片。",
@@ -19247,9 +19248,6 @@
         "ranN": "Ran {{value0}} 子智能体",
         "tokens": "{{value0}} 代币",
         "unnamed": "子智能体"
-      },
-      "conversationCommand": {
-        "pendingWork": "在使用此命令之前，请等待挂起的工作和消息完成。"
       },
       "drop": {
         "messageTitle": "拖放以附加到此消息",

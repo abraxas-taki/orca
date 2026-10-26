@@ -18947,7 +18947,8 @@
         "clearAfterRetry": "Réessayez votre message précédent, puis lancez /clear.",
         "compactAfterRetry": "Réessayez votre message précédent, puis lancez /compact.",
         "clearAfterSending": "Votre message précédent est encore en cours d'envoi. Lancez /clear une fois qu'il est parti.",
-        "compactAfterSending": "Votre message précédent est encore en cours d'envoi. Lancez /compact une fois qu'il est parti."
+        "compactAfterSending": "Votre message précédent est encore en cours d'envoi. Lancez /compact une fois qu'il est parti.",
+        "pendingWork": "Attendez la fin du travail et des messages en attente avant d'utiliser cette commande."
       },
       "composer": {
         "imageUnavailable": "Aperçu indisponible",
@@ -19388,9 +19389,6 @@
         "ranN": "Ran les sous-agents {{value0}}",
         "tokens": "Jetons {{value0}}",
         "unnamed": "Sous-agent"
-      },
-      "conversationCommand": {
-        "pendingWork": "Attendez la fin du travail et des messages en attente avant d'utiliser cette commande."
       },
       "drop": {
         "messageTitle": "Déposez pour joindre à ce message",

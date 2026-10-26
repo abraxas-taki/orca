@@ -18807,7 +18807,8 @@
         "clearAfterRetry": "Reintente su mensaje anterior y luego ejecute /clear.",
         "compactAfterRetry": "Reintente su mensaje anterior y luego ejecute /compact.",
         "clearAfterSending": "Su mensaje anterior todavía se está enviando. Ejecute /clear cuando se haya enviado.",
-        "compactAfterSending": "Su mensaje anterior todavía se está enviando. Ejecute /compact cuando se haya enviado."
+        "compactAfterSending": "Su mensaje anterior todavía se está enviando. Ejecute /compact cuando se haya enviado.",
+        "pendingWork": "Espera a que terminen el trabajo y los mensajes pendientes antes de usar este comando."
       },
       "composer": {
         "imageUnavailable": "Vista previa no disponible",
@@ -19308,9 +19309,6 @@
         "awaitingUnnamed": "Esperando entrada del usuario",
         "asked": "Preguntó:",
         "questionCount": "{{value0}} preguntas"
-      },
-      "conversationCommand": {
-        "pendingWork": "Espera a que terminen el trabajo y los mensajes pendientes antes de usar este comando."
       },
       "drop": {
         "messageTitle": "Suelta para adjuntar a este mensaje",

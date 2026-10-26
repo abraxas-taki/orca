@@ -1,7 +1,10 @@
 import { selectAgentSessionCurrentRequests } from '../../../src/shared/agent-session-current-requests'
 
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { runningStructuredAgentSessionTurnId } from '../../../src/shared/structured-agent-session-live-turn'
+import { structuredSessionBackgroundTasksView } from '../../../src/shared/structured-session-background-tasks-view'
+import { agentSessionVisibleFailureFacts } from '../../../src/shared/agent-session-visible-failures'
+import { tuiAgentDisplayName } from '../../../src/shared/tui-agent-display-names'
 import { pendingPromptsAllUnanswerableHere } from '../../../src/shared/agent-session-approval-subject'
 import {
   structuredAgentSessionSendBody,
@@ -86,6 +89,8 @@ export function useMobileStructuredSendWithOutcome(args: {
     stateRef,
     stopping
   } = args
+  // Sends whose request is still out: a command waits behind them, as on desktop.
+  const sendsInFlight = useRef(0)
   return useCallback(
     async (
       text: string,
@@ -116,13 +121,22 @@ export function useMobileStructuredSendWithOutcome(args: {
         fence: currentFence,
         pending: commandPending,
         controller: { agent: agent ?? undefined, ...controller },
-        busy: () =>
-          actionableStructuredApproval(stateRef.current) ||
-          actionableStructuredQuestion(stateRef.current)
-            ? 'prompt'
-            : runningStructuredAgentSessionTurnId(stateRef.current)
-              ? 'working'
-              : null,
+        agentName: agent ? (tuiAgentDisplayName(agent) ?? agent) : undefined,
+        holds: () => {
+          const state = stateRef.current
+          const turnId = runningStructuredAgentSessionTurnId(state)
+          const tasks = structuredSessionBackgroundTasksView(state.backgroundTasks, turnId)
+          return {
+            working: turnId !== null,
+            prompt: Boolean(
+              actionableStructuredApproval(state) || actionableStructuredQuestion(state)
+            ),
+            background: tasks.show || tasks.isMonitoring,
+            backgroundTasksRunning: tasks.isMonitoring,
+            sending: sendsInFlight.current > 0
+          }
+        },
+        startFailures: () => agentSessionVisibleFailureFacts(stateRef.current.items),
         waitsInLine: (command) =>
           command === 'compact' &&
           commandsWait &&
@@ -155,6 +169,7 @@ export function useMobileStructuredSendWithOutcome(args: {
       }
       // Wait for pending picks so the send carries this chat’s settled options.
       const options = sendOptions?.()
+      sendsInFlight.current += 1
       const outcome = await sendMobileStructuredAgentSessionMessage({
         client,
         sessionId,
@@ -170,6 +185,8 @@ export function useMobileStructuredSendWithOutcome(args: {
         onAccepted: (cursor) =>
           accept({ ...send, ...(cursor ? { recordedCursor: cursor } : {}) }, images),
         onError: onSendError
+      }).finally(() => {
+        sendsInFlight.current -= 1
       })
       if (outcome === 'unknown') {
         hold(send)

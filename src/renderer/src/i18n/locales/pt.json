@@ -19592,9 +19592,6 @@
         "tokens": "{{value0}} tokens",
         "unnamed": "Subagente"
       },
-      "conversationCommand": {
-        "pendingWork": "Aguarde a conclusão do trabalho e das mensagens pendentes antes de usar este comando."
-      },
       "drop": {
         "title": "Solte para anexar a este chat",
         "subtitle": "Os arquivos são adicionados à sua mensagem como caminhos que o agente pode ler.",
@@ -19784,7 +19781,8 @@
         "clearAfterRetry": "Tente enviar sua mensagem anterior novamente e execute /clear.",
         "compactAfterRetry": "Tente enviar sua mensagem anterior novamente e execute /compact.",
         "clearAfterSending": "Sua mensagem anterior ainda está sendo enviada. Execute /clear após o envio.",
-        "compactAfterSending": "Sua mensagem anterior ainda está sendo enviada. Execute /compact após o envio."
+        "compactAfterSending": "Sua mensagem anterior ainda está sendo enviada. Execute /compact após o envio.",
+        "pendingWork": "Aguarde a conclusão do trabalho e das mensagens pendentes antes de usar este comando."
       },
       "newRowsAnnouncement": "Novas mensagens chegaram enquanto você estava ausente",
       "newRowsMarker": "Novas",

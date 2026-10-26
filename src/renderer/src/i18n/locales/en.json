@@ -19198,7 +19198,8 @@
         "clearAfterRetry": "Retry your earlier message, then run /clear.",
         "compactAfterRetry": "Retry your earlier message, then run /compact.",
         "clearAfterSending": "Your earlier message is still being sent. Run /clear once it has gone.",
-        "compactAfterSending": "Your earlier message is still being sent. Run /compact once it has gone."
+        "compactAfterSending": "Your earlier message is still being sent. Run /compact once it has gone.",
+        "pendingWork": "Wait for pending work and messages to finish before using this command."
       },
       "taskList": {
         "title": "Tasks",
@@ -19639,9 +19640,6 @@
         "ranN": "Ran {{value0}} subagents",
         "tokens": "{{value0}} tokens",
         "unnamed": "Subagent"
-      },
-      "conversationCommand": {
-        "pendingWork": "Wait for pending work and messages to finish before using this command."
       },
       "rewind": {
         "unsupported": "This chat can't go back to an earlier message.",
