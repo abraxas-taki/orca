@@ -7,7 +7,7 @@ import { resolveEnvironmentPairingOffer } from '../../shared/runtime-environment
 import { findWslHostDeployment } from '../../shared/runtime-environment-wsl-host-store'
 import { createWslDistroHolder, type WslDistroHolder } from './wsl-distro-holder'
 import { listWslHostDistros } from './wsl-host-distro-list'
-import { isWslDistroRegistered } from './wsl-distro-registry-id'
+import { resolveWslDistroName } from './wsl-distro-registry-id'
 import type { WslHostConnector, WslHostReachability } from './wsl-host-service'
 import { readWslDistroOrcadPublicKey } from './wsl-host-ssh-orcad-conflict'
 import {
@@ -183,7 +183,7 @@ export function createWslHostConnector(options: {
         decommission: decommissionWslHostOrcad(target, createWslOrcadHostTransport({ target }))
       })
     },
-    isDistroRegistered: (distro, distroId) => isWslDistroRegistered(distro, distroId),
+    resolveDistroName: (distro, distroId) => resolveWslDistroName(distro, distroId),
     releaseHolder: async (distro) => {
       await holder.release(distro)
     },

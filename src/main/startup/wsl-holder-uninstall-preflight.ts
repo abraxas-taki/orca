@@ -29,13 +29,21 @@ export function runWslHolderUninstallPreflight(argv: readonly string[] = process
   if (!argv.includes(WSL_HOLDER_UNINSTALL_FLAG)) {
     return false
   }
-  process.env.ORCA_BACKGROUND_LAUNCH = '1'
-  // The same userData the app records holders under; before any other preflight step.
-  ensureWindowsAppDataPath(app)
+  // Armed first: nothing below may leave the uninstaller waiting on an error box.
   const timeout = setTimeout(() => app.exit(1), UNINSTALL_RELEASE_TIMEOUT_MS)
-  void releaseWslHoldersForUninstall(
-    createWslDistroHolder({ userDataPath: app.getPath('userData') })
-  ).then((code) => {
+  let holder: WslDistroHolder
+  try {
+    process.env.ORCA_BACKGROUND_LAUNCH = '1'
+    // The same userData the app records holders under; before any other preflight step.
+    ensureWindowsAppDataPath(app)
+    holder = createWslDistroHolder({ userDataPath: app.getPath('userData') })
+  } catch (error) {
+    console.warn('[wsl] uninstall could not start releasing WSL distro holders:', error)
+    clearTimeout(timeout)
+    app.exit(1)
+    return true
+  }
+  void releaseWslHoldersForUninstall(holder).then((code) => {
     clearTimeout(timeout)
     app.exit(code)
   })

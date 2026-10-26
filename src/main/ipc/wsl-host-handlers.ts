@@ -7,7 +7,7 @@ import {
 } from '../../shared/wsl-host-types'
 import type { Store } from '../persistence'
 import { createWslHostConnector } from '../wsl/wsl-host-connector'
-import { createWslDistroHolder } from '../wsl/wsl-distro-holder'
+import { releaseUnwantedWslHolders, wslHolderKeepPolicy } from '../wsl/wsl-orphan-holder-release'
 import {
   createFakeWslHostConnector,
   readFakeWslHostsConfig
@@ -185,19 +185,24 @@ function startService(args: WslHostHandlerArgs): WslHostService | null {
   return created
 }
 
-/** With the gate closed no host runs, so a holder an earlier build left only keeps its distro up. */
 let gatedOffHoldersReleased = false
 
+/**
+ * With the gate closed, a launch still releases orphans (no host record, or a pending Remove)
+ * but keeps every host's holder: a tester reopening Orca without the gate must not end a live
+ * host's sessions. With no holder recorded it touches nothing beyond one folder check.
+ */
 function releaseHoldersWhileGatedOff(userDataPath: string): void {
   if (process.platform !== 'win32' || gatedOffHoldersReleased) {
     return
   }
   gatedOffHoldersReleased = true
-  void createWslDistroHolder({ userDataPath })
-    .releaseAll()
-    .catch((error: unknown) => {
-      console.warn('[wsl-hosts] Could not release WSL distro holders:', error)
-    })
+  void releaseUnwantedWslHolders({
+    userDataPath,
+    isWanted: wslHolderKeepPolicy({ userDataPath, keepHostHolders: true })
+  }).catch((error: unknown) => {
+    console.warn('[wsl-hosts] Could not release orphaned WSL distro holders:', error)
+  })
 }
 
 export function registerWslHostHandlers(args: WslHostHandlerArgs): void {

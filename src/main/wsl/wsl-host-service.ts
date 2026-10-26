@@ -3,7 +3,6 @@
  * Add/Connect, or when the user switches to one of its workspaces. After a confirmed stop the host is
  * parked: polls and visible work keep it down until the user acts or the distro runs again.
  */
-import { errorMessage } from '../../shared/error-message'
 import { focusReachability } from './wsl-host-focus-reachability'
 import { setWslHostPendingStop } from '../../shared/runtime-environment-wsl-host-store'
 import type { WslHostDeploymentRecord } from '../../shared/wsl-host-deployment-store'
@@ -14,7 +13,7 @@ import type {
   WslHostServerStop,
   WslHostStatus
 } from '../../shared/wsl-host-types'
-import type { WslHostConnector } from './wsl-host-connector-contract'
+import type { WslHostConnector, WslHostServiceDependencies } from './wsl-host-connector-contract'
 import { wslDistroHolderKey } from './wsl-distro-holder-record'
 import {
   persistWslHostConnection,
@@ -31,12 +30,9 @@ import {
 } from './wsl-host-add-admission'
 import type { WslOrcadConnection } from './wsl-orcad-connection'
 import { registerWslHost } from './wsl-host-registration'
-import {
-  readdPendingWslHost,
-  removeWslHostServer,
-  startupHolderPolicy,
-  type WslHostRemoval
-} from './wsl-host-removal'
+import { withWslHostIds } from './wsl-host-records'
+import { wslHolderKeepPolicy } from './wsl-orphan-holder-release'
+import { readdPendingWslHost, removeWslHostServer } from './wsl-host-removal'
 import type { WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
 import {
   forgetWslHostToWake,
@@ -44,20 +40,11 @@ import {
   rememberWslHostsToWake
 } from './wsl-host-early-wake'
 
-export type { WslHostConnector, WslHostReachability } from './wsl-host-connector-contract'
-
-export type WslHostServiceDependencies = {
-  userDataPath: () => string
-  isEnabled: () => boolean
-  /** Whether this build ships the orcad template a WSL host deploys from. */
-  hasServerFiles: () => boolean
-  publish: (status: WslHostStatus) => void
-  /** The environment's pairing changed: transports that authenticate with the old one retire. */
-  pairingChanged: (environmentId: string) => void
-  /** A connection came up: verify the server now rather than on the status owner's backoff. */
-  ready: (environmentId: string) => void
-  removed: (environmentId: string) => Promise<void> | void
-}
+export type {
+  WslHostConnector,
+  WslHostReachability,
+  WslHostServiceDependencies
+} from './wsl-host-connector-contract'
 
 export class WslHostService {
   private connector: WslHostConnector | null = null
@@ -127,13 +114,7 @@ export class WslHostService {
   }
 
   async listDistros(): Promise<WslHostDistro[]> {
-    const records = this.records()
-    const candidates = await this.wsl.listDistros()
-    return candidates.map(({ id: _id, ...distro }) => ({
-      ...distro,
-      environmentId:
-        records.find((record) => sameWslDistro(record.distro, distro.name))?.environmentId ?? null
-    }))
+    return withWslHostIds(await this.wsl.listDistros(), this.records())
   }
 
   add(args: { distro: string; startIfStopped?: boolean }): Promise<WslHostAddResult> {
@@ -172,24 +153,21 @@ export class WslHostService {
     if (!record) {
       throw new Error('This server is not a WSL host.')
     }
-    // Block reconnect from visible work, liveness and calls before stopping.
+    // Block reconnect from visible work, liveness and calls before stopping; a failed removal
+    // must leave the host usable and allow another attempt.
     this.removing.add(environmentId)
-    let removal: WslHostRemoval
-    try {
-      removal = await removeWslHostServer(this.deps.userDataPath(), this.connector, record)
-      if (removal.removed) {
-        forgetWslHostToWake(this.deps.userDataPath(), record.distro)
-        this.visible.delete(environmentId)
-        this.parked.delete(environmentId)
-      }
-    } finally {
-      // Failed removal must leave the host usable and allow another removal attempt.
-      this.removing.delete(environmentId)
-    }
+    const removal = await removeWslHostServer(
+      this.deps.userDataPath(),
+      this.connector,
+      record
+    ).finally(() => this.removing.delete(environmentId))
     if (!removal.removed) {
       this.setStatus(this.recordForEnvironment(environmentId) ?? record, { state: 'closed' })
       return removal.serverStop
     }
+    forgetWslHostToWake(this.deps.userDataPath(), record.distro)
+    this.visible.delete(environmentId)
+    this.parked.delete(environmentId)
     this.statuses.delete(environmentId)
     this.notifyStatusesChanged()
     await this.deps.removed(environmentId)
@@ -364,12 +342,15 @@ export class WslHostService {
       return
     }
     // An unfinished Remove shows as such from launch; nothing reconnects it.
-    for (const record of this.records()) {
-      if (record.pendingStop) {
-        this.setStatus(record, { state: 'closed' })
-      }
-    }
-    await this.connector.adoptHolders(startupHolderPolicy(this.deps.userDataPath(), this.canRun()))
+    const pending = this.records().filter((record) => record.pendingStop)
+    pending.forEach((record) => this.setStatus(record, { state: 'closed' }))
+    await this.connector.adoptHolders(
+      wslHolderKeepPolicy({
+        userDataPath: this.deps.userDataPath(),
+        keepHostHolders: this.canRun(),
+        isAdding: (distro) => this.adding.has(wslDistroHolderKey(distro))
+      })
+    )
   }
 
   /** What the UI shows before offering any WSL host action. */

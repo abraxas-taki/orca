@@ -8,12 +8,9 @@ import {
   removeWslHostEnvironment,
   setWslHostPendingStop
 } from '../../shared/runtime-environment-wsl-host-store'
-import {
-  readWslHostDeployments,
-  type WslHostDeploymentRecord
-} from '../../shared/wsl-host-deployment-store'
+import type { WslHostDeploymentRecord } from '../../shared/wsl-host-deployment-store'
 import type { WslHostAddResult, WslHostServerStop } from '../../shared/wsl-host-types'
-import { admitWslHostDistro, sameWslDistro } from './wsl-host-add-admission'
+import { admitWslHostDistro } from './wsl-host-add-admission'
 import type { WslHostDistroCandidate } from './wsl-host-distro-list'
 import type { WslHostConnector } from './wsl-host-service'
 
@@ -26,14 +23,15 @@ export async function removeWslHostServer(
 ): Promise<WslHostRemoval> {
   let serverStop: WslHostServerStop = { stopped: true }
   if (connector) {
-    // A distro that is no longer registered (by name or GUID) runs nothing of this host.
-    const registered = await connector
-      .isDistroRegistered(record.distro, record.distroId)
+    // A distro that is no longer registered (by GUID or name) runs nothing of this host.
+    const current = await connector
+      .resolveDistroName(record.distro, record.distroId)
       .catch(() => null)
-    if (registered !== false) {
+    if (current !== false) {
+      // Under its current name: a renamed distro never reads as running under the old one.
       // Never boots: a stopped distro is itself a proven stop.
       serverStop = await connector
-        .stopServer(record.distro, record.environmentId)
+        .stopServer(current ?? record.distro, record.environmentId)
         .catch((error: unknown): WslHostServerStop => ({
           stopped: false,
           verdict: 'unverifiable',
@@ -80,31 +78,4 @@ export async function readdPendingWslHost(
   } catch (error) {
     return { ok: false, kind: 'failed', message: errorMessage(error) }
   }
-}
-
-/**
- * Which holders startup keeps: none while hosts can't run, every one when the host records can't
- * all be read (unverifiable, so live work is never killed), else those of hosts not being removed.
- */
-export function startupHolderPolicy(
-  userDataPath: string,
-  canRun: boolean
-): (distro: string) => boolean {
-  if (!canRun) {
-    return () => false
-  }
-  let hosts: WslHostDeploymentRecord[]
-  try {
-    const read = readWslHostDeployments(userDataPath)
-    if (read.unreadableEnvironmentIds.size > 0) {
-      return () => true
-    }
-    hosts = read.deployments
-  } catch (error) {
-    console.warn('[wsl-hosts] Could not read WSL host records; keeping every holder:', error)
-    return () => true
-  }
-  // A pending host's Remove already released its holder; nothing re-adopts it.
-  return (distro) =>
-    hosts.some((record) => sameWslDistro(record.distro, distro) && !record.pendingStop)
 }

@@ -1,13 +1,33 @@
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import type { WslDistroHolder, WslDistroHolderAdoption } from '../wsl/wsl-distro-holder'
 
-vi.mock('electron', () => ({
-  app: { exit: vi.fn(), getPath: () => '/user-data', setPath: vi.fn() }
+const electron = vi.hoisted(() => ({
+  userDataPath: '/user-data',
+  exit: vi.fn(),
+  requestSingleInstanceLock: vi.fn(),
+  BrowserWindow: vi.fn(),
+  handle: vi.fn()
 }))
+const appData = vi.hoisted(() => ({ ensure: vi.fn() }))
+
+vi.mock('electron', () => ({
+  app: {
+    exit: electron.exit,
+    getPath: () => electron.userDataPath,
+    setPath: vi.fn(),
+    requestSingleInstanceLock: electron.requestSingleInstanceLock
+  },
+  BrowserWindow: electron.BrowserWindow,
+  ipcMain: { handle: electron.handle }
+}))
+vi.mock('./windows-app-data-path', () => ({ ensureWindowsAppDataPath: appData.ensure }))
 
 import {
   releaseWslHoldersForUninstall,
+  runWslHolderUninstallPreflight,
   WSL_HOLDER_UNINSTALL_FLAG
 } from './wsl-holder-uninstall-preflight'
 
@@ -63,5 +83,50 @@ describe('WSL holder release on uninstall', () => {
     // Killed first, so no running Orca can respawn a holder behind the release.
     expect(release).toBeGreaterThan(realUninstall.indexOf('orca-terminal-daemon.exe'))
     expect(hooks.split(WSL_HOLDER_UNINSTALL_FLAG)).toHaveLength(2)
+  })
+
+  it('exits 0 with no holder records, and opens no window, lock or IPC', async () => {
+    electron.userDataPath = mkdtempSync(join(tmpdir(), 'orca-uninstall-no-holders-'))
+    electron.exit.mockClear()
+    try {
+      expect(runWslHolderUninstallPreflight(['Orca.exe', WSL_HOLDER_UNINSTALL_FLAG])).toBe(true)
+      await vi.waitFor(() => expect(electron.exit).toHaveBeenCalledWith(0))
+      expect(electron.BrowserWindow).not.toHaveBeenCalled()
+      expect(electron.requestSingleInstanceLock).not.toHaveBeenCalled()
+      expect(electron.handle).not.toHaveBeenCalled()
+    } finally {
+      rmSync(electron.userDataPath, { recursive: true, force: true })
+    }
+  })
+
+  it('exits 1 rather than leaving an error box when setup throws', () => {
+    vi.useFakeTimers()
+    electron.exit.mockClear()
+    appData.ensure.mockImplementationOnce(() => {
+      throw new Error('Orca could not find the Windows roaming AppData folder')
+    })
+    try {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      expect(runWslHolderUninstallPreflight(['Orca.exe', WSL_HOLDER_UNINSTALL_FLAG])).toBe(true)
+      expect(electron.exit).toHaveBeenCalledExactlyOnceWith(1)
+      // The timer armed before setup is cleared, so it can't exit a second time.
+      vi.runAllTimers()
+      expect(electron.exit).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('launches from the uninstaller only for a userData that has holder records', () => {
+    const hooks = readFileSync(
+      new URL('../../../config/nsis/orca-installer-hooks.nsh', import.meta.url),
+      'utf8'
+    )
+    const launch = hooks.indexOf(`--orca-uninstall-release-wsl-holders'`)
+    const gate = hooks.lastIndexOf('${if} $1 == "1"', launch)
+    expect(gate).toBeGreaterThan(-1)
+    expect(hooks.slice(0, gate)).toMatch(
+      /\$\{FileExists\} "\$APPDATA\\\$\{APP_PACKAGE_NAME\}\\wsl-distro-holders\\\*\.json"/
+    )
   })
 })
