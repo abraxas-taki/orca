@@ -9,6 +9,11 @@ export type MobileWorktreeSummary = {
   readonly linkedPR: number | null
   readonly suppressedGitHubPR: number | null
   readonly pushTarget: GitPushTarget | null
+  // Guard a stale-link clear against a worktree that moved since the lookup.
+  readonly branch: string
+  readonly head: string
+  readonly isBare?: boolean
+  readonly isArchived?: boolean
 }
 
 // Both consumers treat unreadable metadata as no hint; normalize malformed baseRef/linkedPR to null before fallback.
@@ -20,7 +25,11 @@ const worktreeSummarySchema: z.ZodType<MobileWorktreeSummary | null, unknown> =
             baseRef: value.worktree.baseRef ?? null,
             linkedPR: value.worktree.linkedPR ?? null,
             suppressedGitHubPR: value.worktree.suppressedGitHubPR ?? null,
-            pushTarget: value.worktree.pushTarget ?? null
+            pushTarget: value.worktree.pushTarget ?? null,
+            branch: value.worktree.branch ?? '',
+            head: value.worktree.head ?? '',
+            isBare: value.worktree.isBare,
+            isArchived: value.worktree.isArchived
           }
         : null
     )

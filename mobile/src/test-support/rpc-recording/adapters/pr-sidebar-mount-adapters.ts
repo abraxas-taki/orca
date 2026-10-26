@@ -25,8 +25,8 @@ export function prSidebarMountAdapters(
           reads.fetchHostedReviewForBranch(client, worktreeId, args),
         fetchWorktreeGitHubPRLink: (worktreeId) =>
           link.fetchWorktreeGitHubPRLink(client, worktreeId),
-        clearWorktreeReviewLink: (worktreeId) =>
-          link.clearMobileWorktreeReviewLink(client, worktreeId),
+        clearWorktreeReviewLink: (worktreeId, shouldApply) =>
+          link.clearMobileWorktreeReviewLink(client, worktreeId, shouldApply),
         fetchPRForBranch: (worktreeId, args) => reads.fetchPRForBranch(client, worktreeId, args),
         fetchWorkItemDetails: (worktreeId, args) =>
           reads.fetchWorkItemDetails(client, worktreeId, args),

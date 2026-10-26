@@ -199,7 +199,19 @@ describe('loadPrSidebarData', () => {
       currentHeadOid: 'head-now'
     })
     expect(out).toMatchObject({ kind: 'ready', data: { pr: PR } })
-    expect(d.clearWorktreeReviewLink).toHaveBeenCalledWith('w')
+    // The clear re-checks the worktree, so a link chosen meanwhile survives.
+    const [[worktreeId, shouldApply]] = vi.mocked(d.clearWorktreeReviewLink).mock.calls
+    expect(worktreeId).toBe('w')
+    const worktree = {
+      baseRef: null,
+      linkedPR: 42,
+      suppressedGitHubPR: null,
+      pushTarget: null,
+      branch: 'feat',
+      head: 'head-now'
+    }
+    expect(shouldApply(worktree)).toBe(true)
+    expect(shouldApply({ ...worktree, linkedPR: 99 })).toBe(false)
   })
 
   it('hides the branch PR the user unlinked', async () => {

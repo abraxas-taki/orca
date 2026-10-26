@@ -20,11 +20,11 @@ import { getRefreshAliasExecutionHostId } from './repository-routing'
 import {
   buildWorktreeLookupIndex,
   findUniqueWorktreeById,
-  isStaleExactLinkedPRLookup,
-  shouldApplyBranchMismatchedLinkedPRClear,
-  shouldApplyDivergedLinkedPRClear
+  isStaleExactLinkedPRLookup
 } from './worktree-refresh'
 import {
+  shouldApplyBranchMismatchedLinkedPRClear,
+  shouldApplyDivergedLinkedPRClear,
   shouldClearBranchMismatchedLinkedOpenPR,
   shouldClearDivergedLinkedMergedPR
 } from '../../../../shared/github/linked-pr-staleness'

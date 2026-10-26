@@ -3,7 +3,11 @@ import type { GitPushTarget } from '../../../src/shared/worktree/types'
 import { CLEARED_HOSTED_REVIEW_SELECTION_UPDATES } from '../../../src/shared/worktree/hosted-review-links'
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import type { RpcOperationSender } from '../transport/rpc-operation-sender'
-import { worktreeLinkSet, worktreeSummaryRead } from './mobile-worktree-metadata-operations'
+import {
+  worktreeLinkSet,
+  worktreeSummaryRead,
+  type MobileWorktreeSummary
+} from './mobile-worktree-metadata-operations'
 
 // Use the desktop worktree metadata fields so follow-up reads share authoritative review hints.
 
@@ -118,8 +122,14 @@ const NO_GITHUB_PR_LINK: WorktreeGitHubPRLink = {
 // Desktop's durable clear for a link the branch has moved past; a failed write only repeats the check next load.
 export async function clearMobileWorktreeReviewLink(
   client: RpcOperationSender,
-  worktreeId: string
+  worktreeId: string,
+  shouldApply: (worktree: MobileWorktreeSummary) => boolean
 ): Promise<void> {
+  // Like desktop, re-read the worktree so a link chosen after the lookup is never cleared.
+  const current = await readWorktreeSummary(client, worktreeId)
+  if (!current || !shouldApply(current)) {
+    return
+  }
   await setWorktreeReviewLink(
     client,
     { worktree: `id:${worktreeId}`, ...CLEARED_HOSTED_REVIEW_SELECTION_UPDATES },
@@ -132,18 +142,26 @@ export async function fetchWorktreeGitHubPRLink(
   client: RpcOperationSender,
   worktreeId: string
 ): Promise<WorktreeGitHubPRLink> {
+  const summary = await readWorktreeSummary(client, worktreeId)
+  return summary
+    ? {
+        linkedPR: summary.linkedPR,
+        suppressedGitHubPR: summary.suppressedGitHubPR,
+        pushTarget: summary.pushTarget
+      }
+    : NO_GITHUB_PR_LINK
+}
+
+async function readWorktreeSummary(
+  client: RpcOperationSender,
+  worktreeId: string
+): Promise<MobileWorktreeSummary | null> {
   try {
     const reply = await worktreeSummaryRead.request(client, { worktree: `id:${worktreeId}` })
     const summary = worktreeSummaryRead.interpret(reply)
-    return summary.accepted && summary.value
-      ? {
-          linkedPR: summary.value.linkedPR,
-          suppressedGitHubPR: summary.value.suppressedGitHubPR,
-          pushTarget: summary.value.pushTarget
-        }
-      : NO_GITHUB_PR_LINK
+    return summary.accepted ? summary.value : null
   } catch {
     // A failed fallback read is a missing hint, not a fatal error.
-    return NO_GITHUB_PR_LINK
+    return null
   }
 }

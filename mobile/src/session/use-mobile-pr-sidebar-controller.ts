@@ -72,7 +72,8 @@ export function useMobilePrSidebarController(input: PrSidebarControllerInput) {
     return {
       fetchForBranch: (wt, args) => fetchHostedReviewForBranch(client, wt, args),
       fetchWorktreeGitHubPRLink: (wt) => fetchWorktreeGitHubPRLink(client, wt),
-      clearWorktreeReviewLink: (wt) => clearMobileWorktreeReviewLink(client, wt),
+      clearWorktreeReviewLink: (wt, shouldApply) =>
+        clearMobileWorktreeReviewLink(client, wt, shouldApply),
       fetchPRForBranch: (wt, args) => fetchPRForBranch(client, wt, args),
       fetchWorkItemDetails: (wt, args) => fetchWorkItemDetails(client, wt, args),
       fetchPRChecks: (wt, args) => fetchPRChecks(client, wt, args)

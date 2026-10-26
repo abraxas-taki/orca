@@ -4,9 +4,12 @@ import type { GitHubWorkItemDetails } from '../../../src/shared/github/work-item
 import type { GitHubPrReadOutcome, GitHubPrRepoSlug } from './github-pr-rpc'
 import { isGitHubPRSuppressed } from '../../../src/shared/worktree/github-pr-suppression'
 import {
+  shouldApplyBranchMismatchedLinkedPRClear,
+  shouldApplyDivergedLinkedPRClear,
   shouldClearBranchMismatchedLinkedOpenPR,
   shouldClearDivergedLinkedMergedPR
 } from '../../../src/shared/github/linked-pr-staleness'
+import type { MobileWorktreeSummary } from '../source-control/mobile-worktree-metadata-operations'
 import type { WorktreeGitHubPRLink } from '../source-control/mobile-pr-link'
 
 export type PrSidebarData = {
@@ -51,7 +54,10 @@ export type PrSidebarLoadDeps = {
   >
   // Resolve persisted links in parallel so closed/merged PRs add no serial read.
   fetchWorktreeGitHubPRLink: (worktreeId: string) => Promise<WorktreeGitHubPRLink>
-  clearWorktreeReviewLink: (worktreeId: string) => Promise<void>
+  clearWorktreeReviewLink: (
+    worktreeId: string,
+    shouldApply: (worktree: MobileWorktreeSummary) => boolean
+  ) => Promise<void>
   fetchPRForBranch: (
     worktreeId: string,
     args: {
@@ -69,6 +75,37 @@ export type PrSidebarLoadDeps = {
     worktreeId: string,
     args: { prNumber: number; headSha?: string | null; prRepo?: GitHubPrRepoSlug | null }
   ) => Promise<GitHubPrReadOutcome<PRCheckDetail[]>>
+}
+
+// The guard desktop applies before persisting the clear, or null when the link still holds.
+function resolveStaleLink(
+  pr: PRInfo | null,
+  link: WorktreeGitHubPRLink,
+  branch: string,
+  requestHeadOid: string | null
+): ((worktree: MobileWorktreeSummary) => boolean) | null {
+  const linkedPRNumber = link.linkedPR
+  if (linkedPRNumber === null) {
+    return null
+  }
+  if (shouldClearDivergedLinkedMergedPR({ pr, linkedPRNumber, requestHeadOid })) {
+    return (worktree) =>
+      shouldApplyDivergedLinkedPRClear({ worktree, linkedPRNumber, branch, requestHeadOid })
+  }
+  const pushTargetBranch = link.pushTarget?.branchName ?? null
+  if (
+    shouldClearBranchMismatchedLinkedOpenPR({
+      pr,
+      linkedPRNumber,
+      branch,
+      requestHeadOid,
+      pushTargetBranch
+    })
+  ) {
+    return (worktree) =>
+      shouldApplyBranchMismatchedLinkedPRClear({ worktree, linkedPRNumber, branch, requestHeadOid })
+  }
+  return null
 }
 
 // Show PR/checks before heavy body/comments; parallel link resolution also retains closed/merged reviews.
@@ -100,24 +137,13 @@ export async function loadPrSidebarData(
       })
     let linkedPR = link.linkedPR
     let prOutcome = await fetchPR(linkedPR)
-    // Desktop drops a link the branch has moved past; resolve by branch as it does after clearing.
-    if (
-      prOutcome.ok &&
-      (shouldClearDivergedLinkedMergedPR({
-        pr: prOutcome.result,
-        linkedPRNumber: link.linkedPR,
-        requestHeadOid
-      }) ||
-        shouldClearBranchMismatchedLinkedOpenPR({
-          pr: prOutcome.result,
-          linkedPRNumber: link.linkedPR,
-          branch: args.branch,
-          requestHeadOid,
-          pushTargetBranch: link.pushTarget?.branchName ?? null
-        }))
-    ) {
+    const staleLink = prOutcome.ok
+      ? resolveStaleLink(prOutcome.result, link, args.branch, requestHeadOid)
+      : null
+    // Desktop drops a link the branch has moved past, then resolves by branch.
+    if (staleLink) {
       linkedPR = null
-      await deps.clearWorktreeReviewLink(args.worktreeId)
+      await deps.clearWorktreeReviewLink(args.worktreeId, staleLink)
       prOutcome = await fetchPR(null)
     }
     if (!prOutcome.ok) {

@@ -180,15 +180,21 @@ function presentMergeStateKind(
       }
     case 'mergeable_checks_passed':
       return {
-        label: 'Able to merge',
+        label: translate('auto.components.github.pr.merge.state.def355ff38', 'Able to merge'),
         tone: SUCCESS_TONE,
-        tooltip: 'GitHub says this PR can merge and checks passed'
+        tooltip: translate(
+          'auto.components.github.pr.merge.state.e42c5bae67',
+          'GitHub says this PR can merge and checks passed'
+        )
       }
     case 'mergeable':
       return {
-        label: 'Able to merge',
+        label: translate('auto.components.github.pr.merge.state.def355ff38', 'Able to merge'),
         tone: SUCCESS_TONE,
-        tooltip: 'GitHub says this PR can merge'
+        tooltip: translate(
+          'auto.components.github.pr.merge.state.cbf0113af6',
+          'GitHub says this PR can merge'
+        )
       }
     case 'checks_passed':
       return {

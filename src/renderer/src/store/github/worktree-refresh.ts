@@ -117,43 +117,6 @@ export function isStaleExactLinkedPRLookup(
   return worktree?.linkedPR !== linkedPRNumber
 }
 
-export function shouldApplyDivergedLinkedPRClear(args: {
-  worktree: Pick<Worktree, 'linkedPR' | 'branch' | 'head' | 'isBare' | 'isArchived'> | undefined
-  linkedPRNumber: number
-  branch: string
-  requestHeadOid: string | null
-}): boolean {
-  const { worktree, linkedPRNumber, branch, requestHeadOid } = args
-  return (
-    Boolean(worktree) &&
-    requestHeadOid !== null &&
-    worktree?.linkedPR === linkedPRNumber &&
-    worktree.branch.replace(/^refs\/heads\//, '') === branch &&
-    worktree.head === requestHeadOid &&
-    worktree.isBare !== true &&
-    worktree.isArchived !== true
-  )
-}
-
-export function shouldApplyBranchMismatchedLinkedPRClear(args: {
-  worktree: Pick<Worktree, 'linkedPR' | 'branch' | 'head' | 'isBare' | 'isArchived'> | undefined
-  linkedPRNumber: number
-  branch: string
-  requestHeadOid: string | null
-}): boolean {
-  const { worktree, linkedPRNumber, branch, requestHeadOid } = args
-  return (
-    Boolean(worktree) &&
-    requestHeadOid !== null &&
-    worktree?.linkedPR === linkedPRNumber &&
-    // Branch-scoped: clear only while still on the branch the mismatch was computed against; a newer switch re-validates.
-    worktree.branch.replace(/^refs\/heads\//, '') === branch.replace(/^refs\/heads\//, '') &&
-    worktree.head === requestHeadOid &&
-    worktree.isBare !== true &&
-    worktree.isArchived !== true
-  )
-}
-
 export function buildPRRefreshCandidate(
   state: AppState,
   worktree: Worktree,

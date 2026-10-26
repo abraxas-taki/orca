@@ -23,11 +23,11 @@ import { setGitHubPRResultCaches, shouldPreserveExistingPRForFallbackMiss } from
 import {
   findUniqueWorktreeById,
   findWorktreeById,
-  isStaleExactLinkedPRLookup,
-  shouldApplyBranchMismatchedLinkedPRClear,
-  shouldApplyDivergedLinkedPRClear
+  isStaleExactLinkedPRLookup
 } from './worktree-refresh'
 import {
+  shouldApplyBranchMismatchedLinkedPRClear,
+  shouldApplyDivergedLinkedPRClear,
   shouldClearBranchMismatchedLinkedOpenPR,
   shouldClearDivergedLinkedMergedPR
 } from '../../../../shared/github/linked-pr-staleness'
