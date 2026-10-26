@@ -11,8 +11,8 @@ import {
   resolveHostedReviewAuthInstruction
 } from './source-control-create-review-blocked-action'
 import type { PrimaryActionInputs } from './source-control-primary-action'
-import type { DropdownItem } from './source-control-dropdown-item-types'
-import type { DropdownActionContext } from './source-control-dropdown-action-context'
+import type { DropdownItem } from '../../../../shared/source-control-dropdown-item-types'
+import type { DropdownActionContext } from '../../../../shared/source-control-dropdown-action-context'
 
 export type HostedReviewDropdownItems = {
   createPR: DropdownItem

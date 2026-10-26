@@ -1,9 +1,9 @@
 // Keep row types independent so consumers do not import the full resolver state machine.
 
-import type { PrimaryActionInputs } from './source-control-primary-action'
-import type { GitConflictOperation } from '../../../../shared/git-status-types'
+import type { SourceControlPrimaryActionDecisionInputs } from './source-control-primary-action-decision-types'
+import type { GitConflictOperation } from './git-status-types'
 
-export type DropdownActionInputs = PrimaryActionInputs & {
+export type DropdownActionInputs = SourceControlPrimaryActionDecisionInputs & {
   conflictOperation?: GitConflictOperation
   isPullRequestOperationActive?: boolean
   rebaseBaseRef?: string | null

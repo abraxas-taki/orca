@@ -1,4 +1,3 @@
-import { translate } from '@/i18n/i18n'
 import type { DropdownItem } from './source-control-dropdown-item-types'
 import type { DropdownActionContext } from './source-control-dropdown-action-context'
 import {
@@ -13,6 +12,27 @@ import {
   formatUnpublishedForcePushTitle
 } from './source-control-dropdown-labels'
 
+// Desktop localizes these strings; other clients pass their own copy.
+export type RemoteDropdownCopy = {
+  rebaseFromNamedBase: (baseRef: string) => string
+  rebaseFromBase: string
+  rebaseChooseRemoteBase: string
+  rebaseDirtyHint: string
+  rebaseWithLatestFrom: (baseRef: string) => string
+  fetch: string
+  fetchTitle: string
+}
+
+export const ENGLISH_REMOTE_DROPDOWN_COPY: RemoteDropdownCopy = {
+  rebaseFromNamedBase: (baseRef) => `Rebase from ${baseRef}`,
+  rebaseFromBase: 'Rebase from Base',
+  rebaseChooseRemoteBase: 'Choose a remote base branch to rebase from',
+  rebaseDirtyHint: 'Try rebasing; git may require committing or stashing local changes first',
+  rebaseWithLatestFrom: (baseRef) => `Rebase current branch with latest commits from ${baseRef}`,
+  fetch: 'Fetch',
+  fetchTitle: 'Fetch from remote without merging'
+}
+
 export type RemoteDropdownItems = {
   push: DropdownItem
   forcePush: DropdownItem
@@ -24,7 +44,10 @@ export type RemoteDropdownItems = {
   publish: DropdownItem
 }
 
-export function buildRemoteDropdownItems(ctx: DropdownActionContext): RemoteDropdownItems {
+export function buildRemoteDropdownItems(
+  ctx: DropdownActionContext,
+  copy: RemoteDropdownCopy = ENGLISH_REMOTE_DROPDOWN_COPY
+): RemoteDropdownItems {
   const {
     upstreamStatus,
     branchCommitsAhead,
@@ -165,48 +188,23 @@ export function buildRemoteDropdownItems(ctx: DropdownActionContext): RemoteDrop
   const hasRemoteBaseRef = rebaseBaseLabel?.includes('/') === true
   const rebase: DropdownItem = {
     kind: 'rebase_base',
-    label: rebaseBaseLabel
-      ? translate(
-          'auto.components.right.sidebar.source.control.dropdown.items.rebaseFromNamedBase',
-          'Rebase from {{baseRef}}',
-          { baseRef: rebaseBaseLabel }
-        )
-      : translate(
-          'auto.components.right.sidebar.source.control.dropdown.items.rebaseFromBase',
-          'Rebase from Base'
-        ),
+    label: rebaseBaseLabel ? copy.rebaseFromNamedBase(rebaseBaseLabel) : copy.rebaseFromBase,
     title: ((): string => {
       if (!rebaseBaseLabel || !hasRemoteBaseRef) {
-        return translate(
-          'auto.components.right.sidebar.source.control.dropdown.items.rebaseChooseRemoteBase',
-          'Choose a remote base branch to rebase from'
-        )
+        return copy.rebaseChooseRemoteBase
       }
       if (hasDirtyLocalChanges) {
-        return translate(
-          'auto.components.right.sidebar.source.control.dropdown.items.rebaseDirtyHint',
-          'Try rebasing; git may require committing or stashing local changes first'
-        )
+        return copy.rebaseDirtyHint
       }
-      return translate(
-        'auto.components.right.sidebar.source.control.dropdown.items.rebaseWithLatestFrom',
-        'Rebase current branch with latest commits from {{baseRef}}',
-        { baseRef: rebaseBaseLabel }
-      )
+      return copy.rebaseWithLatestFrom(rebaseBaseLabel)
     })(),
     disabled: globalBusy || !rebaseBaseRef || !hasRemoteBaseRef
   }
 
   const fetch: DropdownItem = {
     kind: 'fetch',
-    label: translate(
-      'auto.components.right.sidebar.source.control.dropdown.items.226b85a3a7',
-      'Fetch'
-    ),
-    title: translate(
-      'auto.components.right.sidebar.source.control.dropdown.items.04d709801d',
-      'Fetch from remote without merging'
-    ),
+    label: copy.fetch,
+    title: copy.fetchTitle,
     disabled: globalBusy
   }
 

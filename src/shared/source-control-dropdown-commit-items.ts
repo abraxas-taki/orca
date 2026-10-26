@@ -1,8 +1,32 @@
 // Share commit blockers across Commit, Commit & Push, and Commit & Sync so disabled reasons agree.
 
-import { translate } from '@/i18n/i18n'
 import type { DropdownItem } from './source-control-dropdown-item-types'
 import type { DropdownActionContext } from './source-control-dropdown-action-context'
+
+// Desktop localizes these strings; other clients pass their own copy.
+export type CommitDropdownCopy = {
+  commit: string
+  commitSync: string
+  checkingBranchStatus: string
+  checkingPrStatus: string
+  prAlreadyMerged: string
+  checkOutBranchToSync: string
+  publishBranchFirstToSync: string
+  useCommitAndForcePush: string
+  commitThenPullPush: string
+}
+
+export const ENGLISH_COMMIT_DROPDOWN_COPY: CommitDropdownCopy = {
+  commit: 'Commit',
+  commitSync: 'Commit & Sync',
+  checkingBranchStatus: 'Checking branch status…',
+  checkingPrStatus: 'Checking PR status…',
+  prAlreadyMerged: 'PR is already merged',
+  checkOutBranchToSync: 'Check out a branch before syncing commits',
+  publishBranchFirstToSync: 'Publish the branch first to sync commits',
+  useCommitAndForcePush: 'Use Commit & Force Push — remote only has older copies of local commits',
+  commitThenPullPush: 'Commit, then pull and push'
+}
 
 export type CommitDropdownItems = {
   commit: DropdownItem
@@ -10,7 +34,10 @@ export type CommitDropdownItems = {
   commitSync: DropdownItem
 }
 
-export function buildCommitDropdownItems(ctx: DropdownActionContext): CommitDropdownItems {
+export function buildCommitDropdownItems(
+  ctx: DropdownActionContext,
+  copy: CommitDropdownCopy = ENGLISH_COMMIT_DROPDOWN_COPY
+): CommitDropdownItems {
   const {
     globalBusy,
     upstreamLoading,
@@ -29,10 +56,7 @@ export function buildCommitDropdownItems(ctx: DropdownActionContext): CommitDrop
 
   const commit: DropdownItem = {
     kind: 'commit',
-    label: translate(
-      'auto.components.right.sidebar.source.control.dropdown.items.2b8e6595fd',
-      'Commit'
-    ),
+    label: copy.commit,
     title: commitDisabledReason ?? 'Commit staged changes',
     disabled: !canCommit
   }
@@ -73,59 +97,29 @@ export function buildCommitDropdownItems(ctx: DropdownActionContext): CommitDrop
 
   const commitSyncTitle = ((): string => {
     if (upstreamLoading) {
-      return translate(
-        'auto.components.right.sidebar.source.control.dropdown.items.checkingBranchStatus',
-        'Checking branch status…'
-      )
+      return copy.checkingBranchStatus
     }
     if (publishBlockedByPRLoading) {
-      return translate(
-        'auto.components.right.sidebar.source.control.dropdown.items.titleCheckingPrStatus',
-        'Checking PR status…'
-      )
+      return copy.checkingPrStatus
     }
     if (publishBlockedByMergedPR) {
-      return translate(
-        'auto.components.right.sidebar.source.control.dropdown.items.titlePrAlreadyMerged',
-        'PR is already merged'
-      )
+      return copy.prAlreadyMerged
     }
     if (publishBlockedByDetachedHead) {
-      return translate(
-        'auto.components.right.sidebar.source.control.dropdown.items.titleCheckOutBranchToSync',
-        'Check out a branch before syncing commits'
-      )
+      return copy.checkOutBranchToSync
     }
     if (!hasUpstream) {
       // Point to the existing Publish Branch primary instead of naming a nonexistent compound action.
-      return translate(
-        'auto.components.right.sidebar.source.control.dropdown.items.titlePublishBranchFirst',
-        'Publish the branch first to sync commits'
-      )
+      return copy.publishBranchFirstToSync
     }
     if (shouldForcePushWithLease) {
-      return (
-        commitDisabledReason ??
-        translate(
-          'auto.components.right.sidebar.source.control.dropdown.items.titleUseForcePush',
-          'Use Commit & Force Push — remote only has older copies of local commits'
-        )
-      )
+      return commitDisabledReason ?? copy.useCommitAndForcePush
     }
-    return (
-      commitDisabledReason ??
-      translate(
-        'auto.components.right.sidebar.source.control.dropdown.items.titleCommitThenPullPush',
-        'Commit, then pull and push'
-      )
-    )
+    return commitDisabledReason ?? copy.commitThenPullPush
   })()
   const commitSync: DropdownItem = {
     kind: 'commit_sync',
-    label: translate(
-      'auto.components.right.sidebar.source.control.dropdown.items.323bb614aa',
-      'Commit & Sync'
-    ),
+    label: copy.commitSync,
     title: commitSyncTitle,
     disabled:
       globalBusy ||

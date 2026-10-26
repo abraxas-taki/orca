@@ -1,15 +1,15 @@
 // Derive shared branch/review facts once so dropdown labels and disabled states cannot disagree.
 
-import type { PrimaryActionInputs } from './source-control-primary-action'
+import type { SourceControlPrimaryActionDecisionInputs } from './source-control-primary-action-decision-types'
 import { canSubmitCommit, resolveCommitDisabledReason } from './source-control-commit-eligibility'
-import type { GitConflictOperation } from '../../../../shared/git-status-types'
-import { shouldForcePushWithLeaseForUpstream } from '../../../../shared/git-upstream-status'
+import type { GitConflictOperation } from './git-status-types'
+import { shouldForcePushWithLeaseForUpstream } from './git-upstream-status'
 import type { DropdownActionInputs } from './source-control-dropdown-item-types'
 import { formatForcePushTitle } from './source-control-dropdown-labels'
 
 export type DropdownActionContext = {
-  upstreamStatus: PrimaryActionInputs['upstreamStatus']
-  hostedReviewCreation: PrimaryActionInputs['hostedReviewCreation']
+  upstreamStatus: SourceControlPrimaryActionDecisionInputs['upstreamStatus']
+  hostedReviewCreation: SourceControlPrimaryActionDecisionInputs['hostedReviewCreation']
   branchCommitsAhead: number | undefined
   conflictOperation: GitConflictOperation
   isPullRequestOperationActive: boolean
