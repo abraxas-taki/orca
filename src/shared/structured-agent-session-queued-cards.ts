@@ -1,6 +1,15 @@
 // Derive hold labels on the client; the wire carries queue state, not presentation wording.
 
-import type { UnreadAgentSessionFailureFact } from './agent-session-failure'
+import {
+  readWholeAgentSessionFailureFact,
+  type AgentSessionFailureFact,
+  type UnreadAgentSessionFailureFact
+} from './agent-session-failure'
+import { agentSessionFailureStatedByRow } from './agent-session-visible-failures'
+import { agentSessionWriteNotDoneParts } from './agent-session-refusal-notice'
+import type { AgentSessionWriteNoticePart } from './agent-session-write-notice-copy'
+import { dispatchWasWithdrawn } from './structured-agent-session-dispatch-rejection'
+import { structuredAgentSessionAttemptFailureParts } from './structured-agent-session-rejection-words'
 import type { AgentJournalItemBody, AgentJournalSubmission } from './agent-session-journal-types'
 import { pendingPromptsAllUnanswerableHere } from './agent-session-approval-subject'
 import type { NativeChatImageRefBlock } from './native-chat-types'
@@ -161,4 +170,26 @@ export function queuedMessageCardLine(
   return images.length === 1
     ? nativeChatImageLabel(images[0], copy)
     : copy.imageCount(images.length)
+}
+
+/** A returned card's words: a Stop withdrawal is not a send failure; the card's own Send is the retry, so failure words leave sending again out. */
+export function queuedMessageReturnedNotice(
+  card: Pick<QueuedMessageCard, 'returnedReason' | 'returnedRejection'>,
+  agentName: string | undefined,
+  statedFailures: readonly AgentSessionFailureFact[]
+): 'withdrawn' | AgentSessionWriteNoticePart[] {
+  // Read exactly as a rejected submission: the typed fact decides, the reason is the fallback.
+  const reason = card.returnedReason ?? null
+  const rejection = card.returnedRejection
+  if (agentSessionFailureStatedByRow(rejection, statedFailures)) {
+    return agentSessionWriteNotDoneParts('send')
+  }
+  if (dispatchWasWithdrawn({ dispatchState: 'rejected', reason, rejection })) {
+    return 'withdrawn'
+  }
+  return structuredAgentSessionAttemptFailureParts(
+    { kind: 'rejected', reason },
+    { agentName, retryControl: true },
+    readWholeAgentSessionFailureFact(rejection)
+  )
 }

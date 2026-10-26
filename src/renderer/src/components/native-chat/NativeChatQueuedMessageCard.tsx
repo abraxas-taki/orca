@@ -21,24 +21,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import { translate } from '@/i18n/i18n'
-import { structuredAgentSessionAttemptFailureParts } from '../../../../shared/structured-agent-session-rejection-words'
-import { classifyDispatchRejection } from '../../../../shared/structured-agent-session-dispatch-rejection'
-import { readWholeAgentSessionFailureFact } from '../../../../shared/agent-session-failure'
 import { agentSessionWriteNoticeText } from './agent-session-write-notice-text'
 import { QUEUED_MESSAGE_PAUSED_SEND_FAILED } from '../../../../shared/agent-session-wire'
 import { isMacPlatform } from './native-chat-shortcut'
 import {
   queuedMessageCardLine,
   queuedMessageCardSteers,
+  queuedMessageReturnedNotice,
   type QueuedMessageCard
 } from '../../../../shared/structured-agent-session-queued-cards'
 import { NativeChatAgentMessageSenders } from './NativeChatAgentMessageSenders'
 import { NativeChatPendingIcon } from './NativeChatPendingIcon'
 import type { QueuedMessagesPendingAction } from './use-structured-agent-session-queued-messages'
 import { useNativeChatClippedLine } from './use-native-chat-clipped-line'
-import { agentSessionFailureStatedByStartRow } from './structured-agent-session-delivery-notices'
 import type { AgentSessionFailureFact } from '../../../../shared/agent-session-failure'
-import { agentSessionWriteNotDoneParts } from '../../../../shared/agent-session-refusal-notice'
 import { NativeChatQueuedMessageEditor } from './NativeChatQueuedMessageEditor'
 import type { QueuedEditAttachTarget } from './use-native-chat-queued-edit-image-intake'
 import type { QueuedMessageInlineEditor } from './use-structured-agent-session-queued-edit'
@@ -52,29 +48,13 @@ export function queuedMessageCardCaption(
 ): string | null {
   switch (card.hold) {
     case 'returned': {
-      // Read exactly as a rejected submission: the typed fact decides, the reason is the fallback.
-      const reason = card.returnedReason ?? null
-      if (agentSessionFailureStatedByStartRow(card.returnedRejection, statedFailures)) {
-        return agentSessionWriteNoticeText(agentSessionWriteNotDoneParts('send'))
-      }
-      // A Stop-withdrawn draft was not a send failure; describe its withdrawal.
-      if (
-        classifyDispatchRejection({ reason, rejection: card.returnedRejection }).category ===
-        'withdrawn'
-      ) {
-        return translate(
-          'components.native-chat.queuedMessages.withdrawnHold',
-          'Stopped before it was sent'
-        )
-      }
-      return agentSessionWriteNoticeText(
-        structuredAgentSessionAttemptFailureParts(
-          { kind: 'rejected', reason },
-          // The card's own Send is the retry, so the words leave out sending again.
-          { agentName, retryControl: true },
-          readWholeAgentSessionFailureFact(card.returnedRejection)
-        )
-      )
+      const notice = queuedMessageReturnedNotice(card, agentName, statedFailures)
+      return notice === 'withdrawn'
+        ? translate(
+            'components.native-chat.queuedMessages.withdrawnHold',
+            'Stopped before it was sent'
+          )
+        : agentSessionWriteNoticeText(notice)
     }
     case 'paused':
       // Localize known pause markers; unknown newer-host markers fall back to a plain pause.
