@@ -19,7 +19,7 @@ import type {
   NativeChatToolCallBlock
 } from '../../../src/shared/native-chat-types'
 import { MobileSourceCopyButton } from '../components/MobileSourceCopyButton'
-import { nativeChatMessagePlainText } from './mobile-native-chat-message-plain-text'
+import { nativeChatMessageCopyText } from '../../../src/shared/native-chat-message-copy-text'
 import { deriveNativeChatRowContent } from '../../../src/shared/native-chat-row-content'
 import {
   MobileNativeChatGroupedThought,
@@ -232,7 +232,7 @@ function MobileNativeChatMessageImpl({
     )
   }
   const isChatTurn = message.role === 'user' || message.role === 'assistant'
-  const copyText = isChatTurn ? nativeChatMessagePlainText(message) : ''
+  const copyText = isChatTurn ? nativeChatMessageCopyText(message) : ''
   const proseRow = (block: NativeChatBlock, index: number, text: string, revealing = false) =>
     isSubagentGroupBlock(block) && isRenderableSubagentGroup(block) ? (
       <MobileNativeChatSubagentGroup

@@ -11,7 +11,8 @@ import { deriveNativeChatRowContent } from '../../../../shared/native-chat-row-c
 import { NativeChatReasoningRow } from './NativeChatReasoningRow'
 import { NativeChatNoticeRow } from './NativeChatNoticeRow'
 import { nativeChatNoticeBlock } from '../../../../shared/native-chat-notice'
-import { nativeChatBlocksInOwnWords } from './native-chat-stopped-before-start-row'
+import { nativeChatStoppedBeforeStartLabel } from './native-chat-stopped-before-start-row'
+import { nativeChatBlocksInOwnWords } from '../../../../shared/native-chat-stopped-before-start'
 import { ProviderFrameRow } from './NativeChatTranscriptChrome'
 import type { NativeChatDiffReveal } from './native-chat-turn-diffs'
 import type {
@@ -83,7 +84,7 @@ export const MessageRow = memo(function MessageRow(
     workRun
   } = props
   const rowRef = useRef<HTMLDivElement | null>(null)
-  const blocks = nativeChatBlocksInOwnWords(message.blocks)
+  const blocks = nativeChatBlocksInOwnWords(message.blocks, nativeChatStoppedBeforeStartLabel())
   // Share content derivation with slot selection so invisible rows cannot reserve transcript gaps.
   const content = deriveNativeChatRowContent(blocks)
   const { markdown, prose } = content

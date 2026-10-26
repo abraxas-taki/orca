@@ -7,7 +7,7 @@ import { BottomDrawer } from '../components/BottomDrawer'
 import { useClipboardWriter } from '../platform/clipboard'
 import { useWindowSafeAreaInsets } from '../layout/side-safe-area'
 import { colors, spacing, typography } from '../theme/mobile-theme'
-import { nativeChatMessagePlainText } from './mobile-native-chat-message-plain-text'
+import { nativeChatMessageCopyText } from '../../../src/shared/native-chat-message-copy-text'
 
 type Props = {
   message: NativeChatMessage
@@ -24,7 +24,7 @@ export function MobileNativeChatMessageActionsSheet({
   // Wait for the drawer to unmount before presenting another native modal.
   const selectRequested = useRef(false)
   // Streaming updates must not reset an active native text selection.
-  const [text] = useState(() => nativeChatMessagePlainText(message))
+  const [text] = useState(() => nativeChatMessageCopyText(message))
   const closeSheet = () => setSheetVisible(false)
 
   return (
