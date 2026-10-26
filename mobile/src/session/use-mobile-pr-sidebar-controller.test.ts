@@ -208,7 +208,9 @@ describe('loadPrSidebarData', () => {
       suppressedGitHubPR: null,
       pushTarget: null,
       branch: 'feat',
-      head: 'head-now'
+      head: 'head-now',
+      isBare: false,
+      isArchived: false
     }
     expect(shouldApply(worktree)).toBe(true)
     expect(shouldApply({ ...worktree, linkedPR: 99 })).toBe(false)
