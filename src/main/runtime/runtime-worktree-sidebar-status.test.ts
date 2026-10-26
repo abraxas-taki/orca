@@ -38,19 +38,15 @@ describe('resolveRuntimeWorktreeSidebarStatus', () => {
       resolveRuntimeWorktreeSidebarStatus(
         { status: 'active', agents: [doneRow(outcome)] },
         NOW,
-        true
+        null
       )
     ).toBe(expected)
   })
 
-  it('keeps a pending question above a failed turn', () => {
-    expect(
-      resolveRuntimeWorktreeSidebarStatus(
-        { status: 'permission', agents: [doneRow('failure')] },
-        NOW,
-        true
-      )
-    ).toBe('permission')
+  it('keeps another pane’s pending question above a failed turn, but not the failed pane’s own title', () => {
+    const summary = { status: 'permission' as const, agents: [doneRow('failure')] }
+    expect(resolveRuntimeWorktreeSidebarStatus(summary, NOW, 'permission')).toBe('permission')
+    expect(resolveRuntimeWorktreeSidebarStatus(summary, NOW, null)).toBe('failed')
   })
 
   it('falls back to the host status once the agent row is stale', () => {
@@ -61,14 +57,14 @@ describe('resolveRuntimeWorktreeSidebarStatus', () => {
           agents: [doneRow('failure', NOW - AGENT_STATUS_STALE_AFTER_MS - 1)]
         },
         NOW,
-        true
+        null
       )
     ).toBe('active')
   })
 
   it('lets a finished turn show through its own pane’s lingering working title', () => {
     const summary = { status: 'working' as const, agents: [doneRow('success')] }
-    expect(resolveRuntimeWorktreeSidebarStatus(summary, NOW, false)).toBe('done')
-    expect(resolveRuntimeWorktreeSidebarStatus(summary, NOW, true)).toBe('working')
+    expect(resolveRuntimeWorktreeSidebarStatus(summary, NOW, null)).toBe('done')
+    expect(resolveRuntimeWorktreeSidebarStatus(summary, NOW, 'working')).toBe('working')
   })
 })

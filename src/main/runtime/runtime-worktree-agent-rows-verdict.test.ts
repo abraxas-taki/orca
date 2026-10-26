@@ -111,7 +111,7 @@ function ingest(summary: AgentSessionStatusSummary, children: AgentChildWorkEvid
   const summaries = new Map([[WORKSPACE_ID, row]])
   attachRuntimeWorktreeAgentRows({
     summaries,
-    workingTerminalEvidenceByWorktreeId: new Map(),
+    terminalTitleEvidenceByWorktreeId: new Map(),
     rowSources: collectRuntimeWorktreeAgentSources({
       mirroredWorktreeIdByTabId: new Map(),
       connectedPtyEvidence: {

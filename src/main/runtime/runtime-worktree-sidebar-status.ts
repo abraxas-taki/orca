@@ -11,7 +11,8 @@ import {
 export function resolveRuntimeWorktreeSidebarStatus(
   summary: Pick<RuntimeWorktreePsSummary, 'status' | 'agents'>,
   now: number,
-  hasUnsuppressedWorkingTitle: boolean
+  /** The highest title status left after desktop's pane suppression; null when none remains. */
+  titleStatus: 'working' | 'permission' | null
 ): WorktreeStatus {
   const flags: AgentPaneActivityFlags = {
     hasPermission: false,
@@ -27,8 +28,10 @@ export function resolveRuntimeWorktreeSidebarStatus(
       applyAgentPaneActivityFlags(flags, row)
     }
   }
-  // Why: desktop ignores titles of panes with a fresh agent row; working rows return through the flags.
+  // Why: desktop ignores titles of panes with a fresh agent row; live rows return through the flags.
   const heuristic =
-    summary.status === 'working' && !hasUnsuppressedWorkingTitle ? 'active' : summary.status
+    summary.status === 'working' || summary.status === 'permission'
+      ? (titleStatus ?? 'active')
+      : summary.status
   return rankWorktreeStatus(heuristic, flags)
 }
