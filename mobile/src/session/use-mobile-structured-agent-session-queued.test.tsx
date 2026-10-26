@@ -191,6 +191,30 @@ describe('mobile structured queued messages', () => {
       expect(asyncStorage.setItem).not.toHaveBeenCalled()
     })
 
+    it("sends straight into the turn when the host's Queue follow-ups is off, as the desktop does", async () => {
+      sendRequest.mockImplementation(async (method) => {
+        if (method === 'settings.get') {
+          return ok({ settings: { nativeChatQueueFollowUps: false } })
+        }
+        if (method === 'agentSession.send') {
+          return mutationOk({
+            clientMessageId: 'client-1',
+            submission: acceptedSubmission('client-1')
+          })
+        }
+        return method === 'agentSession.options' ? ok({ models: [], current: {} }) : ok({})
+      })
+      await mountSession(CAPABLE)
+      await vi.waitFor(() =>
+        expect(sendRequest.mock.calls.map(([method]) => method)).toContain('settings.get')
+      )
+      await act(async () => {})
+      await act(async () => {
+        await hook!.sendWithOutcome('steer me')
+      })
+      expect('delivery' in requestOf('agentSession.send').params).toBe(false)
+    })
+
     it('keeps today’s request exactly against an incapable host', async () => {
       sendRequest.mockImplementation(async (method) => {
         if (method === 'agentSession.send') {

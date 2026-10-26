@@ -61,7 +61,6 @@ describe('mobileQueuedMessageCards', () => {
     }
   )
 
-
   it("a send-failed command card's caption names Send only when Send is there", () => {
     const failed = draft({
       messageId: 'c',
@@ -82,7 +81,6 @@ describe('mobileQueuedMessageCards', () => {
     )
   })
 
-
   it("keeps a card's own failed send beside a plainly queued one", () => {
     const cards = mobileQueuedMessageCards(
       [
@@ -93,7 +91,6 @@ describe('mobileQueuedMessageCards', () => {
     )
     expect(cards.map((card) => card.caption)).toEqual(["Couldn't send — tap Send to retry", null])
   })
-
 
   it('captions a reasonless pause as a plain pause, promising no release rule', () => {
     const [card] = mobileQueuedMessageCards([draft({ messageId: 'a', paused: true })], [])
@@ -114,7 +111,6 @@ describe('mobileQueuedMessageCards', () => {
     expect(cards[1]?.caption).toBe('Waiting — a message ahead needs attention')
     expect(cards[1]?.needsAttention).toBe(false)
   })
-
 
   it('maps a Stop-withdrawn returned card to its own English copy', () => {
     const [card] = mobileQueuedMessageCards(

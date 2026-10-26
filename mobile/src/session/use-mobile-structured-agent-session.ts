@@ -49,6 +49,7 @@ import {
 import { useMobileStructuredQueuedMessageControls } from './use-mobile-structured-queued-message-controls'
 import { useMobileStructuredBackgroundTasks } from './use-mobile-structured-background-tasks'
 import { useMobileStructuredSends } from './use-mobile-structured-sends'
+import { useMobileNativeChatQueueFollowUps } from './use-mobile-native-chat-queue-follow-ups'
 
 export function useMobileStructuredAgentSession(
   args: MobileStructuredAgentSessionArgs
@@ -68,6 +69,7 @@ export function useMobileStructuredAgentSession(
   // Gate queueing by capability while accepting published cards from every host.
   const queueCapable = hostSupport?.queuedMessages === true
   const commandsWait = queueCapable && hostSupport?.queuedCommands === true
+  const queueFollowUps = useMobileNativeChatQueueFollowUps(client, connected)
   const promptCancelSupported = hostSupport?.promptCancel ?? null
   const hostAnswersRepeatedStops = hostSupport?.quietRepeatedStop ?? null
   const hostStopsConversation = hostSupport?.conversationStop ?? null
@@ -184,6 +186,7 @@ export function useMobileStructuredAgentSession(
     sessionId,
     enabled,
     queueCapable,
+    queueFollowUps,
     commandsWait,
     stateRef,
     stopping,
@@ -194,21 +197,16 @@ export function useMobileStructuredAgentSession(
     onSendError,
     sendOptions: hostSupport?.sendOptions === true ? options.sendSelection : undefined
   })
+  const sendQueues = mobileStructuredSendQueues(queueCapable, queueFollowUps, state)
   const turnIndicator = useMemo(
     () => ({
       thinking,
       activityText,
       stopping,
       stopRequestInFlight,
-      ...(stopping
-        ? {
-            afterStop: mobileStructuredSendQueues(queueCapable, state)
-              ? ('queue' as const)
-              : ('send' as const)
-          }
-        : {})
+      ...(stopping ? { afterStop: sendQueues ? ('queue' as const) : ('send' as const) } : {})
     }),
-    [thinking, activityText, stopping, stopRequestInFlight, queueCapable, state]
+    [thinking, activityText, stopping, stopRequestInFlight, sendQueues]
   )
   const { items, currentRequests, actionablePromptIds, status } = state
   // Prefer host actionability: ended-agent prompts must receive no answer.

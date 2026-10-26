@@ -1,7 +1,8 @@
 // Derive hold labels on the client; the wire carries queue state, not presentation wording.
 
 import type { UnreadAgentSessionFailureFact } from './agent-session-failure'
-import type { AgentJournalSubmission } from './agent-session-journal-types'
+import type { AgentJournalItemBody, AgentJournalSubmission } from './agent-session-journal-types'
+import { pendingPromptsAllUnanswerableHere } from './agent-session-approval-subject'
 import type { NativeChatImageRefBlock } from './native-chat-types'
 import type { AgentSessionQueuedMessage, AgentSessionQueuePause } from './agent-session-wire'
 import {
@@ -112,6 +113,18 @@ export function commandCardWaiting(
   return (queuedMessages ?? []).some(
     (message) =>
       message.state === 'waiting' && !message.paused && message.body.command !== undefined
+  )
+}
+
+/** Sends queue behind a waiting command even with follow-ups off; prompts no one here can answer would strand the queue, so then a send starts a turn. */
+export function structuredAgentSessionQueueEnabled(
+  queueFollowUps: boolean,
+  session: { queuedMessages?: readonly AgentSessionQueuedMessage[] | null },
+  prompts: readonly { body: AgentJournalItemBody }[]
+): boolean {
+  return (
+    (queueFollowUps || commandCardWaiting(session.queuedMessages)) &&
+    !pendingPromptsAllUnanswerableHere(prompts)
   )
 }
 
