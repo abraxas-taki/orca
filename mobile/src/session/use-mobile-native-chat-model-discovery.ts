@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
-import type { CatalogModel } from '../../../src/shared/agent-session-option-catalog'
-import { catalogModelsFromModelDiscovery } from '../../../src/shared/native-chat-discovered-catalog-models'
+import {
+  getAgentSessionOptionCatalog,
+  type CatalogModel
+} from '../../../src/shared/agent-session-option-catalog'
+import {
+  catalogModelsFromModelDiscovery,
+  mergeDiscoveredCatalogModels
+} from '../../../src/shared/native-chat-discovered-catalog-models'
 import { defineRpcOperation, runRpcOperation } from '../transport/rpc-operation'
 
 const discoveredModel = z.object({
@@ -55,7 +61,8 @@ export function useMobileNativeChatModelDiscovery(args: {
     models: CatalogModel[]
   } | null>(null)
   useEffect(() => {
-    if (!enabled || !client || !worktreeId || !agent) {
+    const catalog = agent ? getAgentSessionOptionCatalog(agent) : null
+    if (!enabled || !client || !worktreeId || !agent || !catalog) {
       return
     }
     let cancelled = false
@@ -63,7 +70,7 @@ export function useMobileNativeChatModelDiscovery(args: {
       .then((discovery) => {
         const models = discovery ? catalogModelsFromModelDiscovery(agent, discovery) : null
         if (!cancelled && models !== null) {
-          setResult({ client, scope, models })
+          setResult({ client, scope, models: mergeDiscoveredCatalogModels(agent, catalog, models) })
         }
       })
       .catch(() => {

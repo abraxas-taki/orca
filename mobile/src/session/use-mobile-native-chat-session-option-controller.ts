@@ -1,7 +1,10 @@
 import type { RpcClient } from '../transport/rpc-client'
 import { useMobileNativeChatModelDiscovery } from './use-mobile-native-chat-model-discovery'
 import { writeMobileNativeChatSessionOptions } from './mobile-native-chat-session-option-persistence'
-import { getAgentSessionOptionCatalog } from '../../../src/shared/agent-session-option-catalog'
+import {
+  getAgentSessionOptionCatalog,
+  type AgentSessionOptionCatalog
+} from '../../../src/shared/agent-session-option-catalog'
 import type { AgentSessionConversationCommand } from '../../../src/shared/agent-session/agent-session-conversation-command'
 import { useCallback, useMemo } from 'react'
 import type {
@@ -17,6 +20,10 @@ import {
   useMobileNativeChatSessionOptions,
   type MobileNativeChatSessionOptionsController
 } from './use-mobile-native-chat-session-options'
+
+function isAuthoritativeListing(catalog: AgentSessionOptionCatalog | null): boolean {
+  return catalog?.listModels !== undefined && catalog.discoveredModelsAreAuthoritative === true
+}
 
 export function useMobileNativeChatSessionOptionController(args: {
   client?: RpcClient | null
@@ -81,7 +88,7 @@ export function useMobileNativeChatSessionOptionController(args: {
       !activeChatStructured &&
       activeSessionTabId !== null &&
       agent !== null &&
-      getAgentSessionOptionCatalog(agent)?.discoveredModelsAreAuthoritative === true
+      isAuthoritativeListing(getAgentSessionOptionCatalog(agent))
   })
   const writeSettings = useCallback(
     (mutation: NativeChatSessionOptionSettingsMutation) => {

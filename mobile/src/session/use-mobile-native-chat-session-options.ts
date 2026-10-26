@@ -76,6 +76,8 @@ export function useMobileNativeChatSessionOptions(args: {
   const latest = useRef(args)
   const activeIdentityRef = useRef(identity)
   const [pending, setPending] = useState<PendingOperation | null>(null)
+  // One surface per chat for this controller's life: a pick still on its way lands where the chat shows it on return.
+  const [surfaces] = useState(() => new Map<string, NativeChatPtySessionOptionsSurface>())
   const pendingTokenRef = useRef(0)
 
   useLayoutEffect(() => {
@@ -92,30 +94,52 @@ export function useMobileNativeChatSessionOptions(args: {
     if (!identity || !agent || !scopeKey) {
       return null
     }
-    return createNativeChatPtySessionOptions({
-      agent,
-      scopeKey,
-      mode: 'live',
-      modelLabel: sayNativeChatSessionOptionEnglish('model'),
-      canSwitchOmpModel,
-      dispatchCommand: async (command, options) => {
-        // One controller serves every tab: a queued pick must not reach the tab opened since.
-        if (activeIdentityRef.current !== identity) {
-          throw new Error('The chat changed before the command was sent.')
+    const surfaceKey = `${identity}\0${canSwitchOmpModel}`
+    const midSession = getAgentSessionOptionCatalog(agent)?.modelApply.midSession
+    // Phone-only: desktop confirms a Claude model switch on its terminal screen; the phone cannot, so it never saves one as a launch default.
+    const modelSwitchUnconfirmable =
+      midSession?.kind === 'command' && midSession.detectAgentInteraction !== undefined
+    const created =
+      surfaces.get(surfaceKey) ??
+      createNativeChatPtySessionOptions({
+        agent,
+        scopeKey,
+        mode: 'live',
+        modelLabel: sayNativeChatSessionOptionEnglish('model'),
+        canSwitchOmpModel,
+        dispatchCommand: async (command, options) => {
+          // One controller serves every tab: a queued pick must not reach the tab opened since.
+          if (activeIdentityRef.current !== identity) {
+            throw new Error('The chat changed before the command was sent.')
+          }
+          const outcome = options?.delivery
+            ? await latest.current.dispatchCommand(command, { delivery: options.delivery })
+            : await latest.current.dispatchCommand(command)
+          // Desktop commits a pick only after the terminal confirms the write.
+          if (outcome === 'rejected' || outcome === 'unknown') {
+            throw new Error('The terminal did not accept the command.')
+          }
+        },
+        onAgentPicker: () => {
+          if (activeIdentityRef.current === identity) {
+            latest.current.onAgentPicker?.()
+          }
+        },
+        persistSelection: (pick) => {
+          if (!modelSwitchUnconfirmable || pick.optionId !== 'model') {
+            latest.current.writeSettings?.({
+              type: 'apply-picks',
+              agent,
+              picks: [
+                modelSwitchUnconfirmable ? { ...pick, adoptModelAsLaunchDefault: false } : pick
+              ]
+            })
+          }
         }
-        const outcome = options?.delivery
-          ? await latest.current.dispatchCommand(command, { delivery: options.delivery })
-          : await latest.current.dispatchCommand(command)
-        // Desktop commits a pick only after the terminal confirms the write.
-        if (outcome === 'rejected' || outcome === 'unknown') {
-          throw new Error('The terminal did not accept the command.')
-        }
-      },
-      onAgentPicker: () => latest.current.onAgentPicker?.(),
-      persistSelection: (pick) =>
-        latest.current.writeSettings?.({ type: 'apply-picks', agent, picks: [pick] })
-    })
-  }, [agent, canSwitchOmpModel, identity, scopeKey])
+      })
+    setBoundedScopeCacheEntry(surfaces, surfaceKey, created)
+    return created
+  }, [agent, canSwitchOmpModel, identity, scopeKey, surfaces])
 
   useEffect(() => {
     if (surface && discoveredModels) {

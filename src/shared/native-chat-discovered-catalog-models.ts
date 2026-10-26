@@ -1,6 +1,9 @@
 import {
   createClaudeCatalogOptions,
   getAgentSessionOptionCatalog,
+  mergeCatalogModels,
+  mergeDiscoveredAuthoritativeModels,
+  type AgentSessionOptionCatalog,
   type CatalogModel
 } from './agent-session-option-catalog'
 import type { AgentType } from './agent-status-types'
@@ -45,6 +48,20 @@ export function catalogModelsFromModelDiscovery(
           })
         : []
   }))
+}
+
+/** Discovered models as the picker lists them: Claude's own, or merged with the seed so its option menus stay. */
+export function mergeDiscoveredCatalogModels(
+  agent: AgentType,
+  catalog: AgentSessionOptionCatalog,
+  discovered: readonly CatalogModel[]
+): CatalogModel[] {
+  if (agent === 'claude') {
+    return [...discovered]
+  }
+  return catalog.discoveredModelsAreAuthoritative
+    ? mergeDiscoveredAuthoritativeModels(catalog.models, discovered)
+    : mergeCatalogModels(catalog.models, discovered)
 }
 
 /** Retire a persisted default the listing no longer offers: launch sites without a picker still turn it into -m. */

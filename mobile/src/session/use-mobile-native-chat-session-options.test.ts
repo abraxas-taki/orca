@@ -148,6 +148,44 @@ describe('useMobileNativeChatSessionOptions', () => {
     })
   })
 
+  it('saves a Claude effort but never its unconfirmed model switch as a launch default', async () => {
+    const writeSettings = vi.fn()
+    mount({ reportedModel: 'claude-sonnet-5', writeSettings })
+    await act(async () => {
+      await api!.setOption('model', 'opus')
+      await api!.setOption('effort', 'low')
+    })
+    expect(writeSettings).toHaveBeenCalledTimes(1)
+    expect(writeSettings).toHaveBeenCalledWith({
+      type: 'apply-picks',
+      agent: 'claude',
+      picks: [expect.objectContaining({ optionId: 'effort', adoptModelAsLaunchDefault: false })]
+    })
+  })
+
+  it('shows a pick that lands after the user left the chat and came back', async () => {
+    let resolveModel!: (outcome: MobileNativeChatSendOutcome) => void
+    dispatchCommand.mockImplementationOnce(
+      () =>
+        new Promise<MobileNativeChatSendOutcome>((resolve) => {
+          resolveModel = resolve
+        })
+    )
+    mount({ reportedModel: 'claude-sonnet-5' })
+    let picked!: Promise<boolean>
+    await act(async () => {
+      picked = api!.setOption('model', 'opus')
+      await Promise.resolve()
+    })
+    update({ scopeKey: 'host\0worktree\0other-tab' })
+    update({ scopeKey: 'host\0worktree\0tab' })
+    await act(async () => {
+      resolveModel('accepted')
+      await picked
+    })
+    expect(api!.snapshot[0]!.kind).toMatchObject({ currentValue: 'opus' })
+  })
+
   it('types the Codex picker command and switches to the terminal', async () => {
     mount({ agent: 'codex' })
     expect(api!.snapshot[0]?.action).toEqual({ type: 'agent-picker' })
