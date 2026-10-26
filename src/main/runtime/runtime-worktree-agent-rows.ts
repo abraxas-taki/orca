@@ -2,7 +2,10 @@ import { isFreshNonDoneAgentStatus } from '../../shared/agent-status-types'
 import { isAgentStatusFresh } from '../../shared/agent-status-freshness'
 import type { RuntimeWorktreeAgentRow, RuntimeWorktreePsSummary } from '../../shared/runtime-types'
 import { mergeWorktreeSummaryStatus } from './runtime-worktree-status-projection'
-import { resolveRuntimeWorktreeSidebarStatus } from './runtime-worktree-sidebar-status'
+import {
+  resolveRuntimeWorktreeSidebarStatus,
+  terminalTitleEvidenceMatchesSource
+} from './runtime-worktree-sidebar-status'
 import type { RuntimeWorktreePsSummaryLookup } from './runtime-worktree-summary-paths'
 import type { RuntimeTerminalTitleEvidence } from './runtime-worktree-ps-activity'
 import type { RuntimeWorktreeAgentSource } from './runtime-worktree-agent-source'
@@ -108,43 +111,11 @@ export function attachRuntimeWorktreeAgentRows(args: {
     }
   }
   for (const summary of args.summaries.values()) {
-    const freshRows = summary.agents.filter((row) => isAgentStatusFresh(row, now))
-    const freshSources = freshRows.flatMap((row) => {
-      const source = rowSources.get(row.paneKey)
-      return source ? [source] : []
-    })
-    // Why: like desktop, a finished worker also silences its orchestrating parent's title.
-    const finishedWorkerParents = new Set(
-      freshRows.flatMap((row) =>
-        row.state === 'done' && row.parentPaneKey ? [row.parentPaneKey] : []
-      )
-    )
-    const titles = (args.terminalTitleEvidenceByWorktreeId.get(summary.worktreeId) ?? []).filter(
-      (evidence) =>
-        !(evidence.paneKey && finishedWorkerParents.has(evidence.paneKey)) &&
-        freshSources.every((source) => !terminalTitleEvidenceMatchesSource(evidence, source))
-    )
-    const titleStatus = titles.some((evidence) => evidence.status === 'permission')
-      ? 'permission'
-      : titles.length > 0
-        ? 'working'
-        : null
-    summary.sidebarStatus = resolveRuntimeWorktreeSidebarStatus(summary, now, titleStatus)
-  }
-}
-
-function terminalTitleEvidenceMatchesSource(
-  evidence: RuntimeTerminalTitleEvidence,
-  source: RuntimeWorktreeAgentSource
-): boolean {
-  if (evidence.paneKey) {
-    return (
-      evidence.paneKey === source.paneKey ||
-      Boolean(evidence.ptyId && source.ptyId && evidence.ptyId === source.ptyId)
+    summary.sidebarStatus = resolveRuntimeWorktreeSidebarStatus(
+      summary,
+      now,
+      args.terminalTitleEvidenceByWorktreeId.get(summary.worktreeId) ?? [],
+      (paneKey) => rowSources.get(paneKey)
     )
   }
-  if (evidence.ptyId && source.ptyId) {
-    return evidence.ptyId === source.ptyId
-  }
-  return Boolean(evidence.tabId && evidence.tabId === source.tabId)
 }

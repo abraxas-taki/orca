@@ -11,6 +11,7 @@ import {
   type HostScopedWorktreeKey
 } from '../worktree/host-qualified-identity'
 import { listGitWorkspaceRows } from './workspace-rows'
+import { UNCACHED_LINKED_PR_STATE } from '../runtime-worktree-contracts'
 
 /** PR grouping currently admits only GitHub facts. */
 const WorkspaceReviewFactSchema = z.object({
@@ -65,6 +66,13 @@ export function readWorkspaceReviewFact(
 
 export function prGroupOfReviewFact(fact: WorkspaceReviewFact | null | undefined): PRGroupKey {
   return fact ? getPRGroupKeyForState(fact.reviewState) : 'in-progress'
+}
+
+/** PR lane for a worktree.ps row, whose uncached linked PR carries no review fact. */
+export function prGroupOfPsLinkedPR(linkedPR: { state: string } | null | undefined): PRGroupKey {
+  return linkedPR && linkedPR.state !== UNCACHED_LINKED_PR_STATE
+    ? getPRGroupKeyForState(linkedPR.state)
+    : 'in-progress'
 }
 
 export function workspaceReviewFactsEqual(

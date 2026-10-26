@@ -22,6 +22,18 @@ export type AgentPaneActivityFlags = {
   hasLiveDone: boolean
 }
 
+export function createAgentPaneActivityFlags(): AgentPaneActivityFlags {
+  return {
+    hasPermission: false,
+    hasLiveWorking: false,
+    hasLiveMonitoring: false,
+    hasFailed: false,
+    hasInterrupted: false,
+    hasUnconfirmed: false,
+    hasLiveDone: false
+  }
+}
+
 export function applyAgentPaneActivityFlags(
   flags: AgentPaneActivityFlags,
   entry: Pick<AgentStatusEntry, 'state' | 'workingMode' | 'interrupted' | 'mainAgent'>
