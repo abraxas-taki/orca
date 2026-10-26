@@ -29,14 +29,12 @@ export function buildMobileDiffLines(
   const modifiedKeys = options?.ignoreTrimWhitespace
     ? modifiedLines.map((line) => line.trim())
     : modifiedLines
-  const same: LineEquality = (originalIndex, modifiedIndex) =>
-    originalKeys[originalIndex] === modifiedKeys[modifiedIndex]
   // Why: the LCS table is quadratic. Large generated files still need a
   // responsive mobile preview, so fall back to prefix/suffix diffing.
   const lines =
     originalLines.length * modifiedLines.length <= MAX_DIFF_CELLS
-      ? buildLcsDiffLines(originalLines, modifiedLines, same)
-      : buildPrefixSuffixDiffLines(originalLines, modifiedLines, same)
+      ? buildLcsDiffLines(originalLines, modifiedLines, originalKeys, modifiedKeys)
+      : buildPrefixSuffixDiffLines(originalLines, modifiedLines, originalKeys, modifiedKeys)
 
   return finalizeMobileDiffLines(lines)
 }
@@ -52,20 +50,21 @@ function splitContentLines(content: string): string[] {
   return lines
 }
 
-type LineEquality = (originalIndex: number, modifiedIndex: number) => boolean
-
+// Keys are the lines compared for equality; the lines themselves are what the diff shows.
 function buildLcsDiffLines(
   originalLines: string[],
   modifiedLines: string[],
-  same: LineEquality
+  originalKeys: string[],
+  modifiedKeys: string[]
 ): MobileDiffLine[] {
   const rowWidth = modifiedLines.length + 1
   const dp = new Uint32Array((originalLines.length + 1) * rowWidth)
   for (let i = originalLines.length - 1; i >= 0; i -= 1) {
     for (let j = modifiedLines.length - 1; j >= 0; j -= 1) {
-      dp[i * rowWidth + j] = same(i, j)
-        ? dp[(i + 1) * rowWidth + j + 1] + 1
-        : Math.max(dp[(i + 1) * rowWidth + j], dp[i * rowWidth + j + 1])
+      dp[i * rowWidth + j] =
+        originalKeys[i] === modifiedKeys[j]
+          ? dp[(i + 1) * rowWidth + j + 1] + 1
+          : Math.max(dp[(i + 1) * rowWidth + j], dp[i * rowWidth + j + 1])
     }
   }
 
@@ -73,7 +72,7 @@ function buildLcsDiffLines(
   let originalIndex = 0
   let modifiedIndex = 0
   while (originalIndex < originalLines.length && modifiedIndex < modifiedLines.length) {
-    if (same(originalIndex, modifiedIndex)) {
+    if (originalKeys[originalIndex] === modifiedKeys[modifiedIndex]) {
       if (
         !appendDiffLine(lines, {
           kind: 'context',
@@ -145,13 +144,14 @@ function buildLcsDiffLines(
 function buildPrefixSuffixDiffLines(
   originalLines: string[],
   modifiedLines: string[],
-  same: LineEquality
+  originalKeys: string[],
+  modifiedKeys: string[]
 ): MobileDiffLine[] {
   let prefixLength = 0
   while (
     prefixLength < originalLines.length &&
     prefixLength < modifiedLines.length &&
-    same(prefixLength, prefixLength)
+    originalKeys[prefixLength] === modifiedKeys[prefixLength]
   ) {
     prefixLength += 1
   }
@@ -160,7 +160,8 @@ function buildPrefixSuffixDiffLines(
   while (
     suffixLength + prefixLength < originalLines.length &&
     suffixLength + prefixLength < modifiedLines.length &&
-    same(originalLines.length - suffixLength - 1, modifiedLines.length - suffixLength - 1)
+    originalKeys[originalLines.length - suffixLength - 1] ===
+      modifiedKeys[modifiedLines.length - suffixLength - 1]
   ) {
     suffixLength += 1
   }

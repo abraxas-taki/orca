@@ -61,8 +61,6 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
   // Desktop's settings decide the compare base here and the list order and diffs upstream.
   const { settings, reload: reloadSettings } = useMobileSourceControlSettings(client, connState)
   const compareAgainstUpstream = settings.compareAgainstUpstream
-  // The compare base can be the branch's upstream, so it follows the latest status read.
-  const upstreamNameRef = useRef<string | undefined>(undefined)
   const [screenState, setScreenState] = useState<ScreenState>({ kind: 'loading' })
   const [branchCompareState, setBranchCompareState] = useState<MobileBranchCompareState>({
     kind: 'idle'
@@ -100,7 +98,8 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
   )
 
   const loadBranchCompare = useCallback(
-    async (options?: { preserveReadyOnFailure?: boolean }) => {
+    // The compare base can be the branch's upstream, so it follows the status read that triggered it.
+    async (options: { preserveReadyOnFailure: boolean; upstreamName: string | undefined }) => {
       // Each compare refresh owns a fresh reply; retire first so only the newest attempt can publish.
       branchCompare.reset()
       if (!worktreeId || !client || connState !== 'connected') {
@@ -116,7 +115,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
       const loaded = await branchCompare.load(scope, WHOLE_WORKTREE, (currency) =>
         readBranchCompareOutcome(client, worktreeId, currency, {
           compareAgainstUpstream,
-          upstreamName: upstreamNameRef.current
+          upstreamName: options.upstreamName
         })
       )
       // Mount liveness belongs to the view; a current reply still cannot publish after detach.
@@ -128,7 +127,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
       }
       const outcome = loaded.value
       setBranchCompareState((prev) =>
-        nextBranchCompareState(outcome, prev, options?.preserveReadyOnFailure === true)
+        nextBranchCompareState(outcome, prev, options.preserveReadyOnFailure)
       )
       return outcome.kind === 'ready'
     },
@@ -186,8 +185,10 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
             if (!refusal) {
               const result = gitStatusHostPayloadRead.interpret(reply)
               setScreenState({ kind: 'ready', status: result })
-              upstreamNameRef.current = result.upstreamStatus?.upstreamName
-              void loadBranchCompare({ preserveReadyOnFailure: true })
+              void loadBranchCompare({
+                preserveReadyOnFailure: true,
+                upstreamName: result.upstreamStatus?.upstreamName
+              })
               if (options?.clearActionErrorOnSuccess !== false) {
                 setActionError(null)
               }

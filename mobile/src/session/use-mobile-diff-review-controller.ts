@@ -96,9 +96,11 @@ export function useMobileDiffReviewController(input: ControllerInput) {
     }
     setScreenState(keepReady({ kind: 'loading' }))
     try {
-      const nextState = await loadMobileDiffReviewSnapshot(client, worktreeId, {
+      const nextState = await loadMobileDiffReviewSnapshot(
+        client,
+        worktreeId,
         compareAgainstUpstream
-      })
+      )
       if (!isCurrent()) {
         return
       }

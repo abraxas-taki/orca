@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { DEFAULT_SOURCE_CONTROL_GROUP_ORDER } from '../../../src/shared/source-control-group-order'
 import {
   sourceControlSettingsRead,
@@ -13,50 +13,74 @@ const DESKTOP_DEFAULTS: MobileSourceControlSettings = {
   diffShowWhitespace: false
 }
 
-// Desktop's Source Control and diff settings, read per connection and on reload; mobile has no settings stream.
+type ClientSettings = {
+  settings: MobileSourceControlSettings
+  inFlight: Promise<void> | null
+  listeners: Set<() => void>
+}
+
+// One copy per host client, so every screen sees a reread; a new host starts from desktop's defaults.
+const settingsByClient = new WeakMap<RpcClient, ClientSettings>()
+
+function clientSettings(client: RpcClient): ClientSettings {
+  let entry = settingsByClient.get(client)
+  if (!entry) {
+    entry = { settings: DESKTOP_DEFAULTS, inFlight: null, listeners: new Set() }
+    settingsByClient.set(client, entry)
+  }
+  return entry
+}
+
+function rereadSettings(client: RpcClient): void {
+  const entry = clientSettings(client)
+  if (entry.inFlight) {
+    return
+  }
+  entry.inFlight = sourceControlSettingsRead
+    .request(client)
+    .then((response) => {
+      const reply = sourceControlSettingsRead.interpret(response)
+      if (reply.accepted) {
+        entry.settings = reply.value
+        entry.listeners.forEach((listener) => listener())
+      }
+    })
+    .catch(() => {
+      // Keep the last settings when the host is unreachable.
+    })
+    .finally(() => {
+      entry.inFlight = null
+    })
+}
+
+// Desktop's Source Control and diff settings, reread when a screen mounts, on reconnect and on reload; mobile has no settings stream.
 export function useMobileSourceControlSettings(
   client: RpcClient | null,
   connState: ConnectionState
 ): { settings: MobileSourceControlSettings; reload: () => void } {
-  // Keyed by client so a new host never shows the previous host's settings while its read is in flight.
-  const [read, setRead] = useState<{
-    client: RpcClient
-    settings: MobileSourceControlSettings
-  } | null>(null)
-  const [revision, setRevision] = useState(0)
-  useEffect(() => {
-    if (!client || connState !== 'connected') {
-      return
-    }
-    let stale = false
-    void sourceControlSettingsRead
-      .request(client)
-      .then((response) => {
-        const reply = sourceControlSettingsRead.interpret(response)
-        if (!stale && reply.accepted) {
-          // An unchanged reread keeps the same object so dependents do not reload.
-          setRead((prev) =>
-            prev?.client === client && sameSettings(prev.settings, reply.value)
-              ? prev
-              : { client, settings: reply.value }
-          )
-        }
-      })
-      .catch(() => {
-        // Keep desktop's defaults when the host is unreachable.
-      })
-    return () => {
-      stale = true
-    }
-  }, [client, connState, revision])
-  const reload = useCallback(() => setRevision((current) => current + 1), [])
-  return { settings: read && read.client === client ? read.settings : DESKTOP_DEFAULTS, reload }
-}
-
-function sameSettings(a: MobileSourceControlSettings, b: MobileSourceControlSettings): boolean {
-  return (
-    a.compareAgainstUpstream === b.compareAgainstUpstream &&
-    a.diffShowWhitespace === b.diffShowWhitespace &&
-    a.groupOrder === b.groupOrder
+  const subscribe = useCallback(
+    (listener: () => void) => {
+      if (!client) {
+        return () => {}
+      }
+      const { listeners } = clientSettings(client)
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+    [client]
   )
+  const settings = useSyncExternalStore(subscribe, () =>
+    client ? clientSettings(client).settings : DESKTOP_DEFAULTS
+  )
+  useEffect(() => {
+    if (client && connState === 'connected') {
+      rereadSettings(client)
+    }
+  }, [client, connState])
+  const reload = useCallback(() => {
+    if (client && connState === 'connected') {
+      rereadSettings(client)
+    }
+  }, [client, connState])
+  return { settings, reload }
 }

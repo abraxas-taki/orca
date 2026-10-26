@@ -85,7 +85,7 @@ export async function loadMobileDiffReviewSnapshot(
   client: RpcClient,
   worktreeId: string,
   // Compare against the same base the Changes list just showed.
-  policy?: { compareAgainstUpstream: boolean }
+  compareAgainstUpstream: boolean
 ): Promise<ReviewScreenState> {
   const statusReply = await gitStatusProjectionRead.request(client, {
     worktree: `id:${worktreeId}`
@@ -108,14 +108,10 @@ export async function loadMobileDiffReviewSnapshot(
 
   // Interpret after both reads settle so worktree refusal cannot preempt the compare failure.
   const [branch, worktreeReply] = await Promise.all([
-    loadMobileDiffReviewBranchCompare(
-      client,
-      worktreeId,
-      policy && {
-        compareAgainstUpstream: policy.compareAgainstUpstream,
-        upstreamName: status.upstreamStatus?.upstreamName
-      }
-    ),
+    loadMobileDiffReviewBranchCompare(client, worktreeId, {
+      compareAgainstUpstream,
+      upstreamName: status.upstreamStatus?.upstreamName
+    }),
     reviewWorktreeMetadataRead.request(client, { worktree: `id:${worktreeId}` })
   ])
   let metadata
