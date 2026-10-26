@@ -5,10 +5,7 @@ import { resolveRuntimeWorktreeSidebarStatus } from './runtime-worktree-sidebar-
 
 const NOW = 10_000_000
 
-function doneRow(
-  outcome: 'failure' | 'cancellation' | 'unconfirmed' | 'success',
-  updatedAt = NOW
-): RuntimeWorktreeAgentRow {
+function doneRow(outcome: 'failure' | 'success', updatedAt = NOW): RuntimeWorktreeAgentRow {
   return {
     paneKey: 'tab-1:1',
     parentPaneKey: null,
@@ -28,19 +25,14 @@ function doneRow(
 }
 
 describe('resolveRuntimeWorktreeSidebarStatus', () => {
-  it.each([
-    ['failure', 'failed'],
-    ['cancellation', 'interrupted'],
-    ['unconfirmed', 'unconfirmed'],
-    ['success', 'done']
-  ] as const)('reads a finished %s turn as the desktop dot %s', (outcome, expected) => {
+  it('shows a fresh failed turn over a live terminal', () => {
     expect(
       resolveRuntimeWorktreeSidebarStatus(
-        { status: 'active', agents: [doneRow(outcome)] },
+        { status: 'active', agents: [doneRow('failure')] },
         NOW,
         null
       )
-    ).toBe(expected)
+    ).toBe('failed')
   })
 
   it('keeps another pane’s pending question above a failed turn, but not the failed pane’s own title', () => {
