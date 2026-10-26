@@ -189,8 +189,11 @@ describe('OrchestrationPane', () => {
     expect(markup).toContain('Nested worker depth')
     expect(markup).toContain('type="number"')
     expect(markup).toContain('aria-label="Nested worker depth"')
-    expect(markup).toContain('min="1"')
-    expect(markup).not.toContain('max=')
+    const container = document.createElement('div')
+    container.innerHTML = markup
+    const depth = container.querySelector('input[aria-label="Nested worker depth"]')
+    expect(depth?.getAttribute('min')).toBe('1')
+    expect(depth?.hasAttribute('max')).toBe(false)
     expect(markup).not.toContain('Default:')
     expect(markup.indexOf('Nested worker depth')).toBeGreaterThan(
       markup.indexOf('Orchestration skill')
@@ -258,6 +261,28 @@ describe('OrchestrationPane', () => {
     })
     expect(mocks.updateSettings).toHaveBeenCalledWith({ orchestrationHeartbeatsEnabled: false })
     expect(matchesSettingsSearch('heartbeat', getOrchestrationPaneSearchEntries())).toBe(true)
+  })
+
+  it('shows the heartbeat interval only while heartbeats are on and saves a whole number of minutes', async () => {
+    const off = getDefaultSettings('/tmp')
+    off.orchestrationHeartbeatsEnabled = false
+    expect(renderToStaticMarkup(<OrchestrationPane {...getPaneProps(off)} />)).not.toContain(
+      'Heartbeat interval'
+    )
+
+    const rendered = await renderPane()
+    const input = rendered.querySelector<HTMLInputElement>('input[aria-label="Heartbeat interval"]')
+    if (!input) {
+      throw new Error('Heartbeat interval input was not rendered')
+    }
+    expect(input.value).toBe('5')
+    await act(async () => {
+      setNativeValue(input, '15')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    })
+    expect(mocks.updateSettings).toHaveBeenCalledWith({ orchestrationHeartbeatIntervalMinutes: 15 })
+    expect(matchesSettingsSearch('interval', getOrchestrationPaneSearchEntries())).toBe(true)
   })
 
   it('keeps host-only runtime settings out of paired web clients', () => {
