@@ -1,3 +1,4 @@
+import { parseTerminalKittyKeyboardFlags } from '../../../../src/shared/terminal-kitty-keyboard-flags'
 import { resetSmoothScrollOffset } from './normal-buffer-smooth-scroll'
 import { stopSurfaceTouchGestures } from './surface-touch-gestures'
 import { clearLongPress } from './tap-dispatch'
@@ -134,7 +135,7 @@ export function init(
   // lastEmittedModes stays what native last received, so a cleared snapshot still publishes its modes.
   scope.keyboardModes.adoptSnapshot(
     typeof initialData === 'string' ? initialData : '',
-    typeof kittyKeyboardFlags === 'number' ? kittyKeyboardFlags : undefined
+    parseTerminalKittyKeyboardFlags(kittyKeyboardFlags)
   )
   const replayData = normalizeInitialData(initialData)
   // Mirror only replayed modes after normal-buffer prefixes are discarded.

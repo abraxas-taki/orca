@@ -112,17 +112,14 @@ export class TerminalKittyKeyboardModeTracker {
 
   /** Scan snapshot screen selection before owner-proven flags; only demote when the owner supplies evidence, preserving live-tracked state for older hosts. */
   adoptSnapshot(snapshotData: string, provenFlags: number | undefined): void {
-    if (provenFlags === undefined) {
-      // Fresh mirrors’ initial zero proves nothing about reattached PTYs; demote it before downstream serialization can claim known-inactive flags.
-      if (!this.baselineProven) {
-        this.resetForSnapshot()
-      }
-      this.scanReplay(snapshotData)
-      return
+    // Fresh mirrors’ initial zero proves nothing about reattached PTYs; demote it before downstream serialization can claim known-inactive flags.
+    if (provenFlags !== undefined || !this.baselineProven) {
+      this.resetForSnapshot()
     }
-    this.resetForSnapshot()
     this.scanReplay(snapshotData)
-    this.restoreSnapshotFlags(provenFlags)
+    if (provenFlags !== undefined) {
+      this.restoreSnapshotFlags(provenFlags)
+    }
   }
 
   scan(data: string): void {

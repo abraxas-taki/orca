@@ -17,7 +17,7 @@ export function encodeTerminalKeyForModes(bytes: string, modes: TerminalModes | 
   }
   // Match xterm's legacy encoder: DECCKM sends unmodified arrows, Home and End as SS3; its Kitty encoder keeps CSI.
   const legacyApplicationCursor =
-    modes?.applicationCursorKeysMode === true && (modes.kittyKeyboardFlags ?? 0) === 0
+    modes?.applicationCursorKeysMode === true && modes.kittyKeyboardFlags === 0
   const cursorKey = legacyApplicationCursor ? UNMODIFIED_CURSOR_KEY.exec(bytes) : null
   return cursorKey ? `\x1bO${cursorKey[1]}` : bytes
 }

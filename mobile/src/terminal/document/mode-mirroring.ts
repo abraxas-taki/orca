@@ -1,51 +1,30 @@
 import { notify } from './host-notify'
 import { getMouseTrackingMode } from './mouse-input-encoding'
-import type { TerminalDocumentScope } from './document-scope'
+import type { TerminalDocumentModes, TerminalDocumentScope } from './document-scope'
 
 export function emitModesIfChanged(scope: TerminalDocumentScope) {
   if (!scope.term) {
     return
   }
-  const bp = !!(scope.term.modes && scope.term.modes.bracketedPasteMode)
-  const applicationCursorKeysMode = !!scope.term.modes?.applicationCursorKeysMode
-  const kittyKeyboardFlags = scope.keyboardModes.flags
-  const modifyOtherKeys = scope.keyboardModes.modifyOtherKeys
+  const termModes = scope.term.modes
   let alt = false
-  const mouseTrackingMode = getMouseTrackingMode(scope)
   try {
     alt =
       scope.term.buffer && scope.term.buffer.active && scope.term.buffer.active.type === 'alternate'
   } catch {}
-  if (
-    bp !== scope.lastEmittedModes.bracketedPasteMode ||
-    alt !== scope.lastEmittedModes.altScreen ||
-    mouseTrackingMode !== scope.lastEmittedModes.mouseTrackingMode ||
-    scope.sgrMouseMode !== scope.lastEmittedModes.sgrMouseMode ||
-    scope.sgrMousePixelsMode !== scope.lastEmittedModes.sgrMousePixelsMode ||
-    applicationCursorKeysMode !== scope.lastEmittedModes.applicationCursorKeysMode ||
-    kittyKeyboardFlags !== scope.lastEmittedModes.kittyKeyboardFlags ||
-    modifyOtherKeys !== scope.lastEmittedModes.modifyOtherKeys
-  ) {
-    scope.lastEmittedModes = {
-      bracketedPasteMode: bp,
-      altScreen: alt,
-      mouseTrackingMode: mouseTrackingMode,
-      sgrMouseMode: scope.sgrMouseMode,
-      sgrMousePixelsMode: scope.sgrMousePixelsMode,
-      applicationCursorKeysMode,
-      kittyKeyboardFlags,
-      modifyOtherKeys
-    }
-    notify(scope, {
-      type: 'modes',
-      bracketedPasteMode: bp,
-      altScreen: alt,
-      mouseTrackingMode: mouseTrackingMode,
-      sgrMouseMode: scope.sgrMouseMode,
-      sgrMousePixelsMode: scope.sgrMousePixelsMode,
-      applicationCursorKeysMode,
-      kittyKeyboardFlags,
-      modifyOtherKeys
-    })
+  const modes: TerminalDocumentModes = {
+    bracketedPasteMode: !!termModes?.bracketedPasteMode,
+    altScreen: alt,
+    mouseTrackingMode: getMouseTrackingMode(scope),
+    sgrMouseMode: scope.sgrMouseMode,
+    sgrMousePixelsMode: scope.sgrMousePixelsMode,
+    applicationCursorKeysMode: !!termModes?.applicationCursorKeysMode,
+    kittyKeyboardFlags: scope.keyboardModes.flags,
+    modifyOtherKeys: scope.keyboardModes.modifyOtherKeys
+  }
+  const last = scope.lastEmittedModes
+  if (Object.entries(modes).some(([key, value]) => value !== Reflect.get(last, key))) {
+    scope.lastEmittedModes = modes
+    notify(scope, { type: 'modes', ...modes })
   }
 }
