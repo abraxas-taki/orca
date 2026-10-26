@@ -2,7 +2,6 @@ import type { RuntimeWorktreeAgentRow } from '../../../src/shared/runtime-types'
 import { isAgentStatusFresh } from '../../../src/shared/agent-status-freshness'
 import { agentVerdictDisplayMark } from '../../../src/shared/agent-main-agent-verdict'
 import {
-  agentNoUpdateLabel,
   formatCompactDuration,
   resolveDecayedAgentRowState
 } from '../../../src/shared/agent-row-decay-state'
@@ -82,11 +81,6 @@ export function agentDisplayLabel(row: RuntimeWorktreeAgentRow, now: number): st
   if (row.state === 'working' && row.mainAgent?.stopping === true) {
     return STOPPING_LABEL
   }
-  const dotState = agentDotState(row, now)
-  // Silence proves only time without updates, as desktop's compact row reports it.
-  if (dotState === 'unverifiable') {
-    return agentNoUpdateLabel(row, now)
-  }
   const message = row.lastAssistantMessage?.trim()
   if (message) {
     return message
@@ -95,7 +89,7 @@ export function agentDisplayLabel(row: RuntimeWorktreeAgentRow, now: number): st
   if (prompt) {
     return prompt
   }
-  return agentStateLabel(dotState)
+  return agentStateLabel(agentDotState(row, now))
 }
 
 // Mirror desktop lastEnteredDoneAt: date main-agent failures independently while subagents remain active.

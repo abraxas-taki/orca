@@ -177,9 +177,10 @@ describe('agentDisplayLabel', () => {
     )
   })
 
-  it('reports how long a stale row on a live terminal has been silent, like desktop', () => {
-    const silent = row({ state: 'working', prompt: 'build', updatedAt: 0, hasLivePty: true })
-    expect(agentDisplayLabel(silent, 40 * 60_000)).toBe('No update in 40m')
+  it('keeps the task text on a silent row and names the silence when there is none', () => {
+    const silent = row({ state: 'working', updatedAt: 0, hasLivePty: true })
+    expect(agentDisplayLabel({ ...silent, prompt: 'build' }, 40 * 60_000)).toBe('build')
+    expect(agentDisplayLabel(silent, 40 * 60_000)).toBe('No recent update')
   })
 })
 
