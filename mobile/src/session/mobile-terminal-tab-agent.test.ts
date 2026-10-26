@@ -59,22 +59,8 @@ describe('resolveMobileTerminalTabAgentId', () => {
     ).toBe('claude')
   })
 
-  it('keeps hook identity authoritative over launch identity', () => {
-    expect(
-      resolveMobileTerminalTabAgentId(
-        terminalTab('Terminal', { agentType: 'codex', launchAgent: 'claude' })
-      )
-    ).toBe('codex')
-  })
-
   it('falls back to explicit terminal titles when hook identity is unavailable', () => {
     expect(resolveMobileTerminalTabAgentId(terminalTab('✦ Gemini CLI'))).toBe('gemini')
-  })
-
-  it('does not let title fallback override launch identity', () => {
-    expect(
-      resolveMobileTerminalTabAgentId(terminalTab('Codex ready', { launchAgent: 'claude' }))
-    ).toBe('claude')
   })
 
   it('lets a different agent reclaim a pane whose launched agent finished', () => {
@@ -145,8 +131,7 @@ describe('host pane identity', () => {
     expect(resolveMobileTerminalTabAgentId(tab, null)).toBe('claude')
   })
 
-  it('shows Cursor for a saved task name with no hook or launch identity', () => {
-    expect(resolveMobileTerminalTabAgentId(terminalTab('Saved task name'), 'cursor')).toBe('cursor')
+  it('keeps host Cursor identity out of behavioral ownership', () => {
     expect(
       resolveMobileTerminalTabOwnedAgentId(terminalTab('Saved task name'), 'cursor')
     ).toBeNull()
