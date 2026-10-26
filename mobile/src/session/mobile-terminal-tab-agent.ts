@@ -8,7 +8,10 @@ import type { MobileSessionTab } from './mobile-session-route-types'
 
 type MobileTerminalTabAgentIdentity = {
   title: string
-  agentStatus?: Pick<AgentStatusEntry, 'agentType' | 'state'> | null
+  agentStatus?: {
+    agentType?: AgentStatusEntry['agentType'] | null
+    state?: AgentStatusEntry['state']
+  } | null
   launchAgent?: TuiAgent | null
 }
 
@@ -24,9 +27,9 @@ export function getMobileTerminalTabHostAgentIdentity(
 
 // Cursor imports Claude hooks; older hosts still report them as claude, so the host identity corrects that.
 function correctCursorImportedHookAgent(
-  hookAgentType: string | undefined,
+  hookAgentType: string | null | undefined,
   hostAgentIdentity: string | null | undefined
-): string | undefined {
+): string | null | undefined {
   return hookAgentType === 'claude' && hostAgentIdentity === 'cursor' ? 'cursor' : hookAgentType
 }
 
@@ -44,7 +47,7 @@ export function resolveMobileTerminalTabOwnedAgentId(
   return null
 }
 
-// Phones receive no process, sleeping-session or sibling-pane signals, so the desktop rule runs on hook, launch and title.
+// Phones get no process, sleeping-session or sibling signals; a host-published Cursor identity stands in for Cursor's foreground process.
 export function resolveMobileTerminalTabAgentId(
   tab: MobileTerminalTabAgentIdentity,
   hostAgentIdentity?: string | null
@@ -53,13 +56,13 @@ export function resolveMobileTerminalTabAgentId(
   const hookAgent = agentTypeToIconAgent(
     correctCursorImportedHookAgent(status?.agentType, hostAgentIdentity)
   )
-  const agent = resolveTabAgentFromSignalSnapshot({
+  return resolveTabAgentFromSignalSnapshot({
     title: tab.title,
     hookAgent: status?.state === 'done' ? null : hookAgent,
     focusedCompletedHookAgent: status?.state === 'done' ? hookAgent : null,
+    processAgent: hostAgentIdentity === 'cursor' ? 'cursor' : null,
     launchAgent: tab.launchAgent ?? undefined
   })
-  return agent ?? (hostAgentIdentity === 'cursor' ? 'cursor' : null)
 }
 
 export function getMobileSessionTabTitle(

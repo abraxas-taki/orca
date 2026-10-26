@@ -112,16 +112,13 @@ describe('host pane identity', () => {
     expect(resolveMobileTerminalTabOwnedAgentId(tab, 'cursor')).toBe('cursor')
   })
 
-  it('does not replace a launch identity Orca chose', () => {
+  it('ranks host Cursor identity like a foreground process: above launch and titles', () => {
+    const launched = terminalTab('Terminal', { agentType: 'unknown', launchAgent: 'claude' })
+    expect(resolveMobileTerminalTabOwnedAgentId(launched, 'cursor')).toBe('claude')
+    expect(resolveMobileTerminalTabAgentId(launched, 'cursor')).toBe('cursor')
     expect(
-      resolveMobileTerminalTabAgentId(terminalTab('Terminal', { launchAgent: 'claude' }), 'cursor')
-    ).toBe('claude')
-  })
-
-  it('keeps launch identity when the hook report is unknown', () => {
-    const tab = terminalTab('Terminal', { agentType: 'unknown', launchAgent: 'claude' })
-    expect(resolveMobileTerminalTabOwnedAgentId(tab, 'cursor')).toBe('claude')
-    expect(resolveMobileTerminalTabAgentId(tab, 'cursor')).toBe('claude')
+      resolveMobileTerminalTabAgentId(terminalTab('Fix Codex support - ⏳ Working ···'), 'cursor')
+    ).toBe('cursor')
   })
 
   it("does not replace another agent's hook report", () => {
