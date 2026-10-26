@@ -9,9 +9,12 @@ import {
   resolveMobileTerminalTabOwnedAgentId
 } from './mobile-terminal-tab-agent'
 
-function agentStatus(agentType: string | undefined): AgentStatusEntry {
+function agentStatus(
+  agentType: string | undefined,
+  state: AgentStatusEntry['state'] = 'working'
+): AgentStatusEntry {
   return {
-    state: 'working',
+    state,
     prompt: '',
     updatedAt: 1,
     stateStartedAt: 1,
@@ -23,7 +26,12 @@ function agentStatus(agentType: string | undefined): AgentStatusEntry {
 
 function terminalTab(
   title: string,
-  options: { agentType?: string; id?: string; launchAgent?: TuiAgent } = {}
+  options: {
+    agentType?: string
+    state?: AgentStatusEntry['state']
+    id?: string
+    launchAgent?: TuiAgent
+  } = {}
 ): Extract<MobileSessionTab, { type: 'terminal' }> {
   return {
     type: 'terminal',
@@ -32,7 +40,9 @@ function terminalTab(
     terminal: 'pty-1',
     isActive: true,
     ...(options.launchAgent ? { launchAgent: options.launchAgent } : {}),
-    ...(options.agentType === undefined ? {} : { agentStatus: agentStatus(options.agentType) })
+    ...(options.agentType === undefined
+      ? {}
+      : { agentStatus: agentStatus(options.agentType, options.state) })
   }
 }
 
@@ -65,6 +75,23 @@ describe('resolveMobileTerminalTabAgentId', () => {
     expect(
       resolveMobileTerminalTabAgentId(terminalTab('Codex ready', { launchAgent: 'claude' }))
     ).toBe('claude')
+  })
+
+  it('lets a different agent reclaim a pane whose launched agent finished', () => {
+    const tab = terminalTab('Codex ready', {
+      agentType: 'claude',
+      state: 'done',
+      launchAgent: 'claude'
+    })
+    expect(resolveMobileTerminalTabAgentId(tab)).toBe('codex')
+  })
+
+  it('keeps an OMP-launched tab as OMP when its hook reports pi', () => {
+    expect(
+      resolveMobileTerminalTabAgentId(
+        terminalTab('Terminal', { agentType: 'pi', launchAgent: 'omp' })
+      )
+    ).toBe('omp')
   })
 
   it('treats unknown hook identity as unavailable', () => {

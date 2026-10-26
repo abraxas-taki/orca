@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest'
 import {
   resolveCanonicalPaneAgentIdentity,
   type CanonicalPaneAgentIdentity
-} from '../../../shared/pane-agent-identity-adapter'
+} from './pane-agent-identity-adapter'
 import { resolveTabAgentFromSignals } from './tab-agent-from-signals'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { TuiAgent } from './tui-agent'
 
 const AGENTS: readonly TuiAgent[] = ['claude', 'codex']
 const SLOT_COUNT = 7

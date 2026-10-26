@@ -1,17 +1,17 @@
-import { titleShowsNoAgent } from '../../../shared/agent-detection'
+import { titleShowsNoAgent } from './agent-detection'
 import {
   isClaudeIdentityFrameTitle,
   resolveExplicitTerminalTitleAgentType
-} from '../../../shared/terminal-title-agent-type'
+} from './terminal-title-agent-type'
 import {
   resolveCompatibleAgentTypeForOwner,
   shareCompatibleTitleIdentityGroup
-} from '../../../shared/agent-title-owner'
-import { isOpenCodeNativeTitle } from '../../../shared/opencode-terminal-title'
-import { resolvePaneAgentOwnerRecord } from '../../../shared/pane-agent-owner'
-import type { TerminalAgent } from '../../../shared/terminal-agent'
-import type { TuiAgent } from '../../../shared/tui-agent'
-import { agentTypeToIconAgent } from './agent-status'
+} from './agent-title-owner'
+import { isOpenCodeNativeTitle } from './opencode-terminal-title'
+import { resolvePaneAgentOwnerRecord } from './pane-agent-owner'
+import type { TerminalAgent } from './terminal-agent'
+import type { TuiAgent } from './tui-agent'
+import { agentTypeToIconAgent } from './agent-type-icon-agent'
 
 /**
  * Resolves wrapper-compatible signal identity against the pane owner.
@@ -163,4 +163,24 @@ export function resolveTabAgentFromSignals(args: {
     liveSiblingIdentity ??
     idleSiblingIdentity
   )
+}
+
+/** One-shot read without useTabAgent's observation history or OSC 133;D, so local-only exit clearing does not apply. */
+export function resolveTabAgentFromSignalSnapshot(
+  args: Omit<
+    Parameters<typeof resolveTabAgentFromSignals>[0],
+    'hasObservedAgentSignal' | 'isRemote'
+  >
+): TerminalAgent | null {
+  const explicitTitleAgent = resolveExplicitTerminalTitleAgentType(args.title)
+  const fallbackAgentSignal = args.launchAgent
+    ? explicitTitleAgent === args.launchAgent
+    : Boolean(explicitTitleAgent || args.siblingHookAgent)
+  return resolveTabAgentFromSignals({
+    ...args,
+    hasObservedAgentSignal: Boolean(
+      args.hookAgent || args.focusedCompletedHookAgent || args.processAgent || fallbackAgentSignal
+    ),
+    isRemote: true
+  })
 }
