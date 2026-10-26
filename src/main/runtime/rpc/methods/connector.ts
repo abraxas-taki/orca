@@ -1,6 +1,7 @@
 /** Gate every connector.* conversation handler on this host's experimentalConnectors setting, regardless of caller. */
 
 import { delayUnlessAborted } from '../../../../shared/abort-aware-delay'
+import { cloudConversation } from '../../../../shared/connector-cloud-contract'
 import {
   ConnectorAnswer,
   ConnectorCancel,
@@ -94,20 +95,20 @@ export const CONNECTOR_METHODS = [
         deliveryId
       )
   }),
-  // `orca connector reply`: the calling pane names its conversation and turn; Orca Cloud posts it.
+  // `orca connector reply`: the calling pane names its cloud conversation and turn; Orca Cloud posts it.
   defineMethod({
     name: 'connector.reply',
     permission: 'workspace',
     params: ConnectorReply,
     handler: async ({ paneKey, replyId, text }, context) => {
       const target = requireSeam(context.runtime).replyTarget(paneKey)
-      if (target?.key.source !== 'slack') {
+      const conversation = target && cloudConversation(target.key)
+      if (!target || !conversation) {
         throw new Error('not_a_cloud_conversation')
       }
       if (target.turnId === null) {
         throw new Error('no_current_turn')
       }
-      const conversation = { source: 'slack' as const, externalId: target.key.externalId }
       const sent = await context.runtime
         .getConnectorCloud()
         ?.reply({ replyId, conversation, turnId: target.turnId, text })

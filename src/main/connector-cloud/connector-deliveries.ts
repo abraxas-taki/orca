@@ -65,7 +65,7 @@ export function dispatchDelivery(
   let done: Promise<ConnectorDeliveryResult>
   switch (delivery.kind) {
     case 'start': {
-      const target = placeLaunchTarget(delivery.placeId, deliveryId)
+      const target = placeLaunchTarget(delivery.placeId, deliveryId, key.source)
       if (!target) {
         return refuse(deliveryId, { outcome: 'unsupported' })
       }

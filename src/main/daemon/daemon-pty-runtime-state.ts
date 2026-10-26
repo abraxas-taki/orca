@@ -232,7 +232,10 @@ export abstract class DaemonPtyRuntimeState {
       tokenPath: opts.tokenPath,
       protocolVersion: opts.protocolVersion
     })
-    this.historyManager = opts.historyPath ? new HistoryManager(opts.historyPath) : null
+    const client = this.client
+    this.historyManager = opts.historyPath
+      ? new HistoryManager(opts.historyPath, { resizeModel: () => client.getDaemonResizeModel() })
+      : null
     this.historyReader = opts.historyPath ? new HistoryReader(opts.historyPath) : null
     this.respawnFn = opts.respawn ?? null
     this.readRunningWslDistros = opts.readRunningWslDistros
