@@ -1,3 +1,4 @@
+import { useContext } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react-native'
 import { AGENT_SESSION_HOST_STATUS_COPY } from '../../../src/shared/agent-session-host-status-rows'
@@ -7,8 +8,22 @@ import {
   nativeChatNoticeLook,
   type NativeChatNoticeTone
 } from '../../../src/shared/native-chat-notice'
-import { isTextBlock, type NativeChatBlock } from '../../../src/shared/native-chat-types'
-import { usageLimitLineText } from '../../../src/shared/agent-session-usage-limit-words'
+import {
+  isTextBlock,
+  type NativeChatBlock,
+  type NativeChatTextBlock
+} from '../../../src/shared/native-chat-types'
+import { readWholeAgentSessionFailureFact } from '../../../src/shared/agent-session-failure'
+import { agentSessionFailureSentence } from '../../../src/shared/agent-session-failure-words'
+import { formatUsageLimitResetClock } from '../../../src/shared/agent-session-usage-limit'
+import {
+  nativeChatOrcaStopRowText,
+  sayNativeChatOrcaStopEnglish
+} from '../../../src/shared/native-chat/native-chat-orca-stop-words'
+import {
+  MobileNativeChatNoticeContext,
+  type MobileNativeChatNoticeNames
+} from './mobile-native-chat-notice-context'
 import { MobileMarkdown } from '../components/MobileMarkdown'
 import { INLINE_TEXT_SELECTION } from '../components/inline-text-selection'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
@@ -18,6 +33,24 @@ const TONE_COLOR: Record<NativeChatNoticeTone, string> = {
   warning: colors.statusAmber,
   error: colors.statusRed,
   notice: colors.textMuted
+}
+
+// Desktop's no-Continue wording; the phone always reads its Orca host as remote.
+function noticeLineText(notice: NativeChatTextBlock, names: MobileNativeChatNoticeNames): string {
+  if (notice.orcaStop) {
+    return nativeChatOrcaStopRowText(
+      notice.orcaStop.cause,
+      names.hostName ?? sayNativeChatOrcaStopEnglish('unnamedServer'),
+      { continueAvailable: false, remoteHost: true }
+    )
+  }
+  const failure = readWholeAgentSessionFailureFact(notice.failure)
+  return failure?.kind === 'usageLimitReached'
+    ? agentSessionFailureSentence(failure, 'row', {
+        ...(names.agentName ? { agentName: names.agentName } : {}),
+        usageLimitReset: formatUsageLimitResetClock
+      })
+    : notice.text
 }
 
 // Render system notices separately so they cannot read as the agent’s own prose.
@@ -32,6 +65,7 @@ export function MobileNativeChatNoticeRow({
   onOpenFile?: (relativePath: string) => void
   onLongPress?: () => void
 }): React.JSX.Element | null {
+  const names = useContext(MobileNativeChatNoticeContext)
   const notice = nativeChatNoticeBlock(blocks)
   const aside = [styles.faint, scaledType(typography.bodySize, fontScale)]
   if (!notice) {
@@ -95,7 +129,7 @@ export function MobileNativeChatNoticeRow({
         </Text>
       )
     case 'line': {
-      const lineText = usageLimitLineText(notice)
+      const lineText = noticeLineText(notice, names)
       const textStyle = [
         styles.line,
         scaledType(TEXT_SIZE, fontScale),

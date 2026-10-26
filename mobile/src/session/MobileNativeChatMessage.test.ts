@@ -19,6 +19,10 @@ import type { NativeChatResolvedPrompt } from '../../../src/shared/native-chat-r
 import { colors, typography } from '../theme/mobile-theme'
 import { ANSWERED_PROMPT_ITEMS } from './mobile-native-chat-answered-prompts.test-fixture'
 import { MobileNativeChatRowOverlaysContext } from './mobile-native-chat-row-overlays'
+import {
+  MobileNativeChatNoticeContext,
+  type MobileNativeChatNoticeNames
+} from './mobile-native-chat-notice-context'
 import { styles } from './mobile-native-chat-message-styles'
 
 vi.mock('react-native', async () => {
@@ -65,6 +69,7 @@ vi.mock('lucide-react-native', () => ({
   FilePlus2: 'FilePlus2',
   Folder: 'Folder',
   Globe: 'Globe',
+  Info: 'Info',
   ListChecks: 'ListChecks',
   MessageSquareMore: 'MessageSquareMore',
   Pencil: 'Pencil',
@@ -333,6 +338,36 @@ describe('MobileNativeChatMessage', () => {
       observedAt: 2,
       body
     })!
+  const renderNotice = (body: AgentJournalStatusItem, names: MobileNativeChatNoticeNames) => {
+    act(() => {
+      renderer = create(
+        createElement(
+          MobileNativeChatNoticeContext.Provider,
+          { value: names },
+          createElement(MobileNativeChatMessage, { message: statusRow(body) })
+        )
+      )
+    })
+    return renderer!.root.find(
+      (node) => String(node.type) === 'Text' && node.props.selectable === true
+    )
+  }
+
+  it('names the Orca host an Orca stop came from, in desktop words', () => {
+    const text = renderNotice(
+      {
+        kind: 'status',
+        text: 'Codex stopped while this response was in progress.',
+        tone: 'error',
+        presentation: 'orca-stop',
+        orcaStop: { cause: 'quit' }
+      },
+      { hostName: 'MacBook Pro' }
+    )
+    expect(text.props.children).toBe(
+      'Orca on MacBook Pro stopped while this response was in progress. You can continue in this conversation.'
+    )
+  })
 
   it.each(['without reset', 'with reset', 'from an old host'] as const)(
     'draws an OpenCode usage warning %s',
@@ -360,14 +395,13 @@ describe('MobileNativeChatMessage', () => {
         if (!isAdmissibleAgentJournalItemBody(body) || body.kind !== 'status') {
           throw new Error('Status fixture was not admitted')
         }
-        const tree = render(statusRow(body))
-        const text = tree.root.find(
-          (node) => String(node.type) === 'Text' && node.props.selectable === true
-        )
+        const text = renderNotice(body, { hostName: null, agentName: 'OpenCode' })
+        const tree = renderer!
+        // An old host's stored advice gives way to desktop's sentence from the fact.
         expect(text.props.children).toEqual(
           hasReset
             ? expect.stringMatching(/^OpenCode hit its usage limit\. It resets at \S.*\.$/u)
-            : hostText
+            : 'OpenCode hit its usage limit.'
         )
         expect(Object.assign({}, ...text.props.style)).toMatchObject({ color: colors.statusAmber })
         expect(tree.root.find((node) => String(node.type) === 'AlertTriangle').props.color).toBe(
