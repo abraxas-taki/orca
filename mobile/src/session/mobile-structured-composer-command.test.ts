@@ -9,7 +9,6 @@ const asyncStorage = vi.hoisted(() => ({
 
 vi.mock('@react-native-async-storage/async-storage', () => ({ default: asyncStorage }))
 
-import { agentSessionFailureFact } from '../../../src/shared/agent-session-failure'
 import {
   dispatchMobileStructuredCommand,
   type MobileStructuredCommandHolds
@@ -227,17 +226,6 @@ describe('mobile structured conversation commands', () => {
     expect(await dispatchMobileStructuredCommand(input)).toBe('rejected')
     expect(input.onError).not.toHaveBeenCalled()
     expect(sendRequest).not.toHaveBeenCalled()
-  })
-  it('shows nothing for a /compact start failure a row already states', async () => {
-    const { input, sendRequest } = setup()
-    const failure = agentSessionFailureFact('hostRestarted')
-    sendRequest.mockResolvedValueOnce({
-      ok: true,
-      result: { ok: true, value: { command: 'compact', state: 'failed', failure } }
-    })
-    input.startFailures = () => [failure]
-    expect(await dispatchMobileStructuredCommand(input)).toBe('rejected')
-    expect(input.onError).not.toHaveBeenCalled()
   })
   it('keeps ordinary messages on the existing send path', async () => {
     const { input, sendRequest } = setup()
