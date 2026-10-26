@@ -1,20 +1,17 @@
-import {
-  getAgentSessionOptionCatalog,
-  type CatalogModel
-} from '../../../../shared/agent-session-option-catalog'
-import type { AgentType } from '../../../../shared/agent-status-types'
+import { getAgentSessionOptionCatalog, type CatalogModel } from './agent-session-option-catalog'
+import type { AgentType } from './agent-status-types'
 import type {
   SessionOptionDescriptor,
   SessionOptionsSurface,
   SessionOptionValue
-} from '../../../../shared/native-chat-session-options'
-import { recordNativeChatSessionOptionCommand } from '../../../../shared/native-chat-session-option-commands'
+} from './native-chat-session-options'
+import { recordNativeChatSessionOptionCommand } from './native-chat-session-option-commands'
 import {
   applyNativeChatReportedSessionOptions,
   clearNativeChatSessionModel,
   createNativeChatSessionOptionRecord,
   setTrackedSessionOption
-} from '../../../../shared/native-chat-session-option-state'
+} from './native-chat-session-option-state'
 import {
   readNativeChatSessionOptionCache,
   writeNativeChatSessionOptionCache
@@ -26,7 +23,7 @@ import {
   withTrackedNativeChatModel,
   type NativeChatSessionOptionMode
 } from './native-chat-session-option-snapshot'
-import type { NativeChatSessionOptionDispatchCommand } from './native-chat-session-option-command-dispatch'
+import type { NativeChatSessionOptionDispatchCommand } from './native-chat-session-option-dispatch'
 
 type PersistSelection = (args: {
   modelId: string
@@ -50,6 +47,8 @@ export type CreateNativeChatPtySessionOptionsArgs = {
   fallbackScopeKey?: string
   initialModels?: readonly CatalogModel[]
   mode: NativeChatSessionOptionMode
+  /** The model row's name in the reader's language. */
+  modelLabel: string
   canSwitchOmpModel?: boolean
   reportedValues?: Record<string, SessionOptionValue> | null
   dispatchCommand: NativeChatSessionOptionDispatchCommand
@@ -103,6 +102,7 @@ export function createNativeChatPtySessionOptions(
     models: activeModels(),
     record,
     mode: args.mode,
+    modelLabel: args.modelLabel,
     liveTransport: 'catalog'
   })
   const listeners = new Set<(value: SessionOptionDescriptor[]) => void>()
@@ -114,6 +114,7 @@ export function createNativeChatPtySessionOptions(
       models: activeModels(),
       record,
       mode: args.mode,
+      modelLabel: args.modelLabel,
       liveTransport: 'catalog'
     })
     for (const listener of listeners) {

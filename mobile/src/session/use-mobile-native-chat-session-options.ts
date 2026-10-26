@@ -1,35 +1,34 @@
-import { appliedReportByScope, getScopedRecord } from './mobile-session-option-records'
-export { clearMobileSessionOptionRecordsForTests } from './mobile-session-option-records'
-import { mobileOmpSessionCatalog } from './mobile-omp-session-catalog'
 import type { AgentSessionConversationCommand } from '../../../src/shared/agent-session/agent-session-conversation-command'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore
+} from 'react'
 import {
   getAgentSessionOptionCatalog,
   type CatalogCommandDelivery,
   type CatalogModel
 } from '../../../src/shared/agent-session-option-catalog'
 import type {
+  NativeChatSessionOptionSettingsMutation,
   SessionOptionsSurface,
   SessionOptionDescriptor,
   SessionOptionValue
 } from '../../../src/shared/native-chat-session-options'
 import type { MobileNativeChatSendOutcome } from './native-chat/mobile-native-chat-send'
 import {
-  buildNativeChatSessionOptionCommand,
-  recordNativeChatSessionOptionCommand
-} from '../../../src/shared/native-chat-session-option-commands'
-import {
-  buildNativeChatSessionOptionSnapshot,
-  withTrackedNativeChatModel
-} from '../../../src/shared/native-chat-session-option-snapshot'
-import {
-  applyNativeChatReportedSessionOptions,
-  clearNativeChatSessionModel,
-  getTrackedSessionOption,
-  isFlipOnlyMidSession,
-  matchNativeChatCatalogModelId,
-  setTrackedSessionOption
-} from '../../../src/shared/native-chat-session-option-state'
+  createNativeChatPtySessionOptions,
+  type NativeChatPtySessionOptionsSurface
+} from '../../../src/shared/native-chat-pty-session-options'
+import { clearNativeChatSessionOptionCacheForTests } from '../../../src/shared/native-chat-session-option-cache'
+import { retireMissingModelMutation } from '../../../src/shared/native-chat-discovered-catalog-models'
+import { matchNativeChatCatalogModelId } from '../../../src/shared/native-chat-session-option-state'
+import { setBoundedScopeCacheEntry } from '../../../src/shared/native-chat-scope-cache'
+import { sayNativeChatSessionOptionEnglish } from '../../../src/shared/native-chat-session-option-labels'
 
 export type MobileNativeChatSessionOptionsController = {
   optionSurface?: SessionOptionsSurface
@@ -42,9 +41,19 @@ export type MobileNativeChatSessionOptionsController = {
   recordCommand: (command: string) => void
 }
 
-type PendingOperation = { id: string; token: number }
+type PendingOperation = { identity: string; id: string; token: number }
 
 const EMPTY_SNAPSHOT: SessionOptionDescriptor[] = []
+const subscribeEmpty = (): (() => void) => () => {}
+const getEmptySnapshot = (): SessionOptionDescriptor[] => EMPTY_SNAPSHOT
+
+// Kept across remounts: a repeated hook model is not fresh evidence, and reapplying it would revert a newer pick.
+const appliedReportByIdentity = new Map<string, string>()
+
+export function clearMobileSessionOptionRecordsForTests(): void {
+  clearNativeChatSessionOptionCacheForTests()
+  appliedReportByIdentity.clear()
+}
 
 export function useMobileNativeChatSessionOptions(args: {
   agent: string | null
@@ -57,33 +66,21 @@ export function useMobileNativeChatSessionOptions(args: {
     options?: { delivery?: CatalogCommandDelivery }
   ) => Promise<MobileNativeChatSendOutcome>
   onAgentPicker?: () => void
+  /** Saves picks as the host's launch defaults, as desktop does. */
+  writeSettings?: (mutation: NativeChatSessionOptionSettingsMutation) => void
 }): MobileNativeChatSessionOptionsController {
-  const { agent, scopeKey, reportedModel, dispatchCommand, onAgentPicker, discoveredModels } = args
-  const baseCatalog = useMemo(
-    () =>
-      agent === 'claude' || agent === 'codex' || agent === 'omp'
-        ? getAgentSessionOptionCatalog(agent)
-        : null,
-    [agent]
-  )
-  const catalog = useMemo(
-    () =>
-      baseCatalog && agent === 'omp'
-        ? mobileOmpSessionCatalog(baseCatalog, discoveredModels, args.modelSwitchCommand)
-        : baseCatalog,
-    [agent, baseCatalog, discoveredModels, args.modelSwitchCommand]
-  )
-  const identity = agent && scopeKey ? `${scopeKey}\0${agent}` : null
-  const [version, setVersion] = useState(0)
-  const [pendingByIdentity, setPendingByIdentity] = useState<
-    Record<string, PendingOperation | undefined>
-  >({})
-  const pendingId = identity ? (pendingByIdentity[identity]?.id ?? null) : null
-  const bump = useCallback(() => setVersion((current) => current + 1), [])
+  const { agent, scopeKey, reportedModel, discoveredModels } = args
+  const identity =
+    agent && scopeKey && getAgentSessionOptionCatalog(agent) ? `${scopeKey}\0${agent}` : null
+  const canSwitchOmpModel = args.modelSwitchCommand === 'orca-model'
+  const latest = useRef(args)
   const activeIdentityRef = useRef(identity)
-  const applyQueuesRef = useRef(new Map<string, Promise<void>>())
-  const operationTokenRef = useRef(0)
+  const [pending, setPending] = useState<PendingOperation | null>(null)
+  const pendingTokenRef = useRef(0)
 
+  useLayoutEffect(() => {
+    latest.current = args
+  })
   useLayoutEffect(() => {
     activeIdentityRef.current = identity
     return () => {
@@ -91,210 +88,109 @@ export function useMobileNativeChatSessionOptions(args: {
     }
   }, [identity])
 
+  const surface = useMemo(() => {
+    if (!identity || !agent || !scopeKey) {
+      return null
+    }
+    return createNativeChatPtySessionOptions({
+      agent,
+      scopeKey,
+      mode: 'live',
+      modelLabel: sayNativeChatSessionOptionEnglish('model'),
+      canSwitchOmpModel,
+      dispatchCommand: async (command, options) => {
+        // One controller serves every tab: a queued pick must not reach the tab opened since.
+        if (activeIdentityRef.current !== identity) {
+          throw new Error('The chat changed before the command was sent.')
+        }
+        const outcome = options?.delivery
+          ? await latest.current.dispatchCommand(command, { delivery: options.delivery })
+          : await latest.current.dispatchCommand(command)
+        // Desktop commits a pick only after the terminal confirms the write.
+        if (outcome === 'rejected' || outcome === 'unknown') {
+          throw new Error('The terminal did not accept the command.')
+        }
+      },
+      onAgentPicker: () => latest.current.onAgentPicker?.(),
+      persistSelection: (pick) =>
+        latest.current.writeSettings?.({ type: 'apply-picks', agent, picks: [pick] })
+    })
+  }, [agent, canSwitchOmpModel, identity, scopeKey])
+
   useEffect(() => {
-    if (!catalog || !scopeKey || !agent || !reportedModel) {
+    if (surface && discoveredModels) {
+      surface.replaceModels(discoveredModels)
+    }
+  }, [discoveredModels, surface])
+
+  useEffect(() => {
+    const mutation =
+      agent && discoveredModels ? retireMissingModelMutation(agent, discoveredModels) : null
+    if (mutation) {
+      latest.current.writeSettings?.(mutation)
+    }
+  }, [agent, discoveredModels])
+
+  useEffect(() => {
+    const catalog = agent ? getAgentSessionOptionCatalog(agent) : null
+    if (!surface || !identity || !catalog || !reportedModel) {
       return
     }
+    // Phone-only: desktop reads Claude's model from its terminal screen, which the phone cannot see, so Claude keeps the hook model too.
     // OMP reports exact selectors, including models absent from cached discovery.
     const matched =
       agent === 'omp'
         ? reportedModel.trim()
-        : matchNativeChatCatalogModelId(catalog, reportedModel, {
-            allowUnlisted: agent === 'codex'
-          })
-    if (!matched) {
+        : matchNativeChatCatalogModelId(
+            { ...catalog, models: discoveredModels ?? catalog.models },
+            reportedModel,
+            { allowUnlisted: agent === 'codex' }
+          )
+    if (!matched || appliedReportByIdentity.get(identity) === matched) {
       return
     }
-    // Repeated session-start reports predate later picks; only a changed report is fresh evidence allowed to override them.
-    if (appliedReportByScope.get(scopeKey) === matched) {
-      return
-    }
-    appliedReportByScope.set(scopeKey, matched)
-    const record = getScopedRecord(scopeKey, agent)
-    if (applyNativeChatReportedSessionOptions(record, { model: matched })) {
-      bump()
-    }
-  }, [agent, bump, catalog, reportedModel, scopeKey])
+    setBoundedScopeCacheEntry(appliedReportByIdentity, identity, matched)
+    surface.reportSessionOptions({ model: matched })
+  }, [agent, discoveredModels, identity, reportedModel, surface])
 
-  const snapshot = useMemo(() => {
-    if (!catalog || !scopeKey || !agent) {
-      return EMPTY_SNAPSHOT
-    }
-    void version
-    const record = getScopedRecord(scopeKey, agent)
-    return buildNativeChatSessionOptionSnapshot({
-      catalog,
-      // Reconcile tracked models absent from discovery so their rows/options survive stale catalog data.
-      models: withTrackedNativeChatModel(catalog, catalog.models, record),
-      record,
-      mode: 'live',
-      modelLabel: 'Model',
-      liveTransport: 'catalog'
-    })
-  }, [agent, catalog, scopeKey, version])
-
-  const runSerialized = useCallback(
-    (operationIdentity: string, id: string, run: () => Promise<boolean>): Promise<boolean> => {
-      const previous = applyQueuesRef.current.get(operationIdentity) ?? Promise.resolve()
-      const runIfCurrent = (): Promise<boolean> =>
-        activeIdentityRef.current === operationIdentity ? run() : Promise.resolve(false)
-      const chained = previous.then(runIfCurrent, runIfCurrent)
-      const tail = chained.then(
-        () => undefined,
-        () => undefined
-      )
-      applyQueuesRef.current.set(operationIdentity, tail)
-      operationTokenRef.current += 1
-      const token = operationTokenRef.current
-      setPendingByIdentity((current) => ({
-        ...current,
-        [operationIdentity]: { id, token }
-      }))
-      void tail.then(() => {
-        if (applyQueuesRef.current.get(operationIdentity) === tail) {
-          applyQueuesRef.current.delete(operationIdentity)
-        }
-        setPendingByIdentity((current) => {
-          if (current[operationIdentity]?.token !== token) {
-            return current
-          }
-          const next = { ...current }
-          delete next[operationIdentity]
-          return next
-        })
-      })
-      return chained
-    },
-    []
+  const snapshot = useSyncExternalStore(
+    surface?.subscribe ?? subscribeEmpty,
+    surface?.getSnapshot ?? getEmptySnapshot,
+    surface?.getSnapshot ?? getEmptySnapshot
   )
 
+  const track = useCallback(
+    (id: string, run: (target: NativeChatPtySessionOptionsSurface) => Promise<unknown>) => {
+      if (!surface || !identity) {
+        return Promise.resolve(false)
+      }
+      pendingTokenRef.current += 1
+      const token = pendingTokenRef.current
+      setPending({ identity, id, token })
+      return run(surface)
+        .then(
+          () => true,
+          () => false
+        )
+        .finally(() => {
+          setPending((current) => (current?.token === token ? null : current))
+        })
+    },
+    [identity, surface]
+  )
   const setOption = useCallback(
-    (id: string, value: SessionOptionValue): Promise<boolean> => {
-      if (!catalog || !scopeKey || !agent || !identity) {
-        return Promise.resolve(false)
-      }
-      return runSerialized(identity, id, async () => {
-        const record = getScopedRecord(scopeKey, agent)
-        const previousModelId = typeof record.model?.value === 'string' ? record.model.value : null
-        const apply =
-          id === 'model'
-            ? catalog.modelApply
-            : withTrackedNativeChatModel(catalog, catalog.models, record)
-                .find((model) => model.id === previousModelId)
-                ?.options.find((option) => option.id === id)?.apply
-        if (!apply || apply.midSession?.kind === 'agent-picker') {
-          return false
-        }
-        const flipOnly = isFlipOnlyMidSession(apply.midSession)
-        const trackedToggle = flipOnly
-          ? getTrackedSessionOption(record, previousModelId, id)
-          : undefined
-        if (flipOnly && !trackedToggle) {
-          return false
-        }
-        if (flipOnly && trackedToggle?.value === value) {
-          return true
-        }
-        const command = buildNativeChatSessionOptionCommand({
-          optionId: id,
-          value,
-          apply,
-          modelId: previousModelId,
-          catalog,
-          models: withTrackedNativeChatModel(catalog, catalog.models, record),
-          record
-        })
-        if (!command) {
-          return false
-        }
-        // Capture the dispatch baseline because live reports/typed commands mutate the shared record outside this queue.
-        const trackedBeforeDispatch =
-          id === 'model' ? undefined : getTrackedSessionOption(record, previousModelId, id)
-        const outcome = await dispatchCommand(command)
-        if (outcome === 'rejected') {
-          return false
-        }
-        if (id !== 'model') {
-          // If the model moved during dispatch, never file the old model’s option under its new destination.
-          const modelStill = typeof record.model?.value === 'string' ? record.model.value : null
-          if (
-            modelStill !== previousModelId ||
-            getTrackedSessionOption(record, previousModelId, id) !== trackedBeforeDispatch
-          ) {
-            return true
-          }
-        }
-        if (id === 'model') {
-          if (typeof value === 'string' && previousModelId !== value) {
-            delete record.valuesByModel[value]
-          }
-        }
-        // Flip-only controls cannot heal via report; keep their best-known applied state.
-        setTrackedSessionOption(record, id, value, flipOnly ? 'applied' : 'dispatched')
-        bump()
-        return true
-      })
-    },
-    [agent, bump, catalog, dispatchCommand, identity, runSerialized, scopeKey]
+    (id: string, value: SessionOptionValue) => track(id, (target) => target.setOption(id, value)),
+    [track]
   )
-
   const invokeAction = useCallback(
-    (id: string): Promise<boolean> => {
-      if (!catalog || !scopeKey || !agent || !identity) {
-        return Promise.resolve(false)
-      }
-      return runSerialized(identity, id, async () => {
-        const record = getScopedRecord(scopeKey, agent)
-        const modelId = typeof record.model?.value === 'string' ? record.model.value : null
-        const apply =
-          id === 'model'
-            ? catalog.modelApply
-            : withTrackedNativeChatModel(catalog, catalog.models, record)
-                .find((model) => model.id === modelId)
-                ?.options.find((option) => option.id === id)?.apply
-        const midSession = apply?.midSession
-        if (midSession?.kind === 'agent-picker') {
-          const outcome = midSession.delivery
-            ? await dispatchCommand(midSession.command, { delivery: midSession.delivery })
-            : await dispatchCommand(midSession.command)
-          if (outcome === 'rejected') {
-            return false
-          }
-          clearNativeChatSessionModel(record)
-          bump()
-          onAgentPicker?.()
-          return true
-        }
-        if (isFlipOnlyMidSession(midSession) && !getTrackedSessionOption(record, modelId, id)) {
-          return (await dispatchCommand(midSession.command)) !== 'rejected'
-        }
-        return false
-      })
-    },
-    [agent, bump, catalog, dispatchCommand, identity, onAgentPicker, runSerialized, scopeKey]
+    (id: string) => track(id, (target) => target.invokeAction(id)),
+    [track]
   )
-
   const recordCommand = useCallback(
-    (command: string): void => {
-      if (!catalog || !scopeKey || !agent) {
-        return
-      }
-      const record = getScopedRecord(scopeKey, agent)
-      const result = recordNativeChatSessionOptionCommand({
-        catalog,
-        models: withTrackedNativeChatModel(catalog, catalog.models, record),
-        record,
-        command
-      })
-      if (result.changed) {
-        bump()
-      }
-      if (result.opensAgentPicker) {
-        onAgentPicker?.()
-      }
-    },
-    [agent, bump, catalog, onAgentPicker, scopeKey]
+    (command: string) => surface?.recordOutgoingCommand(command),
+    [surface]
   )
+  const pendingId = pending && pending.identity === identity ? pending.id : null
 
   return useMemo(
     () => ({ snapshot, pendingId, setOption, invokeAction, recordCommand }),

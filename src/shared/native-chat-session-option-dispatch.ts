@@ -1,8 +1,9 @@
 import type {
   CatalogAgentInteractionDetection,
   CatalogCommandDelivery
-} from '../../../../shared/agent-session-option-catalog'
-import type { ClaudeModelSwitchOutcome } from './claude-model-switch-confirmation'
+} from './agent-session-option-catalog'
+
+export type ClaudeModelSwitchOutcome = 'applied' | 'rejected' | 'unknown'
 
 export type NativeChatSessionOptionDispatchResult = {
   outcome?: ClaudeModelSwitchOutcome

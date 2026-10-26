@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import { act, create } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useMobileOmpModelDiscovery } from './use-mobile-omp-model-discovery'
+import { useMobileNativeChatModelDiscovery } from './use-mobile-native-chat-model-discovery'
 import {
   useMobileNativeChatSessionOptions,
   clearMobileSessionOptionRecordsForTests
@@ -13,7 +13,7 @@ function reply(result: unknown): RpcResponse {
   return { id: 'discovery', ok: true, result, _meta: { runtimeId: 'host' } }
 }
 
-type Args = Parameters<typeof useMobileOmpModelDiscovery>[0]
+type Args = Parameters<typeof useMobileNativeChatModelDiscovery>[0]
 type TestRenderer = {
   unmount: () => void
   update: (element: ReturnType<typeof createElement>) => void
@@ -25,7 +25,7 @@ let snapshot: ReturnType<typeof useMobileNativeChatSessionOptions>['snapshot'] =
 let args: Args
 const reportedModel = 'custom/current'
 function Probe(): null {
-  const discoveredModels = useMobileOmpModelDiscovery(args)
+  const discoveredModels = useMobileNativeChatModelDiscovery(args)
   options = useMobileNativeChatSessionOptions({
     agent: 'omp',
     scopeKey: `${args.hostId}:${args.worktreeId}`,
@@ -39,7 +39,7 @@ function Probe(): null {
 }
 async function mount(client: Args['client']): Promise<void> {
   switchCapability = 'orca-model'
-  args = { client, enabled: true, hostId: 'host-a', worktreeId: 'folder:one' }
+  args = { client, agent: 'omp', enabled: true, hostId: 'host-a', worktreeId: 'folder:one' }
   await act(async () => {
     renderer = create(createElement(Probe))
   })
@@ -58,7 +58,7 @@ const listed = {
 }
 
 describe('mobile OMP model discovery and picker choices', () => {
-  it('queries the execution workspace and retains the current model beside configured choices', async () => {
+  it('queries the execution workspace and untracks a hook model the configured list lacks', async () => {
     const sendRequest = vi.fn(async () => reply(listed))
     await mount({ sendRequest })
     expect(sendRequest).toHaveBeenCalledWith(
@@ -69,12 +69,10 @@ describe('mobile OMP model discovery and picker choices', () => {
       },
       undefined
     )
-    expect(modelChoices()).toMatchObject({
-      currentValue: reportedModel,
-      choices: expect.arrayContaining([
-        expect.objectContaining({ value: 'provider/new', label: 'New model' }),
-        expect.objectContaining({ value: reportedModel })
-      ])
+    // As on desktop: an authoritative list retires models it omits, even one the hook reported.
+    expect(modelChoices()).toEqual({
+      type: 'select',
+      choices: [expect.objectContaining({ value: 'provider/new', label: 'New model' })]
     })
   })
   it('makes discovered choices selectable only after the live extension advertises support', async () => {

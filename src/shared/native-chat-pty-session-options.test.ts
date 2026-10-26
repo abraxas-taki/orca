@@ -5,13 +5,13 @@ import {
   seedNativeChatAppliedSessionOptions
 } from './native-chat-session-option-cache'
 import { createNativeChatPtySessionOptions } from './native-chat-pty-session-options'
-import { mergeDiscoveredAuthoritativeModels } from '../../../../shared/agent-session-option-catalog'
-import { GROK_SESSION_OPTION_CATALOG } from '../../../../shared/agent-session-option-catalog-grok'
+import { mergeDiscoveredAuthoritativeModels } from './agent-session-option-catalog'
+import { GROK_SESSION_OPTION_CATALOG } from './agent-session-option-catalog-grok'
 import {
   resolveNativeChatSessionOptionDefaults,
   updateNativeChatSessionOptionDefaults
-} from '../../../../shared/native-chat-session-option-defaults'
-import type { PersistedNativeChatSessionOptions } from '../../../../shared/native-chat-session-options'
+} from './native-chat-session-option-defaults'
+import type { PersistedNativeChatSessionOptions } from './native-chat-session-options'
 
 describe('native chat PTY session options', () => {
   beforeEach(() => clearNativeChatSessionOptionCacheForTests())
@@ -22,6 +22,7 @@ describe('native chat PTY session options', () => {
       scopeKey: 'pty-1',
       initialModels: [],
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn()
     })!
     expect(surface.getSnapshot()).toEqual([])
@@ -32,6 +33,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn()
     })!
 
@@ -54,6 +56,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       reportedValues: { model: 'opus', effort: 'medium' },
       dispatchCommand: vi.fn()
     })!
@@ -84,6 +87,7 @@ describe('native chat PTY session options', () => {
       scopeKey: 'pty-1',
       fallbackScopeKey: 'tab-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn()
     })!
     expect(surface.getSnapshot()).toEqual(
@@ -107,6 +111,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch,
       persistSelection: persist
     })!
@@ -141,6 +146,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch,
       onAgentPicker
     })!
@@ -170,6 +176,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn().mockResolvedValue({ outcome: 'rejected' }),
       persistSelection: persist,
       onAgentPicker
@@ -198,6 +205,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn().mockResolvedValue({ outcome: 'unknown' }),
       persistSelection: persist,
       onAgentPicker
@@ -224,6 +232,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch,
       persistSelection: persist
     })!
@@ -256,6 +265,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
 
@@ -278,6 +288,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
 
@@ -303,6 +314,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
 
@@ -328,6 +340,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch,
       persistSelection: persist
     })!
@@ -362,6 +375,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
 
@@ -392,6 +406,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
 
@@ -426,6 +441,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
 
@@ -458,6 +474,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
 
@@ -495,6 +512,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch,
       persistSelection: persist
     })!
@@ -529,6 +547,7 @@ describe('native chat PTY session options', () => {
       agent: 'codex',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch,
       onAgentPicker
     })!
@@ -552,6 +571,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn()
     })!
     surface.recordOutgoingCommand('/effort high')
@@ -575,6 +595,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn(),
       onAgentPicker
     })!
@@ -594,6 +615,7 @@ describe('native chat PTY session options', () => {
       agent: 'claude',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn()
     })!
     const model = surface.getSnapshot()[0]
@@ -617,6 +639,7 @@ describe('native chat PTY session options', () => {
         { id: 'sonnet', label: 'Sonnet', options: [] }
       ],
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
 
@@ -643,6 +666,7 @@ describe('native chat PTY session options', () => {
       scopeKey: 'pty-1',
       initialModels: [{ id: 'opus[1m]', label: 'Opus (1M context)', options: [] }],
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn()
     })!
 
@@ -665,6 +689,7 @@ describe('native chat PTY session options', () => {
       agent: 'cursor',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
     expect(surface.getSnapshot().find(({ id }) => id === 'effort')?.settable).toBe(true)
@@ -684,6 +709,7 @@ describe('native chat PTY session options', () => {
       agent: 'grok',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: dispatch
     })!
     // Nothing tracked means no `-m` was emitted, so grok is on its own default.
@@ -710,6 +736,7 @@ describe('native chat PTY session options', () => {
       agent: 'grok',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn(),
       persistSelection: ({ modelId, optionId, value, adoptModelAsLaunchDefault }) => {
         persisted = updateNativeChatSessionOptionDefaults({
@@ -744,6 +771,7 @@ describe('native chat PTY session options', () => {
       agent: 'grok',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       dispatchCommand: vi.fn(
         () =>
           new Promise<void>((resolve) => {
@@ -782,6 +810,7 @@ describe('native chat PTY session options', () => {
       agent: 'grok',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       persistSelection,
       dispatchCommand: vi.fn(
         () =>
@@ -819,6 +848,7 @@ describe('native chat PTY session options', () => {
       agent: 'grok',
       scopeKey: 'pty-1',
       mode: 'live',
+      modelLabel: 'Model',
       initialModels: mergeDiscoveredAuthoritativeModels(GROK_SESSION_OPTION_CATALOG.models, [
         { id: 'grok-4.5', label: 'Grok 4.5', isDefault: true, options: [] }
       ]),

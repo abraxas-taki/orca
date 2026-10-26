@@ -5,24 +5,24 @@ import {
   type CatalogMidSessionApply,
   type CatalogModel,
   type CatalogOptionApply
-} from '../../../../shared/agent-session-option-catalog'
+} from './agent-session-option-catalog'
 import type {
   SessionOptionDescriptor,
   SessionOptionSetResult,
   SessionOptionValue
-} from '../../../../shared/native-chat-session-options'
-import { buildNativeChatSessionOptionCommand } from '../../../../shared/native-chat-session-option-commands'
+} from './native-chat-session-options'
+import { buildNativeChatSessionOptionCommand } from './native-chat-session-option-commands'
 import {
+  flattenNativeChatSessionOptionRecord,
   getTrackedSessionOption as getTrackedOption,
   isFlipOnlyMidSession,
   type NativeChatSessionOptionRecord
-} from '../../../../shared/native-chat-session-option-state'
+} from './native-chat-session-option-state'
 import type {
   NativeChatSessionOptionDispatchCommand,
   NativeChatSessionOptionDispatchResult
-} from './native-chat-session-option-command-dispatch'
+} from './native-chat-session-option-dispatch'
 import {
-  flattenNativeChatSessionOptionRecord,
   resolveEffectiveNativeChatModelId,
   type NativeChatSessionOptionMode
 } from './native-chat-session-option-snapshot'

@@ -118,15 +118,34 @@ describe('useMobileNativeChatSessionOptions', () => {
     expect(model.kind).toMatchObject({ currentValue: 'opus' })
   })
 
-  it('keeps tracked truth when the dispatch is rejected', async () => {
-    dispatchCommand.mockResolvedValue('rejected')
-    mount()
-    let applied: boolean | undefined
+  it.each(['rejected', 'unknown'] as const)(
+    'keeps tracked truth when the write is %s',
+    async (outcome) => {
+      dispatchCommand.mockResolvedValue(outcome)
+      mount()
+      let applied: boolean | undefined
+      await act(async () => {
+        applied = await api!.setOption('model', 'opus')
+      })
+      expect(applied).toBe(false)
+      expect(api!.snapshot[0]).toMatchObject({ valueSource: 'unknown' })
+    }
+  )
+
+  it('offers Grok pickers and saves a pick as the host launch default', async () => {
+    const writeSettings = vi.fn()
+    mount({ agent: 'grok', writeSettings })
+    expect(api!.snapshot[0]).toMatchObject({ id: 'model', settable: true })
+    const model = api!.snapshot[0]!.kind
+    const target = model.type === 'select' ? model.choices[0]!.value : ''
     await act(async () => {
-      applied = await api!.setOption('model', 'opus')
+      expect(await api!.setOption('model', target)).toBe(true)
     })
-    expect(applied).toBe(false)
-    expect(api!.snapshot[0]).toMatchObject({ valueSource: 'unknown' })
+    expect(writeSettings).toHaveBeenCalledWith({
+      type: 'apply-picks',
+      agent: 'grok',
+      picks: [expect.objectContaining({ modelId: target, optionId: 'model', value: target })]
+    })
   })
 
   it('types the Codex picker command and switches to the terminal', async () => {
