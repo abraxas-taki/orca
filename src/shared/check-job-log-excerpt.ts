@@ -15,6 +15,6 @@ export function sanitizeCheckJobLogExcerpt(value: string): string {
     stripAnsiEscapeSequences(bounded)
       .replace(/\r\n?/g, '\n')
       .replace(TERMINAL_CONTROL_CHARACTER_PATTERN, '')
-      .replace(/\p{Cf}/gu, '')
+      .replace(/[^\P{Cf}\u200c\u200d]/gu, '')
   )
 }

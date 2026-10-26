@@ -21,6 +21,10 @@ describe('bounded owned check log sanitation', () => {
     const raw = '\ufefferror: build failed\r\n  at α.ts:1\t界😀\n'
     expect(sanitizeCheckJobLogExcerpt(raw)).toBe('error: build failed\n  at α.ts:1\t界😀\n')
   })
+  it('preserves emoji and word joiners while removing other format controls', () => {
+    const raw = '\ufeff👨\u200d👩\u200d👧\u200d👦 می\u200cروم \u202eerror\u202c\u200b\n'
+    expect(sanitizeCheckJobLogExcerpt(raw)).toBe('👨\u200d👩\u200d👧\u200d👦 می\u200cروم error\n')
+  })
   it.each(['x', 'é', '界', '😀', '\ud800', '\udfff'])('caps UTF-8 %j at byte edges', (unit) => {
     const width = bytes.getUtf8ByteLength(unit)
     for (const delta of [-1, 0, 1]) {
