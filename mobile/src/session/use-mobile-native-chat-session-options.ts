@@ -101,59 +101,63 @@ function createMobileSurfaceEntry(args: {
   canSwitchOmpModel: boolean
   latest: { readonly current: HookArgs }
   activeIdentity: { readonly current: string | null }
-}): SurfaceEntry {
+}): SurfaceEntry | null {
   const { agent, identity, latest, activeIdentity } = args
   const midSession = getAgentSessionOptionCatalog(agent)?.modelApply.midSession
   // Phone-only: desktop confirms a Claude model switch on its terminal screen; the phone cannot, so it never saves one as a launch default.
   const modelSwitchUnconfirmable =
     midSession?.kind === 'command' && midSession.detectAgentInteraction !== undefined
+  const surface = createNativeChatPtySessionOptions({
+    agent,
+    scopeKey: args.scopeKey,
+    mode: 'live',
+    modelLabel: sayNativeChatSessionOptionEnglish('model'),
+    canSwitchOmpModel: args.canSwitchOmpModel,
+    dispatchCommand: async (command, options) => {
+      // One controller serves every tab: a queued pick must not reach the tab opened since.
+      if (activeIdentity.current !== identity) {
+        throw new Error('The chat changed before the command was sent.')
+      }
+      const outcome = options?.delivery
+        ? await latest.current.dispatchCommand(command, { delivery: options.delivery })
+        : await latest.current.dispatchCommand(command)
+      if (entry.retired) {
+        throw new Error('The tab started another agent.')
+      }
+      // Desktop commits a pick only after the terminal confirms the write.
+      if (outcome === 'rejected' || outcome === 'unknown') {
+        throw new Error('The terminal did not accept the command.')
+      }
+    },
+    onAgentPicker: () => {
+      if (activeIdentity.current === identity) {
+        latest.current.onAgentPicker?.()
+      }
+    },
+    persistSelection: (pick) => {
+      // A pick that lands after the phone moved to another host's chat must not become that host's default.
+      if (
+        activeIdentity.current !== identity ||
+        (modelSwitchUnconfirmable && pick.optionId === 'model')
+      ) {
+        return
+      }
+      latest.current.writeSettings?.({
+        type: 'apply-picks',
+        agent,
+        picks: [modelSwitchUnconfirmable ? { ...pick, adoptModelAsLaunchDefault: false } : pick]
+      })
+    }
+  })
+  if (!surface) {
+    return null
+  }
   const entry: SurfaceEntry = {
     agent,
     canSwitchOmpModel: args.canSwitchOmpModel,
     models: null,
     retired: false,
-    surface: createNativeChatPtySessionOptions({
-      agent,
-      scopeKey: args.scopeKey,
-      mode: 'live',
-      modelLabel: sayNativeChatSessionOptionEnglish('model'),
-      canSwitchOmpModel: args.canSwitchOmpModel,
-      dispatchCommand: async (command, options) => {
-        // One controller serves every tab: a queued pick must not reach the tab opened since.
-        if (activeIdentity.current !== identity) {
-          throw new Error('The chat changed before the command was sent.')
-        }
-        const outcome = options?.delivery
-          ? await latest.current.dispatchCommand(command, { delivery: options.delivery })
-          : await latest.current.dispatchCommand(command)
-        if (entry.retired) {
-          throw new Error('The tab started another agent.')
-        }
-        // Desktop commits a pick only after the terminal confirms the write.
-        if (outcome === 'rejected' || outcome === 'unknown') {
-          throw new Error('The terminal did not accept the command.')
-        }
-      },
-      onAgentPicker: () => {
-        if (activeIdentity.current === identity) {
-          latest.current.onAgentPicker?.()
-        }
-      },
-      persistSelection: (pick) => {
-        // A pick that lands after the phone moved to another host's chat must not become that host's default.
-        if (
-          activeIdentity.current !== identity ||
-          (modelSwitchUnconfirmable && pick.optionId === 'model')
-        ) {
-          return
-        }
-        latest.current.writeSettings?.({
-          type: 'apply-picks',
-          agent,
-          picks: [modelSwitchUnconfirmable ? { ...pick, adoptModelAsLaunchDefault: false } : pick]
-        })
-      }
-    })
+    surface
   }
   return entry
 }
@@ -204,7 +208,9 @@ export function useMobileNativeChatSessionOptions(
       latest,
       activeIdentity: activeIdentityRef
     })
-    setBoundedScopeCacheEntry(surfaces, scopeKey, created)
+    if (created) {
+      setBoundedScopeCacheEntry(surfaces, scopeKey, created)
+    }
     return created
   }, [agent, canSwitchOmpModel, identity, scopeKey, surfaces])
   const surface = entry?.surface ?? null
