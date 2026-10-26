@@ -1,18 +1,20 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { structuredAgentSessionCanStop } from '../../../src/shared/structured-agent-session-stop-control'
 
 type Send<Args extends unknown[], Result> = (...args: Args) => Promise<Result>
 
-/** Desktop's Stop rule, counting this chat's sends still awaiting the host as sending. */
+export type MobileStructuredSendsOut = {
+  trackSend: <Args extends unknown[], Result>(send: Send<Args, Result>) => Send<Args, Result>
+  sending: () => boolean
+}
+
+/** Desktop's Stop rule, counting this chat's message sends still awaiting the host as sending. */
 export function useMobileStructuredStopOffer(input: {
   sessionKey: string
   turnId: string | null
   isWorking: boolean
   stopsConversation: boolean
-}): {
-  canStop: boolean
-  trackSend: <Args extends unknown[], Result>(send: Send<Args, Result>) => Send<Args, Result>
-} {
+}): { canStop: boolean; sendsOut: MobileStructuredSendsOut } {
   const { sessionKey } = input
   const countsRef = useRef(new Map<string, number>())
   // Re-render only when a chat starts or stops having a send out, not on every send.
@@ -48,6 +50,10 @@ export function useMobileStructuredStopOffer(input: {
       },
     [sessionKey]
   )
+  const sendsOut = useMemo(
+    () => ({ trackSend, sending: () => countsRef.current.has(sessionKey) }),
+    [sessionKey, trackSend]
+  )
   return {
     canStop: structuredAgentSessionCanStop({
       turnId: input.turnId,
@@ -55,6 +61,6 @@ export function useMobileStructuredStopOffer(input: {
       sending: sendingKeys.has(sessionKey),
       stopsConversation: input.stopsConversation
     }),
-    trackSend
+    sendsOut
   }
 }

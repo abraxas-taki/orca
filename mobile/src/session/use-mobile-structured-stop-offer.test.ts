@@ -5,34 +5,35 @@ import { useMobileStructuredStopOffer } from './use-mobile-structured-stop-offer
 
 describe('useMobileStructuredStopOffer', () => {
   let renderer: ReactTestRenderer | null = null
-  let offer: { canStop: boolean; send: () => Promise<string> } | null = null
+  let offer: { canStop: boolean; sending: () => boolean; send: () => Promise<string> } | null = null
 
   afterEach(() => {
     act(() => renderer?.unmount())
     renderer = null
   })
 
-  function render(send: () => Promise<string>, stopsConversation: boolean): void {
+  function harness(send: () => Promise<string>, stopsConversation: boolean, sessionKey: string) {
     function Harness(): null {
-      const { canStop, trackSend } = useMobileStructuredStopOffer({
-        sessionKey: 'chat',
+      const { canStop, sendsOut } = useMobileStructuredStopOffer({
+        sessionKey,
         turnId: null,
         isWorking: false,
         stopsConversation
       })
-      offer = { canStop, send: trackSend(send) }
+      offer = { canStop, sending: sendsOut.sending, send: sendsOut.trackSend(send) }
       return null
     }
-    act(() => {
-      renderer = create(createElement(Harness))
-    })
+    return createElement(Harness)
   }
 
   it.each([true, false])(
     'offers Stop for a send in flight only where the host stops the conversation (%s)',
     async (stopsConversation) => {
       let settle!: (value: string) => void
-      render(() => new Promise((resolve) => (settle = resolve)), stopsConversation)
+      const send = () => new Promise<string>((resolve) => (settle = resolve))
+      act(() => {
+        renderer = create(harness(send, stopsConversation, 'chat'))
+      })
       expect(offer?.canStop).toBe(false)
 
       let sent: Promise<string> | undefined
@@ -40,12 +41,29 @@ describe('useMobileStructuredStopOffer', () => {
         sent = offer?.send()
       })
       expect(offer?.canStop).toBe(stopsConversation)
+      expect(offer?.sending()).toBe(true)
 
       await act(async () => {
         settle('accepted')
         await sent
       })
       expect(offer?.canStop).toBe(false)
+      expect(offer?.sending()).toBe(false)
     }
   )
+
+  it("keeps one chat's send out of another chat's Stop and command hold", () => {
+    const send = () => new Promise<string>(() => {})
+    act(() => {
+      renderer = create(harness(send, true, 'first'))
+    })
+    act(() => {
+      void offer?.send()
+    })
+    expect(offer?.sending()).toBe(true)
+
+    act(() => renderer?.update(harness(send, true, 'second')))
+    expect(offer?.canStop).toBe(false)
+    expect(offer?.sending()).toBe(false)
+  })
 })
