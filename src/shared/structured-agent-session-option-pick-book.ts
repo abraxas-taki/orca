@@ -61,7 +61,15 @@ export function settleStructuredOptionPick(
   }
 }
 
-/** A repeat of an option already on its way waits; picks of other options may go together. */
 export function structuredOptionPickIsPending(book: StructuredOptionPickBook, id: string): boolean {
   return book.pending[id] !== undefined
+}
+
+/** The pick a new one of `id` must wait for: a repeat waits, other options go together, and a starting provider holds nothing. */
+export function structuredOptionPickBlockingId(
+  book: StructuredOptionPickBook,
+  id: string,
+  providerStarting: boolean
+): string | null {
+  return !providerStarting && structuredOptionPickIsPending(book, id) ? id : null
 }

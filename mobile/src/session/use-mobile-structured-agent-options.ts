@@ -34,7 +34,7 @@ import {
   isLatestStructuredOptionPick,
   settleStructuredOptionPick,
   structuredOptionPickCommit,
-  structuredOptionPickIsPending
+  structuredOptionPickBlockingId
 } from '../../../src/shared/structured-agent-session-option-pick-book'
 import { useMobileStructuredOptionSurface } from './use-mobile-structured-option-surface'
 
@@ -154,10 +154,7 @@ export function useMobileStructuredAgentOptions(args: {
         !canSetStructuredAgentSessionOption(
           {
             ...structuredAgentSessionOptionView(currentState, undefined, {}),
-            pendingId:
-              !providerStarting && structuredOptionPickIsPending(optionPicks.current, id)
-                ? id
-                : null
+            pendingId: structuredOptionPickBlockingId(optionPicks.current, id, providerStarting)
           },
           id,
           value,
