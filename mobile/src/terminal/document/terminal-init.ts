@@ -26,7 +26,6 @@ import { cancelSelect } from './selection-mode'
 import { resetEvictionCounter } from './selection-state-and-eviction'
 import { beginTerminalSurfaceSwap, commitTerminalSurfaceSwap } from './surface-swap'
 import { attachTermObservers } from './term-observers'
-import { TerminalKittyKeyboardModeTracker } from '../../../../src/shared/terminal-kitty-keyboard-mode-tracker'
 import { applyTerminalTheme } from './terminal-theme'
 import { attachWebglAddon, cancelWebglContextRecovery } from './webgl-recovery'
 import { afterWritesDrained, enqueueWrite, pumpWrites, resetWriteQueue } from './write-queue'
@@ -132,18 +131,8 @@ export function init(
   scope.mouseEncodingKnown = false
   scope.sgrMouseMode = false
   scope.sgrMousePixelsMode = false
-  scope.lastEmittedModes = {
-    bracketedPasteMode: false,
-    altScreen: false,
-    mouseTrackingMode: 'none',
-    sgrMouseMode: false,
-    sgrMousePixelsMode: false,
-    applicationCursorKeysMode: false,
-    kittyKeyboardFlags: 0,
-    modifyOtherKeys: 0
-  }
   // Seed like desktop's snapshot path: replayed modes, then the host's proven Kitty flags.
-  scope.keyboardModes = new TerminalKittyKeyboardModeTracker()
+  // lastEmittedModes stays what native last received, so a cleared snapshot still publishes its modes.
   scope.keyboardModes.resetForSnapshot()
   scope.keyboardModes.scanReplay(typeof initialData === 'string' ? initialData : '')
   if (typeof kittyKeyboardFlags === 'number') {

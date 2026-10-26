@@ -156,7 +156,12 @@ export function useMobileSessionTerminalSendActions(scope: MobileSessionTerminal
       return
     }
     const targetHandle = activeHandle
-    const accessoryCommit = await handleLiveInputAccessoryBytes(input)
+    // Encode first so the live-input commit sees the bytes the PTY will receive.
+    const encoded = {
+      ...input,
+      bytes: encodeTerminalKeyForModes(input.bytes, ptyModesRef.current.get(targetHandle))
+    }
+    const accessoryCommit = await handleLiveInputAccessoryBytes(encoded)
     if (accessoryCommit.kind !== 'allow-raw') {
       return
     }
@@ -166,7 +171,7 @@ export function useMobileSessionTerminalSendActions(scope: MobileSessionTerminal
       activeHandle: activeHandleRef.current,
       activeSessionTabType: activeSessionTabTypeRef.current,
       connState: connStateRef.current,
-      bytes: encodeTerminalKeyForModes(input.bytes, ptyModesRef.current.get(targetHandle)),
+      bytes: encoded.bytes,
       deviceToken: deviceTokenRef.current
     })
   }
