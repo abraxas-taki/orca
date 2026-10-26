@@ -103,7 +103,8 @@ export function terminalOscLinkTarget(uri: unknown): TerminalOscLinkTarget | nul
   if (parsed.protocol !== 'file:') {
     return null
   }
-  const resolved = resolveTerminalFileUrlTarget(parsed)
+  // Desktop allows UNC hosts only on Windows; the phone can't tell, so the host's resolver decides.
+  const resolved = resolveTerminalFileUrlTarget(parsed, { allowUncHost: true })
   return resolved
     ? {
         kind: 'file',

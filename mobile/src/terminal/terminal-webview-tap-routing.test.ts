@@ -251,6 +251,22 @@ describe('terminal WebView tap routing', () => {
     })
   })
 
+  it('keeps the UNC host of an OSC file link for a Windows share workspace', async () => {
+    const oscLinks = [
+      { row: 0, startCol: 5, endCol: 15, uri: 'file://server/share/repo/app.ts#L12' }
+    ]
+    const { posted } = boot('open artifact here', oscLinks)
+    await settle()
+
+    fireTouch('touchstart', [{ x: screenXForCol(7), y: tapY }])
+    fireTouch('touchend', [])
+
+    expect(posted.find((m) => m.type === 'terminal-file-tap')).toEqual({
+      type: 'terminal-file-tap',
+      candidates: [{ pathText: '//server/share/repo/app.ts', line: 12, column: null }]
+    })
+  })
+
   it('opens plain file URLs through terminal file taps', async () => {
     const line = 'open file:///tmp/result.json#L12C3 now'
     const { posted } = boot(line)
