@@ -337,7 +337,7 @@ describe('useMobileNativeChatController handleNativeChatSend', () => {
     expect(controller!.nativeChatAcceptsImages).toBe(false)
   })
 
-  it('separates structured working status from provider cancellation availability', async () => {
+  it('offers prompt Cancel only while a provider turn runs', async () => {
     const props = structuredTab('codex')
     structuredActivity.isWorking = true
     try {
@@ -345,18 +345,15 @@ describe('useMobileNativeChatController handleNativeChatSend', () => {
         renderer?.update(createElement(Harness, props))
       })
       expect(controller?.nativeChatAgentWorking).toBe(true)
-      expect(controller?.nativeChatCanStop).toBe(false)
       expect(controller?.handleNativeChatCancelPrompt).toBeUndefined()
       structuredActivity.turnId = 'provider-turn'
       await act(async () => {
         renderer?.update(createElement(Harness, props))
       })
-      expect(controller?.nativeChatCanStop).toBe(true)
       expect(controller?.handleNativeChatCancelPrompt).toEqual(expect.any(Function))
       structuredActivity.turnId = null
       harnessHostSupport = structuredAgentSessionHostSupport(['agent-session.conversation-stop.v1'])
       await act(async () => renderer?.update(createElement(Harness, props)))
-      expect(controller?.nativeChatCanStop).toBe(true)
       expect(controller?.handleNativeChatCancelPrompt).toBeUndefined()
     } finally {
       harnessHostSupport = null

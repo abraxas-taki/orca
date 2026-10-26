@@ -77,7 +77,7 @@ import {
 } from '@/components/native-chat/structured-agent-session-read-owner'
 import { resetStructuredAgentSessionSendsForTests } from '@/components/native-chat/structured-agent-session-message-sender'
 import { getStructuredAgentSessionPendingSends } from '@/components/native-chat/structured-agent-session-pending-sends'
-import { structuredAgentSessionStopControl } from '@/components/native-chat/structured-agent-session-stop-control'
+import { structuredAgentSessionStopControl } from '../../../shared/structured-agent-session-stop-control'
 import {
   clearNativeChatDraftCacheForTests,
   readNativeChatDraftCache,

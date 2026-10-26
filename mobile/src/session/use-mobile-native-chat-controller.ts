@@ -285,11 +285,7 @@ export function useMobileNativeChatController(args: {
     nativeChatReceipts: activeChatStructured ? structuredNativeChat.receipts : null,
     nativeChatActionablePromptIds: structuredNativeChat.actionablePromptIds,
     nativeChatCommandRefusalCauses: structuredNativeChat.commandRefusalCauses,
-    // A host that stops what the chat has in flight takes Stop before the agent opens a turn.
-    nativeChatCanStop: activeChatStructured
-      ? structuredNativeChat.turnId !== null ||
-        (agentSessionHostSupport?.conversationStop === true && structuredNativeChat.isWorking)
-      : nativeChatAgentWorking,
+    nativeChatCanStop: activeChatStructured ? structuredNativeChat.canStop : nativeChatAgentWorking,
     nativeChatStreamingText: terminalTurn.streamingText,
     ...promptCards,
     nativeChatAsk: askDismissal.showAsk || askDismissal.collapsedAsk ? nativeChatAskPrompt : null,

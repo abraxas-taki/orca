@@ -1,3 +1,13 @@
+/** A published chat: its running turn, or the whole conversation where the host stops that while working or sending. */
+export function structuredAgentSessionCanStop(input: {
+  turnId: string | null
+  isWorking: boolean
+  sending: boolean
+  stopsConversation: boolean
+}): boolean {
+  return input.turnId !== null || (input.stopsConversation && (input.isWorking || input.sending))
+}
+
 export function structuredAgentSessionStopControl(input: {
   published: boolean
   /** Temporary: hosts without create.message.v1 still leave the prompt on this client. */
@@ -19,7 +29,12 @@ export function structuredAgentSessionStopControl(input: {
   const { sending, stopSends } = input.sends
   return {
     canStop: published
-      ? turnId !== null || (host.stopsConversation && (isWorking || sending))
+      ? structuredAgentSessionCanStop({
+          turnId,
+          isWorking,
+          sending,
+          stopsConversation: host.stopsConversation
+        })
       : legacyLaunch !== undefined && sending,
     stop: () => {
       if (!published) {
