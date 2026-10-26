@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { MobileNativeChatOwnedScrollView } from './MobileNativeChatOwnedScrollView'
 import { ChevronRight } from 'lucide-react-native'
-import { agentJournalToolCallLifecycle } from '../../../src/shared/agent-journal-tool-call-lifecycle'
 import {
   diffFromText,
   diffFromToolCall
@@ -11,18 +10,15 @@ import type { NativeChatDiffLine } from '../../../src/shared/native-chat/tools/n
 import {
   formatToolDuration,
   mcpToolIdentity,
-  toolWebSearchResults,
   type NativeChatWebSearchResult
 } from '../../../src/shared/native-chat/tools/native-chat-tool-identity'
+import { NATIVE_CHAT_TOOL_ACTIVITY_COPY } from '../../../src/shared/native-chat/tools/native-chat-tool-activity'
 import { nativeChatToolIconName } from '../../../src/shared/native-chat/tools/native-chat-tool-icon'
-import {
-  NATIVE_CHAT_TOOL_ROW_VERB_COPY,
-  nativeChatToolLineLabel
-} from '../../../src/shared/native-chat/tools/native-chat-tool-line-label'
-import {
-  isToolCallBlock,
-  type NativeChatToolCallBlock,
-  type NativeChatToolResultBlock
+import { NATIVE_CHAT_TOOL_ROW_VERB_COPY } from '../../../src/shared/native-chat/tools/native-chat-tool-line-label'
+import { nativeChatToolLineView } from '../../../src/shared/native-chat/tools/native-chat-tool-line-view'
+import type {
+  NativeChatToolCallBlock,
+  NativeChatToolResultBlock
 } from '../../../src/shared/native-chat-types'
 import { MobileSyntaxSegments } from '../components/MobileSyntaxSegments'
 import { INLINE_TEXT_SELECTION } from '../components/inline-text-selection'
@@ -34,9 +30,6 @@ import { MobileNativeChatToolOutput } from './MobileNativeChatFullContent'
 import { useMobileNativeChatOpenedDetail } from './mobile-native-chat-opened-detail'
 import { useMobileNativeChatDisclosure } from './mobile-native-chat-disclosure-store'
 import { toolStyles as styles, toolType } from './mobile-native-chat-tool-styles'
-
-const RESULT_LABEL = 'Result'
-const NO_SEARCH_RESULTS: NativeChatWebSearchResult[] = []
 
 function SearchResults({
   results,
@@ -166,28 +159,20 @@ export function MobileNativeChatToolLine({
   onOpenFile?: (path: string) => void
 }): React.JSX.Element {
   const [expanded, setExpanded] = useMobileNativeChatDisclosure(disclosureKey, false)
-  const call = isToolCallBlock(block) ? block : undefined
-  const label = call ? nativeChatToolLineLabel(call, result) : null
-  const body = call ? result : block.type === 'tool-result' ? block : undefined
+  const { call, label, body, failed, results, hasDetail } = useMemo(
+    () => nativeChatToolLineView(block, result),
+    [block, result]
+  )
   const fullCommand = label?.commandDetail ?? null
-  // User interruption is not tool failure.
-  const lifecycle = call ? agentJournalToolCallLifecycle(call) : null
-  const failed = lifecycle === 'failed' || (lifecycle !== 'interrupted' && result?.isError === true)
   const verb = label?.verb ? NATIVE_CHAT_TOOL_ROW_VERB_COPY[label.verb] : null
   const commandAlone = label?.command === true && verb !== null && label.target.length > 0
   const mcp = call ? mcpToolIdentity(call.name, call.mcpIdentity) : null
-  const name = call ? (mcp ? `${mcp.server} / ${mcp.tool}` : call.name) : RESULT_LABEL
+  const name = call
+    ? mcp
+      ? `${mcp.server} / ${mcp.tool}`
+      : call.name
+    : NATIVE_CHAT_TOOL_ACTIVITY_COPY.result
   const target = label ? label.target : (body?.output.split('\n')[0]?.slice(0, 80) ?? '')
-  const results = useMemo(
-    () => (call ? toolWebSearchResults(call.webSearchResults) : NO_SEARCH_RESULTS),
-    [call]
-  )
-  // An edit that has not landed has no output yet, but the change it proposes is worth opening.
-  const hasDetail =
-    body !== undefined ||
-    fullCommand !== null ||
-    results.length > 0 ||
-    (call !== undefined && diffFromToolCall(call.name, call.input) !== null)
   const filePath = label?.filePath ?? null
   const type = toolType(fontScale)
   const iconSize = 15 * fontScale
