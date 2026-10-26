@@ -11,8 +11,8 @@ import {
   resolveSiblingRetainedTabAgent,
   resolveSiblingTabAgent
 } from './tab-agent'
-import { resolveExplicitTerminalTitleAgentType } from '../../../shared/terminal-title-agent-type'
 import {
+  hasObservedTabAgentSignal,
   resolveLaunchedAgentExitEvidence,
   resolveTabAgentFromSignals
 } from '../../../shared/tab-agent-from-signals'
@@ -113,16 +113,17 @@ export function useTabAgent(tab: TerminalTab): TerminalAgent | null {
       hasObservedAgentSignalRef.current = false
       setHasObservedAgentSignal(false)
     }
-    const explicitTitleAgent = resolveExplicitTerminalTitleAgentType(tab.title)
-    // Why: only a title naming the launched agent arms its exit clearing — sibling/other-agent evidence must not.
-    const fallbackAgentSignal = tab.launchAgent
-      ? explicitTitleAgent === tab.launchAgent
-      : Boolean(explicitTitleAgent || siblingHookAgent)
-    // Why: a recognized foreground process arms exit clearing even for agents with no hook or title integration.
     // Ref-gate already-observed signals: title frames rerun this effect, and redundant dispatches add SortableTab commits implicated in #185 (react-update-depth-attribution.ts).
     if (
       !hasObservedAgentSignalRef.current &&
-      (focusedHookAgent || completedHookEvidence || processAgent || fallbackAgentSignal)
+      hasObservedTabAgentSignal({
+        title: tab.title,
+        launchAgent: tab.launchAgent,
+        hookAgent: focusedHookAgent,
+        siblingHookAgent,
+        hasCompletedHook: completedHookEvidence,
+        processAgent
+      })
     ) {
       hasObservedAgentSignalRef.current = true
       setHasObservedAgentSignal(true)

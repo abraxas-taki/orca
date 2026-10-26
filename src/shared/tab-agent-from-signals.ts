@@ -162,22 +162,37 @@ export function resolveTabAgentFromSignals(args: {
   )
 }
 
-/** One-shot read without useTabAgent's observation history or OSC 133;D, so local-only exit clearing does not apply. */
-export function resolveTabAgentFromSignalSnapshot(
-  args: Omit<
-    Parameters<typeof resolveTabAgentFromSignals>[0],
-    'hasObservedAgentSignal' | 'isRemote'
-  >
-): TerminalAgent | null {
+/** A hook, completion or process, or a title naming the launched agent (any agent when none was launched), arms exit clearing. */
+export function hasObservedTabAgentSignal(args: {
+  title: string
+  launchAgent?: TuiAgent | null
+  hookAgent?: TerminalAgent | null
+  siblingHookAgent?: TerminalAgent | null
+  hasCompletedHook: boolean
+  processAgent?: TerminalAgent | null
+}): boolean {
   const explicitTitleAgent = resolveExplicitTerminalTitleAgentType(args.title)
   const fallbackAgentSignal = args.launchAgent
     ? explicitTitleAgent === args.launchAgent
     : Boolean(explicitTitleAgent || args.siblingHookAgent)
+  return Boolean(
+    args.hookAgent || args.hasCompletedHook || args.processAgent || fallbackAgentSignal
+  )
+}
+
+/** One-shot read without useTabAgent's observation history or OSC 133;D, so local-only exit clearing does not apply. */
+export function resolveTabAgentFromSignalSnapshot(
+  args: Omit<
+    Parameters<typeof resolveTabAgentFromSignals>[0],
+    'hasObservedAgentSignal' | 'isRemote' | 'processShellForeground'
+  >
+): TerminalAgent | null {
   return resolveTabAgentFromSignals({
     ...args,
-    hasObservedAgentSignal: Boolean(
-      args.hookAgent || args.focusedCompletedHookAgent || args.processAgent || fallbackAgentSignal
-    ),
+    hasObservedAgentSignal: hasObservedTabAgentSignal({
+      ...args,
+      hasCompletedHook: Boolean(args.focusedCompletedHookAgent)
+    }),
     isRemote: true
   })
 }

@@ -50,8 +50,9 @@ export function resolveOpenTabOccupantAgent({
     resolveSiblingCompletedTabAgent(agentStatusByPaneKey, layout, tabId) ??
     resolveSiblingRetainedTabAgent(retainedAgentsByPaneKey, layout, tabId)
   const focusedPaneKey = focusedPaneKeyFor(tabId, layout)
-  const process = focusedPaneKey ? paneForegroundAgentByPaneKey?.[focusedPaneKey] : undefined
-  const processAgent = process?.agent ?? null
+  const processAgent = focusedPaneKey
+    ? (paneForegroundAgentByPaneKey?.[focusedPaneKey]?.agent ?? null)
+    : null
   const sleepingSessionAgent = focusedPaneKey
     ? (sleepingAgentSessionsByPaneKey[focusedPaneKey]?.agent ?? null)
     : null
@@ -63,7 +64,6 @@ export function resolveOpenTabOccupantAgent({
     focusedCompletedHookAgent,
     siblingCompletedHookAgent,
     processAgent,
-    processShellForeground: Boolean(process?.shellForeground),
     sleepingSessionAgent,
     launchAgent
   })
