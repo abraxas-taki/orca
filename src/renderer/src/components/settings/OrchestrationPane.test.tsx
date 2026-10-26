@@ -263,13 +263,21 @@ describe('OrchestrationPane', () => {
     expect(matchesSettingsSearch('heartbeat', getOrchestrationPaneSearchEntries())).toBe(true)
   })
 
-  it('shows the heartbeat interval only while heartbeats are on and saves a whole number of minutes', async () => {
-    const off = getDefaultSettings('/tmp')
-    off.orchestrationHeartbeatsEnabled = false
-    expect(renderToStaticMarkup(<OrchestrationPane {...getPaneProps(off)} />)).not.toContain(
-      'Heartbeat interval'
-    )
+  it('renders a saved heartbeat opt-out and turns it back on', async () => {
+    const rendered = await renderPane({
+      ...getDefaultSettings('/tmp'),
+      orchestrationHeartbeatsEnabled: false
+    })
+    const toggle = rendered.querySelector<HTMLButtonElement>('[aria-label="Worker heartbeats"]')
+    expect(toggle?.getAttribute('aria-checked')).toBe('false')
+    expect(rendered.textContent).not.toContain('Heartbeat interval')
+    await act(async () => {
+      toggle?.click()
+    })
+    expect(mocks.updateSettings).toHaveBeenCalledWith({ orchestrationHeartbeatsEnabled: true })
+  })
 
+  it('saves a whole number of heartbeat minutes while heartbeats are on', async () => {
     const rendered = await renderPane()
     const input = rendered.querySelector<HTMLInputElement>('input[aria-label="Heartbeat interval"]')
     if (!input) {
