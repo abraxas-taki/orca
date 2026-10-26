@@ -28,11 +28,13 @@ import {
   type SessionOptionValue
 } from '../../../src/shared/native-chat-session-options'
 import {
-  mobileModelPillLabel,
-  mobileOptionsPillLabel,
-  mobileSessionOptionSummaryValue,
-  mobileSessionOptionDisabledReason
-} from './mobile-native-chat-session-option-labels'
+  nativeChatModelPillLabel,
+  nativeChatOptionValuesLabel,
+  nativeChatSessionOptionDisabledReason,
+  nativeChatSessionOptionLabel,
+  sayNativeChatSessionOptionEnglish as say
+} from '../../../src/shared/native-chat-session-option-labels'
+import { mobileSessionOptionSummaryValue } from './mobile-native-chat-session-option-labels'
 import {
   DescriptorRows,
   ModelPill,
@@ -143,7 +145,7 @@ export function MobileNativeChatSessionOptionPickers({
   const busy = pendingId !== null || sendInFlight
   // Permission mode affects the next send, so a working turn must not lock it.
   const locked = isWorking || busy
-  const reason = mobileSessionOptionDisabledReason(activeDescriptor?.disabledReason)
+  const reason = nativeChatSessionOptionDisabledReason(activeDescriptor?.disabledReason, say)
   const permissionChoice = selectedChoice(permission)
   const permissionColor = permissionChoiceColor(permissionChoice?.value)
   const permissionIcon =
@@ -151,11 +153,9 @@ export function MobileNativeChatSessionOptionPickers({
   const segmentOptions = options.filter(showsSessionOptionAsSegments)
   const rowOptions = options.filter((descriptor) => !segmentOptions.includes(descriptor))
   const primary = model
-    ? mobileModelPillLabel(model)
-    : permission
-      ? mobileSessionOptionSummaryValue(permission)
-      : 'Permissions'
-  const secondary = model && options.length > 0 ? mobileOptionsPillLabel(options) : null
+    ? nativeChatModelPillLabel(model, say)
+    : mobileSessionOptionSummaryValue(home)
+  const secondary = (model && nativeChatOptionValuesLabel(options, say)) || null
 
   const closePicker = (): void => onNavigate(null)
   const applyOption = (descriptor: SessionOptionDescriptor, value: SessionOptionValue): void => {
@@ -225,7 +225,9 @@ export function MobileNativeChatSessionOptionPickers({
                   <ChevronLeft size={18} color={colors.textSecondary} strokeWidth={2.2} />
                 )}
               </Pressable>
-              <Text style={styles.sheetTitle}>{activeDescriptor.label}</Text>
+              <Text style={styles.sheetTitle}>
+                {nativeChatSessionOptionLabel(activeDescriptor, say)}
+              </Text>
               <View style={styles.sheetHeaderSide}>
                 {pendingId !== null ? (
                   <ActivityIndicator size="small" color={colors.textSecondary} />
@@ -327,7 +329,7 @@ function OptionRows({
         return (
           <SessionOptionSummaryRow
             key={descriptor.id}
-            label={isPermission ? 'Permissions' : descriptor.label}
+            label={isPermission ? 'Permissions' : nativeChatSessionOptionLabel(descriptor, say)}
             value={value}
             valueColor={isPermission ? permissionColor : undefined}
             disabled={disabled}

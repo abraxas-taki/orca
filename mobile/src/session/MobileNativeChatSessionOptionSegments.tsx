@@ -6,6 +6,11 @@ import {
   type SessionOptionDescriptor,
   type SessionOptionValue
 } from '../../../src/shared/native-chat-session-options'
+import {
+  nativeChatSessionChoiceShortLabel,
+  nativeChatSessionOptionLabel,
+  sayNativeChatSessionOptionEnglish as say
+} from '../../../src/shared/native-chat-session-option-labels'
 import { SessionOptionCaption } from './MobileNativeChatSessionOptionRows'
 
 // Five fit across a phone's sheet; more read better as a list on their own page.
@@ -36,9 +41,12 @@ export function SessionOptionSegments({
   const { choices, currentValue } = descriptor.kind
   return (
     <View style={styles.block}>
-      <Text style={styles.label}>{descriptor.label}</Text>
+      <Text style={styles.label}>{nativeChatSessionOptionLabel(descriptor, say)}</Text>
       <MobileSegmentedControl
-        segments={choices}
+        segments={choices.map((choice) => ({
+          value: choice.value,
+          label: nativeChatSessionChoiceShortLabel(choice, say, descriptor.id)
+        }))}
         // An unknown value marks nothing, rather than reading as a confirmed choice.
         selected={descriptor.valueSource === 'unknown' ? undefined : currentValue}
         onSelect={onSetOption}
