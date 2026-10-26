@@ -1,3 +1,4 @@
+import type { NativeChatSkillDiscoverySnapshot } from '../../../../../src/shared/native-chat-picker-items'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Keyboard, Pressable, type TextInput, View } from 'react-native'
 import { ArrowUp, Mic, Plus, Square } from 'lucide-react-native'
@@ -65,6 +66,9 @@ type Props = {
   placeholder?: string
   filePaths?: string[]
   onNeedFiles?: (query: string) => void
+  /** The host's disk-scanned skills, loaded once a skill trigger opens. */
+  skillDiscovery?: NativeChatSkillDiscoverySnapshot
+  onNeedSkills?: () => void
   /** Set while the agent can be stopped; Stop takes Send's slot when Send can't deliver. */
   stop?: { onStop?: () => void; held: boolean } | null
 }
@@ -94,6 +98,8 @@ export function MobileNativeChatComposer({
   placeholder = NATIVE_CHAT_COMPOSER_PLACEHOLDER,
   filePaths = NO_FILE_PATHS,
   onNeedFiles,
+  skillDiscovery,
+  onNeedSkills,
   stop = null
 }: Props): React.JSX.Element {
   const fallbackInputRef = useRef<TextInput>(null)
@@ -115,6 +121,8 @@ export function MobileNativeChatComposer({
     structuredCatalog: structured?.catalog,
     filePaths,
     onNeedFiles,
+    skillDiscovery,
+    onNeedSkills,
     onSlashMenuOpen: structured?.onSlashMenuOpen,
     // The surface id is the draft key the structured send reads picks back from.
     onPickSkill: (skill) => recordMobileNativeChatPickedSkills(sendSurfaceId, [skill]),

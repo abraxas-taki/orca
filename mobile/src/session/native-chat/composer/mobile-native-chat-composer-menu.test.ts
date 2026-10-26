@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { deriveComposerAutocomplete } from '../../../../../src/shared/native-chat-composer-autocomplete'
+import type { NativeChatSkillDiscoverySnapshot } from '../../../../../src/shared/native-chat-picker-items'
 import {
   boundedMenuItems,
   draftAfterSkillEdit,
@@ -14,6 +15,7 @@ function mobileComposerSlashItems(input: {
   agent: string
   structured: MobileComposerStructuredCatalog | undefined
   query: string
+  discovery?: NativeChatSkillDiscoverySnapshot
 }) {
   const catalog = mobileComposerCatalog(input)
   const draft = `/${input.query}`
@@ -79,6 +81,34 @@ describe('mobileComposerSlashItems', () => {
     })
     expect(items.some((item) => item.token === '/compact')).toBe(true)
     expect(items.some((item) => item.kind === 'skill')).toBe(false)
+  })
+
+  it("lists the host's scanned skills until the session reports its own", () => {
+    const discovery: NativeChatSkillDiscoverySnapshot = {
+      status: 'ready',
+      skills: [
+        {
+          id: 'triage',
+          name: 'triage',
+          description: 'Triage an issue',
+          providers: ['agent-skills'],
+          sourceKind: 'repo',
+          sourceLabel: 'Repo',
+          rootPath: '/repo/.agents/skills',
+          directoryPath: '/repo/.agents/skills/triage',
+          skillFilePath: '/repo/.agents/skills/triage/SKILL.md',
+          installed: true,
+          updatedAt: null
+        }
+      ]
+    }
+    const tokens = (structured: MobileComposerStructuredCatalog | undefined) =>
+      mobileComposerSlashItems({ agent: 'claude', structured, query: '', discovery })
+        .filter((item) => item.kind === 'skill')
+        .map((item) => item.token)
+    expect(tokens(undefined)).toEqual(['/triage'])
+    expect(tokens({ reported: undefined, conversationCommands: [] })).toEqual(['/triage'])
+    expect(tokens({ reported, conversationCommands: [] })).toEqual(['/research', '/review-pr'])
   })
 
   it('keeps a terminal-backed chat on its curated commands', () => {

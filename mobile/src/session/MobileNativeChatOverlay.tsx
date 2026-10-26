@@ -206,6 +206,8 @@ export function MobileNativeChatOverlay({
                   onClearSendError={onClearSendError}
                   filePaths={controller.nativeChatFilePaths}
                   onNeedFiles={controller.loadNativeChatFiles}
+                  skillDiscovery={controller.nativeChatSkills}
+                  onNeedSkills={controller.loadNativeChatSkills}
                   sessionOptions={controller.nativeChatSessionOptions}
                   structuredComposer={structuredComposer}
                   keyboardInset={keyboardInset}

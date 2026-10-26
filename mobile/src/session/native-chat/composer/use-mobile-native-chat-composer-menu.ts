@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   applyMentionSuggestion,
   applyPickerSuggestion,
-  deriveComposerAutocomplete
+  deriveComposerAutocomplete,
+  isSkillPickerTriggered
 } from '../../../../../src/shared/native-chat-composer-autocomplete'
+import type { NativeChatSkillDiscoverySnapshot } from '../../../../../src/shared/native-chat-picker-items'
 import {
   boundedMenuItems,
   draftAfterSkillEdit,
@@ -30,13 +32,15 @@ export function useMobileNativeChatComposerMenu(input: {
   structuredCatalog: MobileComposerStructuredCatalog | undefined
   filePaths: readonly string[]
   onNeedFiles?: (query: string) => void
+  skillDiscovery?: NativeChatSkillDiscoverySnapshot
+  onNeedSkills?: () => void
   /** The `/` menu opened; the session's list may have changed since it was read. */
   onSlashMenuOpen?: () => void
   /** A picked skill the agent selects by file; a send carries it while its token stays. */
   onPickSkill?: (skill: AgentJournalSkillRef) => void
   focusField: () => void
 }) {
-  const { value, onChangeText, agent, structuredCatalog, filePaths } = input
+  const { value, onChangeText, agent, structuredCatalog, filePaths, skillDiscovery } = input
   const [cursor, setCursor] = useState(0)
   // Drives the caret only right after an insert; a permanently controlled `selection` breaks
   // manual caret placement in React Native.
@@ -44,8 +48,9 @@ export function useMobileNativeChatComposerMenu(input: {
   const [menuKind, setMenuKind] = useState<MenuKind | null>(null)
 
   const catalog = useMemo(
-    () => mobileComposerCatalog({ agent, structured: structuredCatalog }),
-    [agent, structuredCatalog]
+    () =>
+      mobileComposerCatalog({ agent, structured: structuredCatalog, discovery: skillDiscovery }),
+    [agent, skillDiscovery, structuredCatalog]
   )
   const skillTokens = useMemo(() => mobileComposerSkillTokens(catalog), [catalog])
   const skillToken = leadingSkillToken(value, skillTokens)
@@ -91,7 +96,14 @@ export function useMobileNativeChatComposerMenu(input: {
     return narrowedMenuItems(boundedMenuItems(autocomplete.items), menuKind)
   }, [autocomplete, filePaths, menuKind])
 
-  const { onNeedFiles, onSlashMenuOpen } = input
+  const { onNeedFiles, onNeedSkills, onSlashMenuOpen } = input
+  // Scan disk skills only once a token needs them, as desktop does.
+  const skillsTriggered = isSkillPickerTriggered(value.slice(0, cursor), catalog.profile)
+  useEffect(() => {
+    if (skillsTriggered) {
+      onNeedSkills?.()
+    }
+  }, [onNeedSkills, skillsTriggered])
   const mentionQuery = autocomplete.mode === 'mention' ? autocomplete.query : null
   useEffect(() => {
     if (mentionQuery !== null) {
@@ -125,7 +137,11 @@ export function useMobileNativeChatComposerMenu(input: {
     }
     const next = applyPickerSuggestion(value, cursor, row)
     // A skill at the start becomes the leading chip; mid-prompt it stays plain text like desktop.
-    if (row.kind === 'skill' && next.insertedToken && next.caret === next.insertedToken.length + 1) {
+    if (
+      row.kind === 'skill' &&
+      next.insertedToken &&
+      next.caret === next.insertedToken.length + 1
+    ) {
       const rest = value.slice(cursor).trimStart()
       onChangeText(`${row.token} ${rest}`)
     } else {

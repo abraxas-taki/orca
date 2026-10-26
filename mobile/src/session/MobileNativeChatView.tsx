@@ -1,3 +1,4 @@
+import type { NativeChatSkillDiscoverySnapshot } from '../../../src/shared/native-chat-picker-items'
 import { useCallback, useMemo } from 'react'
 import { nativeChatTaskListPredecessors } from '../../../src/shared/native-chat-task-list-history'
 import {
@@ -114,6 +115,8 @@ type Props = ComposerTrayProps & {
   onClearSendError?: () => void
   filePaths?: string[]
   onNeedFiles?: (query: string) => void
+  skillDiscovery?: NativeChatSkillDiscoverySnapshot
+  onNeedSkills?: () => void
   sessionOptions?: MobileNativeChatSessionOptionPickersProps | null
   structuredComposer?: MobileNativeChatStructuredComposer | null
   ask?: AskPrompt | null
@@ -181,6 +184,8 @@ export function MobileNativeChatView({
   onClearSendError,
   filePaths,
   onNeedFiles,
+  skillDiscovery,
+  onNeedSkills,
   sessionOptions,
   structuredComposer = null,
   ask,
@@ -402,6 +407,8 @@ export function MobileNativeChatView({
         placeholder={composerPlaceholder}
         filePaths={filePaths}
         onNeedFiles={onNeedFiles}
+        skillDiscovery={skillDiscovery}
+        onNeedSkills={onNeedSkills}
         stop={
           canStop
             ? {

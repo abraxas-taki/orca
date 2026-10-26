@@ -5,7 +5,7 @@ import type { MobileNativeChatTab } from './native-chat/mobile-native-chat-eligi
 import type { StructuredAgentSessionHostSupport } from './mobile-structured-agent-session-host-support'
 import { useMobileNativeChatAskDismiss } from './use-mobile-native-chat-ask-dismiss'
 import { useMobileNativeChatDrafts } from './native-chat/composer/use-mobile-native-chat-drafts'
-import { useMobileNativeChatFileSearch } from './native-chat/composer/use-mobile-native-chat-file-search'
+import { useMobileNativeChatWorkspaceCatalog } from './native-chat/composer/use-mobile-native-chat-workspace-catalog'
 import { useMobileNativeChatMessageSend } from './use-mobile-native-chat-message-send'
 import { useMobileNativeChatSessionOptionController } from './use-mobile-native-chat-session-option-controller'
 import { useMobileNativeChatSessionLane } from './use-mobile-native-chat-session-lane'
@@ -174,7 +174,7 @@ export function useMobileNativeChatController(args: {
   const activeTurn = activeChatStructured ? structuredNativeChat : terminalTurn
   const nativeChatAgentWorking = activeTurn.isWorking
 
-  const nativeChatFiles = useMobileNativeChatFileSearch({ client, worktreeId })
+  const workspaceCatalog = useMobileNativeChatWorkspaceCatalog(args, activeChatAgent)
 
   // Break the send/options cycle through a ref so snapshot changes cannot recreate send callbacks.
   const recordSessionOptionCommandRef = useRef<(command: string) => void>(() => {})
@@ -297,7 +297,7 @@ export function useMobileNativeChatController(args: {
     handleNativeChatStop: activeChatStructured ? structuredNativeChat.cancel : terminalTurn.stop,
     nativeChatQueued: structuredNativeChat.queued,
     nativeChatBackgroundTasks: activeChatStructured ? structuredNativeChat.backgroundTasks : null,
-    ...nativeChatFiles,
+    ...workspaceCatalog,
     handleNativeChatSend: activeChatStructured
       ? structuredNativeChatSend.send
       : handleNativeChatSend,
