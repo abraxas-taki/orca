@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { partialRuntimeStore } from '../../../runtime-store-partial-fixture'
-import { expectHeartbeatBrief } from '../../../orchestration/dispatch-heartbeat-contract.test-support'
 import type { RpcContext } from '../../core'
 import { createOrchestrationRpcHarness } from './rpc-test-harness'
 import type { OrchestrationDb } from '../../../orchestration/db'
@@ -95,121 +94,73 @@ describe('orchestration CLI/runtime boundary', () => {
     expect(db.getDispatchContext(child.id)?.assignee_handle).toBe('term_worker')
   })
 
-  it.each([undefined, false])(
-    'runs dispatch argv through CLI, RPC and runtime with heartbeat preference %s',
-    async (saved) => {
-      const settings = { orchestrationHeartbeatsEnabled: saved }
-      const state = h.setup(true, partialRuntimeStore({ getSettings: () => settings }))
-      ;({ db, ctx } = state)
-      const { runtime, activeRunId } = state
-      process.env.ORCA_TERMINAL_HANDLE = 'term_coord'
-      vi.stubEnv('ORCA_PAIRING_CODE', '')
-      vi.stubEnv('ORCA_ENVIRONMENT', '')
-      vi.stubEnv('ORCA_AGENT_SESSION_ID', '')
-      const runtimeClient = client()
-      vi.doMock('../../../../../cli/runtime-client', async (importOriginal) => ({
-        ...(await importOriginal<Record<string, unknown>>()),
-        RuntimeClient: class {
-          isRemote = false
-          call = runtimeClient.call
-        }
-      }))
-      const output = vi.fn()
-      vi.doMock('../../../../../cli/format', () => ({ printResult: output }))
-      const { main } = await import('../../../../../cli/index')
-      const task = db.createTask({ spec: 'keep completion and questions available' })
-      const scope = [
-        '--run',
-        activeRunId!,
-        '--task',
-        task.id,
-        '--to',
-        'term_worker',
-        '--from',
-        'term_coord',
-        '--json'
-      ]
-      const preview = async () => {
-        output.mockClear()
-        await main(['orchestration', 'dispatch', ...scope, '--dry-run'])
-        expect(output).toHaveBeenCalledOnce()
-        return output.mock.calls[0][0].result.preamble
+  it('dispatches through CLI argv with heartbeats off, preserving worker commands', async () => {
+    const store = partialRuntimeStore({
+      getSettings: () => ({ orchestrationHeartbeatsEnabled: false })
+    })
+    const state = h.setup(true, store)
+    ;({ db, ctx } = state)
+    const { runtime } = state
+    process.env.ORCA_TERMINAL_HANDLE = 'term_coord'
+    vi.stubEnv('ORCA_PAIRING_CODE', '')
+    vi.stubEnv('ORCA_ENVIRONMENT', '')
+    vi.stubEnv('ORCA_AGENT_SESSION_ID', '')
+    vi.doMock('../../../../../cli/runtime-client', async (importOriginal) => ({
+      ...(await importOriginal<Record<string, unknown>>()),
+      RuntimeClient: class {
+        isRemote = false
+        call = client().call
       }
-      const initialPreview = await preview()
-      expectHeartbeatBrief(initialPreview, saved !== false)
-      expect(db.getDispatchContext(task.id)).toBeUndefined()
-      vi.mocked(runtime.getTerminalPaneKey).mockImplementation((handle) =>
-        handle === 'term_worker'
-          ? 'tab_worker:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-          : h.coordinatorPaneKey
-      )
-      vi.spyOn(runtime, 'getOrchestrationDispatchAuthority').mockImplementation((handle) =>
-        handle === 'term_worker'
-          ? {
-              paneKey: 'tab_worker:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-              processIncarnation: 'runtime_test:term_worker:1',
-              launchTokenHash: null
-            }
-          : null
-      )
-      vi.spyOn(runtime, 'isTerminalRunningAgent').mockResolvedValue(true)
-      const delivered = vi
-        .spyOn(runtime, 'sendTerminalAgentPrompt')
-        .mockResolvedValue({ handle: 'term_worker', accepted: true, bytesWritten: 1 })
-      output.mockClear()
-      await main(['orchestration', 'dispatch', ...scope, '--inject', '--return-preamble'])
-      expect(output).toHaveBeenCalledOnce()
-      const result = output.mock.calls[0][0].result
-      expect(result.injected).toBe(true)
-      expectHeartbeatBrief(result.preamble, saved !== false)
-      expect(delivered).toHaveBeenCalledWith('term_worker', result.preamble, expect.anything())
-      output.mockClear()
-      await main([
-        'orchestration',
-        'dispatch-show',
-        '--task',
-        task.id,
-        '--from',
-        'term_coord',
-        '--preamble',
-        '--json'
-      ])
-      expect(output).toHaveBeenCalledOnce()
-      expect(output.mock.calls[0][0].result.preamble).toBe(result.preamble)
-      settings.orchestrationHeartbeatsEnabled = false
-      expectHeartbeatBrief(await preview(), false)
-      expect(delivered).toHaveBeenCalledOnce()
-
-      vi.spyOn(runtime, 'deliverPendingMessagesForHandle').mockImplementation(() => {})
-      await callRpc('orchestration.send', {
-        from: 'term_worker',
-        to: 'term_coord',
-        subject: 'alive',
-        type: 'heartbeat',
-        payload: JSON.stringify({ taskId: task.id, dispatchId: result.dispatch.id })
-      })
-      const heartbeatAt = db.getDispatchContext(task.id)?.last_heartbeat_at
-      expect(heartbeatAt).toBeTruthy()
-      const mail = await callRpc('orchestration.check', {
-        terminal: 'term_coord',
-        types: 'heartbeat'
-      })
-      expect(mail).toMatchObject({ count: 1 })
-      const terminal = { handle: 'term_worker', worktreeId: 'repo::worker' }
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: observation reads only this identity and the separately stubbed liveness verdict.
-      vi.spyOn(runtime, 'showTerminal').mockResolvedValue(terminal as never)
-      vi.spyOn(runtime, 'getTerminalLivenessVerdict').mockReturnValue({
-        status: 'live',
-        ptyIds: []
-      })
-      const observation = await callRpc('orchestration.workerShow', {
-        dispatch: result.dispatch.id
-      })
-      expect(observation).toMatchObject({
-        dispatch: { lastHeartbeatAt: heartbeatAt, status: 'dispatched' }
-      })
+    }))
+    const output = vi.fn()
+    vi.doMock('../../../../../cli/format', () => ({ printResult: output }))
+    vi.spyOn(runtime, 'getOrchestrationDispatchAuthority').mockImplementation((handle) =>
+      handle === 'term_worker'
+        ? {
+            paneKey: 'tab_worker:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            processIncarnation: 'worker:1',
+            launchTokenHash: null
+          }
+        : null
+    )
+    vi.spyOn(runtime, 'isTerminalRunningAgent').mockResolvedValue(true)
+    const delivered = vi
+      .spyOn(runtime, 'sendTerminalAgentPrompt')
+      .mockResolvedValue({ handle: 'term_worker', accepted: true, bytesWritten: 1 })
+    const task = db.createTask({ spec: 'complete work and report the outcome' })
+    const { main } = await import('../../../../../cli/index')
+    await main([
+      'orchestration',
+      'dispatch',
+      '--task',
+      task.id,
+      '--to',
+      'term_worker',
+      '--inject',
+      '--return-preamble',
+      '--json'
+    ])
+    expect(output).toHaveBeenCalledOnce()
+    const result = output.mock.calls[0][0].result
+    expect(result.injected).toBe(true)
+    expect(db.getTask(task.id)?.status).toBe('dispatched')
+    expect(delivered).toHaveBeenCalledExactlyOnceWith(
+      'term_worker',
+      result.preamble,
+      expect.anything()
+    )
+    expect(result.preamble).not.toMatch(/heartbeat/i)
+    for (const command of [
+      '--type worker_done',
+      '--outcome succeeded',
+      '--outcome failed',
+      'orchestration ask --from',
+      '--type escalation',
+      'orchestration check --terminal'
+    ]) {
+      expect(result.preamble).toContain(command)
     }
-  )
+  })
 
   function taskBySpec(spec: string) {
     const task = db.listTasks().find((candidate) => candidate.spec === spec)

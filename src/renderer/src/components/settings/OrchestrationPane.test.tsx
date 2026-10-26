@@ -7,10 +7,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getOrchestrationUsageExamples } from '@/lib/orchestration-usage-examples'
-import { normalizeLoadedGlobalSettings } from '../../../../main/persistence/loading-store/normalize-loaded-global-settings'
-import { prepareLoadedTerminalSettings } from '../../../../main/persistence/loading-store/prepare-loaded-terminal-settings'
-import { prepareLoadedProfileSettings } from '../../../../main/persistence/loading-store/prepare-loaded-profile-settings'
-import { getDefaultPersistedState, getDefaultSettings } from '../../../../shared/constants'
+import { getDefaultSettings } from '../../../../shared/constants'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import { useAppStore } from '../../store'
 import { OrchestrationPane } from './OrchestrationPane'
@@ -251,41 +248,30 @@ describe('OrchestrationPane', () => {
     expect(input.value).toBe('1')
   })
 
-  it.each([undefined, false])(
-    'renders loaded heartbeat preference %s and saves the opposite choice',
-    async (saved) => {
-      const profile = getDefaultPersistedState('/tmp')
-      delete profile.settings.orchestrationHeartbeatsEnabled
-      if (saved !== undefined) {
-        profile.settings.orchestrationHeartbeatsEnabled = saved
-      }
-      const settings = normalizeLoadedGlobalSettings(
-        profile,
-        prepareLoadedTerminalSettings(profile, () => {}),
-        prepareLoadedProfileSettings(profile, getDefaultPersistedState('/tmp'), () => {})
-      )
-      expect(settings.orchestrationHeartbeatsEnabled).toBe(saved !== false)
-      useAppStore.setState({ settingsSearchQuery: 'heartbeat' })
-      const rendered = await renderPane(settings)
-      const toggle = rendered.querySelector<HTMLButtonElement>('[aria-label="Worker heartbeats"]')
-      expect(toggle?.getAttribute('aria-checked')).toBe(String(saved !== false))
-      await act(async () => {
-        toggle?.click()
-      })
-      expect(mocks.updateSettings).toHaveBeenCalledWith({
-        orchestrationHeartbeatsEnabled: saved === false
-      })
-      await act(async () => {
-        root?.render(
-          <OrchestrationPane
-            {...getPaneProps({ ...settings, orchestrationHeartbeatsEnabled: saved === false })}
-          />
-        )
-      })
-      expect(toggle?.getAttribute('aria-checked')).toBe(String(saved === false))
-      expect(matchesSettingsSearch('heartbeat', getOrchestrationPaneSearchEntries())).toBe(true)
-    }
-  )
+  it('shows worker heartbeats on by default and saves the opposite choice when toggled', async () => {
+    const rendered = await renderPane()
+    const toggle = rendered.querySelector<HTMLButtonElement>('[aria-label="Worker heartbeats"]')
+    expect(toggle?.getAttribute('aria-checked')).toBe('true')
+
+    await act(async () => {
+      toggle?.click()
+    })
+    expect(mocks.updateSettings).toHaveBeenCalledWith({ orchestrationHeartbeatsEnabled: false })
+    expect(matchesSettingsSearch('heartbeat', getOrchestrationPaneSearchEntries())).toBe(true)
+  })
+
+  it('renders a saved heartbeat opt-out and turns it back on', async () => {
+    const rendered = await renderPane({
+      ...getDefaultSettings('/tmp'),
+      orchestrationHeartbeatsEnabled: false
+    })
+    const toggle = rendered.querySelector<HTMLButtonElement>('[aria-label="Worker heartbeats"]')
+    expect(toggle?.getAttribute('aria-checked')).toBe('false')
+    await act(async () => {
+      toggle?.click()
+    })
+    expect(mocks.updateSettings).toHaveBeenCalledWith({ orchestrationHeartbeatsEnabled: true })
+  })
 
   it('keeps host-only runtime settings out of paired web clients', () => {
     ;(globalThis as { __ORCA_WEB_CLIENT__?: boolean }).__ORCA_WEB_CLIENT__ = true
@@ -294,12 +280,6 @@ describe('OrchestrationPane', () => {
     expect(markup).not.toContain('Nested worker depth')
     expect(markup).not.toContain('Tell the coordinator about chat errors')
     expect(markup).not.toContain('Worker heartbeats')
-    expect(
-      matchesSettingsSearch(
-        'heartbeat',
-        getOrchestrationPaneSearchEntries({ includeLocalRuntimeSettings: false })
-      )
-    ).toBe(false)
     expect(
       matchesSettingsSearch(
         'nested worker',

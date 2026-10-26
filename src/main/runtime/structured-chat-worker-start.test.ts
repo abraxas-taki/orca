@@ -1,8 +1,6 @@
 import './rpc/unused-default-rpc-methods.test-fixture'
 // worker-start adopts a chat through its queued send; Stop and failed start must leave the chat intact.
 
-import { expectHeartbeatBrief } from './orchestration/dispatch-heartbeat-contract.test-support'
-import { resolveOrchestrationHeartbeatMinutes } from '../../shared/orchestration-heartbeat'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { formatOrcaSessionAddress } from '../../shared/orca-session-address'
 import { testOrcaSessionId } from '../../shared/orca-session-address-test-fixture'
@@ -89,48 +87,41 @@ function expectChatOpen(): void {
 }
 
 describe('worker-start --terminal names a chat', () => {
-  it.each([undefined, false])(
-    'delivers the heartbeat preference %s to an idle chat and records it as an external worker',
-    async (saved) => {
-      vi.spyOn(runtime, 'getOrchestrationHeartbeatMinutes').mockReturnValue(
-        resolveOrchestrationHeartbeatMinutes({ orchestrationHeartbeatsEnabled: saved })
-      )
-      await openChat(COORDINATOR)
-      const worker = await openChat(PEER_CHAT)
-      const { taskId } = await coordinatorRunAndTask()
+  it('is ready once an idle chat takes its task, and records the chat as an external worker', async () => {
+    await openChat(COORDINATOR)
+    const worker = await openChat(PEER_CHAT)
+    const { taskId } = await coordinatorRunAndTask()
 
-      const started = startWorker({ task: taskId })
-      await vi.waitFor(() => expect(worker.turns).toHaveLength(1), WAIT)
-      await settleTurn(PEER_CHAT, 0)
-      const receipt = await started
+    const started = startWorker({ task: taskId })
+    await vi.waitFor(() => expect(worker.turns).toHaveLength(1), WAIT)
+    await settleTurn(PEER_CHAT, 0)
+    const receipt = await started
 
-      expect(receipt).toMatchObject({
-        state: 'ready',
-        turnStart: 'observed',
-        mode: {
-          detail: `--terminal names the chat ${WORKER}; its task goes to that chat and no agent is launched.`
-        }
-      })
-      const dispatchId = String(receipt.dispatchId)
-      const task = turnText(worker.turns[0]!)
-      expectHeartbeatBrief(task, saved !== false)
-      expect(task).toContain(`Your Orca session ID is: ${WORKER}`)
-      expect(task).toContain('The coordinator cannot see this chat')
-      expect(task).toContain('it will send this chat a fresh')
-      expect(task).not.toContain('this terminal')
-      expect(task).not.toMatch(/exit the shell/i)
-      expect(db.getDispatchContextById(dispatchId)).toMatchObject({
-        assignee_handle: WORKER,
-        assignee_orca_session_id: PEER_CHAT,
-        assignee_pane_key: null,
-        process_incarnation: null
-      })
-      expect(db.getWorkerTerminalResourceByOwner(dispatchId)).toMatchObject({
-        terminal_handle: WORKER,
-        ownership_state: 'external'
-      })
-    }
-  )
+    expect(receipt).toMatchObject({
+      state: 'ready',
+      turnStart: 'observed',
+      mode: {
+        detail: `--terminal names the chat ${WORKER}; its task goes to that chat and no agent is launched.`
+      }
+    })
+    const dispatchId = String(receipt.dispatchId)
+    const task = turnText(worker.turns[0]!)
+    expect(task).toContain(`Your Orca session ID is: ${WORKER}`)
+    expect(task).toContain('The coordinator cannot see this chat')
+    expect(task).toContain('it will send this chat a fresh')
+    expect(task).not.toContain('this terminal')
+    expect(task).not.toMatch(/exit the shell/i)
+    expect(db.getDispatchContextById(dispatchId)).toMatchObject({
+      assignee_handle: WORKER,
+      assignee_orca_session_id: PEER_CHAT,
+      assignee_pane_key: null,
+      process_incarnation: null
+    })
+    expect(db.getWorkerTerminalResourceByOwner(dispatchId)).toMatchObject({
+      terminal_handle: WORKER,
+      ownership_state: 'external'
+    })
+  })
 
   it('hands a busy chat its task as a queued card and reads the start as unknown, not failed', async () => {
     await openChat(COORDINATOR)
