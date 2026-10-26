@@ -1,4 +1,4 @@
-import { resolveTerminalFileUrlTarget } from '../../../shared/terminal-file-url-target'
+import { resolveTerminalFileUrlTarget } from './terminal-file-url-target'
 import type { ParsedTerminalFileLink } from './terminal-links'
 
 // Share OSC 8 resolution for plain file URIs missed by HTTP/local-path detectors.

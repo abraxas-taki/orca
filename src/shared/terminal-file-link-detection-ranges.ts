@@ -55,7 +55,8 @@ export function mergeTerminalFileLinkRanges(ranges: [number, number][]): [number
   const sorted = ranges.slice().sort((left, right) => left[0] - right[0] || left[1] - right[1])
   const merged: [number, number][] = []
   for (const range of sorted) {
-    const last = merged.at(-1)
+    // oxlint-disable-next-line unicorn/prefer-at -- the phone's terminal WebView (Chrome 74) has no Array#at
+    const last: [number, number] | undefined = merged[merged.length - 1]
     if (!last || range[0] > last[1]) {
       merged.push([range[0], range[1]])
       continue
@@ -88,7 +89,8 @@ export function insertTerminalFileLinkClaimedRange(
   claimedRanges: [number, number][],
   range: [number, number]
 ): void {
-  const last = claimedRanges.at(-1)
+  // oxlint-disable-next-line unicorn/prefer-at -- the phone's terminal WebView (Chrome 74) has no Array#at
+  const last: [number, number] | undefined = claimedRanges[claimedRanges.length - 1]
   if (!last || last[0] <= range[0]) {
     claimedRanges.push(range)
     return

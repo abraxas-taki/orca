@@ -1,5 +1,5 @@
 import { TERMINAL_HTTP_URL_MAX_LENGTH } from './terminal-http-link-limits'
-import { isProseUrlTerminator, PROSE_HTTP_URL_SOURCE } from '../../../../shared/prose-url-boundary'
+import { isProseUrlTerminator, PROSE_HTTP_URL_SOURCE } from './prose-url-boundary'
 
 type ParsedTerminalHttpLink = {
   url: string

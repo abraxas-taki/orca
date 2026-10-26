@@ -172,7 +172,8 @@ function buildLineEndingSpacedPathPrefixRanges(
       })
     }
   }
-  return ranges.toReversed()
+  // oxlint-disable-next-line unicorn/no-array-reverse -- the phone's terminal WebView (Chrome 74) has no Array#toReversed; ranges is local
+  return ranges.reverse()
 }
 
 /** Detect separator paths with optional :line:col, ported from VS Code TerminalLocalLinkDetector. */
@@ -299,9 +300,14 @@ export function resolveTerminalFileLinkText(
   cwd: string,
   homePath?: string | null
 ): ResolvedTerminalFileLink | null {
-  const links = extractTerminalFileLinks(linkText)
-  const exactLink = links.find((link) => link.startIndex === 0 && link.endIndex === linkText.length)
+  const exactLink = findExactTerminalFileLink(linkText)
   return exactLink ? resolveTerminalFileLink(exactLink, cwd, homePath) : null
+}
+
+/** The file link spanning all of `linkText`, as an OSC 8 target or other whole-text link names it. */
+export function findExactTerminalFileLink(linkText: string): ParsedTerminalFileLink | null {
+  const links = extractTerminalFileLinks(linkText)
+  return links.find((link) => link.startIndex === 0 && link.endIndex === linkText.length) ?? null
 }
 
 export function isPathInsideWorktree(filePath: string, worktreePath: string): boolean {

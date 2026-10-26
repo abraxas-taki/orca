@@ -1,3 +1,4 @@
+import type { ParsedFileLinkLocation } from '../../../src/shared/file-link-location'
 import type {
   RuntimeNativeChatFileContext,
   RuntimeTerminalPathResolution
@@ -9,6 +10,7 @@ import { fileTapOpenRun, fileTapPathResolve } from './mobile-session-launch-oper
 import { shouldActivateOpenedMobileSessionTab } from './opened-mobile-session-tab'
 import { isRendererUnavailableReply } from '../transport/renderer-unavailable-reply'
 import type { RpcOperationSender } from '../transport/rpc-operation-sender'
+import type { RpcResponse } from '../transport/types'
 
 export type FileTapSessionTab = {
   id: string
@@ -26,6 +28,8 @@ export type OpenMobileFileTapOptions<T extends FileTapSessionTab> = {
   nativeChatContext?: RuntimeNativeChatFileContext | null
   line: number | null
   column: number | null
+  // Replaces pathText/line/column with every reading of a terminal tap; like desktop, the longest that exists opens.
+  candidates?: readonly ParsedFileLinkLocation[]
   pushPreviewRoute: (href: ReturnType<typeof createMobileFilePreviewHref>) => void
   openBrowser: (url: string) => void
   triggerOpenFeedback: () => void
@@ -58,6 +62,39 @@ export function openMobileFileTap<T extends FileTapSessionTab>(
   })
 }
 
+function requestFileTapResolution<T extends FileTapSessionTab>(
+  options: OpenMobileFileTapOptions<T>,
+  pathText: string
+) {
+  return fileTapPathResolve.request(
+    options.client,
+    {
+      worktree: `id:${options.worktreeId}`,
+      pathText,
+      // Why: opts into sibling-workspace resolutions; this caller honors resolved.worktree.
+      crossWorkspace: true,
+      ...(options.terminalHandle && options.terminalHandle.trim().length > 0
+        ? { terminal: options.terminalHandle }
+        : {}),
+      ...(options.cwd && options.cwd.trim().length > 0 ? { cwd: options.cwd } : {}),
+      ...(options.nativeChatContext ? { nativeChatContext: options.nativeChatContext } : {})
+    },
+    { timeoutMs: 10_000 }
+  )
+}
+
+function existingFileTapResolution(
+  response: RpcResponse | null
+): RuntimeTerminalPathResolution | null {
+  const accepted = response ? fileTapPathResolve.interpret(response) : null
+  if (!accepted?.accepted) {
+    return null
+  }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+  const resolved = accepted.value as RuntimeTerminalPathResolution
+  return resolved.exists && !resolved.isDirectory ? resolved : null
+}
+
 function reportOpenFailure<T extends FileTapSessionTab>(
   options: OpenMobileFileTapOptions<T>
 ): void {
@@ -72,30 +109,26 @@ function reportOpenFailure<T extends FileTapSessionTab>(
 async function openMobileFileTapAsync<T extends FileTapSessionTab>(
   options: OpenMobileFileTapOptions<T>
 ): Promise<void> {
-  const worktree = `id:${options.worktreeId}`
-  const response = await fileTapPathResolve.request(
-    options.client,
-    {
-      worktree,
-      pathText: options.pathText,
-      // Why: opts into sibling-workspace resolutions; this caller honors resolved.worktree.
-      crossWorkspace: true,
-      ...(options.terminalHandle && options.terminalHandle.trim().length > 0
-        ? { terminal: options.terminalHandle }
-        : {}),
-      ...(options.cwd && options.cwd.trim().length > 0 ? { cwd: options.cwd } : {}),
-      ...(options.nativeChatContext ? { nativeChatContext: options.nativeChatContext } : {})
-    },
-    { timeoutMs: 10_000 }
+  const targets: readonly ParsedFileLinkLocation[] = options.candidates?.length
+    ? options.candidates
+    : [options]
+  const responses = await Promise.all(
+    // Why: a reading the host cannot answer must not hide a sibling.
+    targets.map((target) => requestFileTapResolution(options, target.pathText).catch(() => null))
   )
-  const accepted = fileTapPathResolve.interpret(response)
-  if (!accepted.accepted) {
-    reportOpenFailure(options)
-    return
+  const resolutions = responses.map(existingFileTapResolution)
+  let foundIndex = -1
+  for (let index = 0; index < targets.length; index++) {
+    if (
+      resolutions[index] &&
+      (foundIndex === -1 || targets[index].pathText.length > targets[foundIndex].pathText.length)
+    ) {
+      foundIndex = index
+    }
   }
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-  const resolved = accepted.value as RuntimeTerminalPathResolution
-  if (!resolved.exists || resolved.isDirectory) {
+  const target = targets[foundIndex]
+  const resolved = resolutions[foundIndex]
+  if (!target || !resolved) {
     reportOpenFailure(options)
     return
   }
@@ -117,7 +150,7 @@ async function openMobileFileTapAsync<T extends FileTapSessionTab>(
         source: 'terminalArtifact',
         absolutePath: resolved.openTarget.absolutePath,
         grantId: resolved.openTarget.grantId,
-        pathText: options.pathText,
+        pathText: target.pathText,
         ...(options.cwd && options.cwd.trim().length > 0 ? { cwd: options.cwd } : {}),
         ...(options.terminalHandle && options.terminalHandle.trim().length > 0
           ? { terminal: options.terminalHandle }
@@ -129,8 +162,8 @@ async function openMobileFileTapAsync<T extends FileTapSessionTab>(
             }
           : {}),
         name: displayNameFromPath(resolved.openTarget.absolutePath),
-        ...(options.line !== null ? { line: String(options.line) } : {}),
-        ...(options.column !== null ? { column: String(options.column) } : {}),
+        ...(target.line !== null ? { line: String(target.line) } : {}),
+        ...(target.column !== null ? { column: String(target.column) } : {}),
         ...(resolvedWorktreeName ? { worktreeName: resolvedWorktreeName } : {})
       })
     )
@@ -154,16 +187,12 @@ async function openMobileFileTapAsync<T extends FileTapSessionTab>(
         source: 'worktree',
         relativePath: openedPath,
         name: displayNameFromPath(openedPath),
-        ...(options.line !== null ? { line: String(options.line) } : {}),
-        ...(options.column !== null ? { column: String(options.column) } : {}),
+        ...(target.line !== null ? { line: String(target.line) } : {}),
+        ...(target.column !== null ? { column: String(target.column) } : {}),
         ...(resolvedWorktreeName ? { worktreeName: resolvedWorktreeName } : {})
       })
     )
-  if (
-    resolvedWorktreeId !== options.worktreeId ||
-    options.line !== null ||
-    options.column !== null
-  ) {
+  if (resolvedWorktreeId !== options.worktreeId || target.line !== null || target.column !== null) {
     pushWorktreePreview()
     return
   }

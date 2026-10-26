@@ -78,7 +78,7 @@ describe('openMobileFileTap', () => {
       switchSessionTab: vi.fn(),
       scheduleDelayedAction: vi.fn()
     })
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(client.sendRequest).toHaveBeenCalledWith(
       'files.resolveTerminalPath',
@@ -146,8 +146,6 @@ describe('openMobileFileTap', () => {
       switchSessionTab,
       scheduleDelayedAction
     })
-    await Promise.resolve()
-    await Promise.resolve()
     await vi.advanceTimersByTimeAsync(0)
 
     expect(client.sendRequest).toHaveBeenCalledWith(
@@ -156,6 +154,58 @@ describe('openMobileFileTap', () => {
       { timeoutMs: 15_000 }
     )
     expect(switchSessionTab).toHaveBeenCalledWith(openedTab)
+  })
+
+  it('opens the longest terminal reading that exists, as desktop does', async () => {
+    const existing = new Set(['src/index.ts', 'src/index.ts.map'])
+    const client = {
+      sendRequest: vi.fn<SendRequest>(async (method, params) => {
+        if (method === 'files.open') {
+          return ok({ opened: true })
+        }
+        const pathText =
+          typeof params === 'object' && params !== null && 'pathText' in params
+            ? String(params.pathText)
+            : ''
+        return ok({
+          worktree: 'wt-1',
+          relativePath: pathText,
+          absolutePath: `/repo/${pathText}`,
+          exists: existing.has(pathText),
+          isDirectory: false
+        })
+      })
+    }
+
+    openMobileFileTap({
+      client,
+      hostId: 'host-1',
+      worktreeId: 'wt-1',
+      pathText: 'src/index.ts',
+      line: null,
+      column: null,
+      candidates: ['src/index.ts', 'src/index.ts.map', 'src/index.ts.map.bak'].map((pathText) => ({
+        pathText,
+        line: null,
+        column: null
+      })),
+      pushPreviewRoute: vi.fn(),
+      openBrowser: vi.fn(),
+      triggerOpenFeedback: vi.fn(),
+      fetchSessionTabs: vi.fn(),
+      getSessionTabs: () => [],
+      getActiveSessionTabId: () => 'terminal-tab',
+      getActivationState: activeTerminalState,
+      switchSessionTab: vi.fn(),
+      scheduleDelayedAction: vi.fn()
+    })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(client.sendRequest).toHaveBeenCalledWith(
+      'files.open',
+      { worktree: 'id:wt-1', relativePath: 'src/index.ts.map' },
+      { timeoutMs: 15_000 }
+    )
   })
 
   it('opens a sibling terminal path through the resolved owning worktree', async () => {
@@ -193,8 +243,7 @@ describe('openMobileFileTap', () => {
       switchSessionTab: vi.fn(),
       scheduleDelayedAction: vi.fn()
     })
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(pushPreviewRoute).toHaveBeenCalledWith({
       pathname: '/h/[hostId]/files/preview/[worktreeId]',
@@ -245,7 +294,7 @@ describe('openMobileFileTap', () => {
       switchSessionTab: vi.fn(),
       scheduleDelayedAction: vi.fn()
     })
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(pushPreviewRoute).toHaveBeenCalledWith({
       pathname: '/h/[hostId]/files/preview/[worktreeId]',
@@ -298,7 +347,7 @@ describe('openMobileFileTap', () => {
       switchSessionTab: vi.fn(),
       scheduleDelayedAction: vi.fn()
     })
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(openBrowser).toHaveBeenCalledWith('file:///repo/public/report%20%231%3F.html')
     expect(client.sendRequest).not.toHaveBeenCalledWith('files.open', expect.anything())
@@ -341,7 +390,7 @@ describe('openMobileFileTap', () => {
       switchSessionTab: vi.fn(),
       scheduleDelayedAction: vi.fn()
     })
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(client.sendRequest).toHaveBeenCalledWith(
       'files.resolveTerminalPath',
@@ -392,8 +441,7 @@ describe('openMobileFileTap', () => {
       switchSessionTab: vi.fn(),
       scheduleDelayedAction: vi.fn()
     })
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(openBrowser).not.toHaveBeenCalled()
     expect(client.sendRequest).toHaveBeenCalledWith(
@@ -454,8 +502,7 @@ describe('openMobileFileTap', () => {
         }
       })
     )
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(pushPreviewRoute).not.toHaveBeenCalled()
   })
@@ -497,9 +544,7 @@ describe('openMobileFileTap', () => {
       scheduleDelayedAction: vi.fn(),
       onOpenFailed
     })
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(onOpenFailed).toHaveBeenCalledTimes(1)
   })
@@ -542,9 +587,7 @@ describe('openMobileFileTap', () => {
       scheduleDelayedAction,
       onOpenFailed
     })
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(onOpenFailed).toHaveBeenCalledTimes(1)
     expect(scheduleDelayedAction).not.toHaveBeenCalled()
@@ -583,8 +626,7 @@ describe('openMobileFileTap', () => {
       scheduleDelayedAction: vi.fn(),
       onOpenFailed
     })
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(onOpenFailed).not.toHaveBeenCalled()
   })
@@ -628,8 +670,7 @@ describe('openMobileFileTap', () => {
       scheduleDelayedAction: vi.fn(),
       onOpenFailed
     })
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(onOpenFailed).not.toHaveBeenCalled()
   })
@@ -675,10 +716,9 @@ describe('openMobileFileTap', () => {
       switchSessionTab,
       scheduleDelayedAction: (callback) => callbacks.push(callback)
     })
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
     callbacks.forEach((callback) => callback())
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(switchSessionTab).not.toHaveBeenCalled()
   })

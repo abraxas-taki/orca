@@ -1,4 +1,3 @@
-import type { IBufferLine, IBufferRange } from '@xterm/xterm'
 import {
   canStartHardWrappedPath,
   getHardWrappedPathPrefix,
@@ -9,13 +8,26 @@ import {
   type HardWrappedPathFragmentRow
 } from './hard-wrapped-terminal-path-fragments'
 
-type TerminalBufferLineWithColumns = IBufferLine & {
+// Structural subset of xterm's buffer API so desktop xterm and the mobile document both fit.
+export type TerminalLinkBufferCell = { getWidth?(): number; getChars?(): string }
+
+export type TerminalLinkBufferLine = {
+  readonly isWrapped: boolean
+  readonly length: number
+  getCell?(x: number): TerminalLinkBufferCell | undefined
   translateToString(
-    trimRight?: boolean,
+    trimRight: boolean,
     startColumn?: number,
     endColumn?: number,
     outColumns?: number[]
   ): string
+}
+
+export type TerminalLinkBuffer = { getLine(y: number): TerminalLinkBufferLine | undefined }
+
+export type TerminalLinkBufferRange = {
+  start: { x: number; y: number }
+  end: { x: number; y: number }
 }
 
 type WrappedLogicalRow = {
@@ -37,14 +49,16 @@ export type WrappedLogicalLine = {
 const MAX_SOFT_WRAPPED_LINK_ROWS = 200
 const MAX_SOFT_WRAPPED_LINK_CHARS = 20_000
 
-function translateLineWithCells(line: IBufferLine): { text: string; columns: number[] } | null {
+function translateLineWithCells(
+  line: TerminalLinkBufferLine
+): { text: string; columns: number[] } | null {
   let text = ''
   const columns: number[] = []
   let endColumn = 0
 
   for (let x = 0; x < line.length; x++) {
-    const cell = line.getCell(x)
-    if (!cell) {
+    const cell = line.getCell?.(x)
+    if (!cell?.getWidth || !cell.getChars) {
       return null
     }
 
@@ -65,14 +79,12 @@ function translateLineWithCells(line: IBufferLine): { text: string; columns: num
   return { text, columns }
 }
 
-export function translateLineWithColumns(line: IBufferLine): { text: string; columns: number[] } {
+export function translateLineWithColumns(line: TerminalLinkBufferLine): {
+  text: string
+  columns: number[]
+} {
   const columns: number[] = []
-  const text = (line as TerminalBufferLineWithColumns).translateToString(
-    false,
-    0,
-    undefined,
-    columns
-  )
+  const text = line.translateToString(false, 0, undefined, columns)
 
   if (columns.length === text.length + 1) {
     return { text, columns }
@@ -89,7 +101,7 @@ export function translateLineWithColumns(line: IBufferLine): { text: string; col
   }
 }
 
-function trimHardWrappedPathRow(line: IBufferLine): HardWrappedPathFragmentRow | null {
+function trimHardWrappedPathRow(line: TerminalLinkBufferLine): HardWrappedPathFragmentRow | null {
   const translated = translateLineWithColumns(line)
   const startIndex = translated.text.search(/\S/)
   if (startIndex === -1) {
@@ -139,7 +151,7 @@ function toWrappedLogicalLine(rows: WrappedLogicalRow[], text: string): WrappedL
 }
 
 export function buildWrappedLogicalLine(
-  buffer: { getLine(y: number): IBufferLine | undefined },
+  buffer: TerminalLinkBuffer,
   bufferLineNumber: number
 ): WrappedLogicalLine | null {
   const y = bufferLineNumber - 1
@@ -195,7 +207,7 @@ export function buildWrappedLogicalLine(
 }
 
 export function buildHardWrappedPathLogicalLineCandidates(
-  buffer: { getLine(y: number): IBufferLine | undefined },
+  buffer: TerminalLinkBuffer,
   bufferLineNumber: number,
   maxRows = 20
 ): WrappedLogicalLine[] {
@@ -285,7 +297,8 @@ export function buildHardWrappedPathLogicalLineCandidates(
       break
     }
 
-    const lastBoundaryRow = boundaryRows.at(-1)!
+    // oxlint-disable-next-line unicorn/prefer-at -- the phone's terminal WebView (Chrome 74) has no Array#at
+    const lastBoundaryRow = boundaryRows[boundaryRows.length - 1]
     if (
       !reachedMixedContinuation &&
       isIncompleteHardWrappedPathStart(startSuffix.text) &&
@@ -331,7 +344,7 @@ export function rangeForParsedFileLink(
   logicalLine: WrappedLogicalLine,
   startIndex: number,
   endIndex: number
-): IBufferRange | null {
+): TerminalLinkBufferRange | null {
   const start = mapLogicalIndexToBufferPosition(logicalLine, startIndex, 'start')
   const end = mapLogicalIndexToBufferPosition(logicalLine, endIndex, 'end')
   if (!start || !end) {

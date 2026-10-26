@@ -1,12 +1,15 @@
-import type { IBufferRange } from '@xterm/xterm'
-import { rangeForParsedFileLink, type WrappedLogicalLine } from './wrapped-terminal-link-ranges'
+import {
+  rangeForParsedFileLink,
+  type TerminalLinkBufferRange,
+  type WrappedLogicalLine
+} from './wrapped-terminal-link-ranges'
 
 export function rangeForParsedLinkOnRow(
   logicalLine: WrappedLogicalLine,
   startIndex: number,
   endIndex: number,
   bufferLineNumber: number
-): IBufferRange | null {
+): TerminalLinkBufferRange | null {
   const row = logicalLine.rows.find((row) => row.y + 1 === bufferLineNumber)
   if (!row) {
     return null

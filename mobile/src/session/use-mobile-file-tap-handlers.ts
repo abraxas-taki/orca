@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, type MutableRefObject } from 'react'
+import type { ParsedFileLinkLocation } from '../../../src/shared/file-link-location'
 import { useWorkspaceRouteHandoff } from '../navigation/workspace-route-handoff'
 import { triggerSelection } from '../platform/haptics'
 import { openMobileFileTap, type FileTapSessionTab } from './mobile-file-tap-open'
@@ -27,12 +28,7 @@ type MobileFileTapHandlerOptions<T extends FileTapSessionTab> = {
 export function useMobileFileTapHandlers<T extends FileTapSessionTab>(
   options: MobileFileTapHandlerOptions<T>
 ): {
-  handleFileTap: (
-    handle: string,
-    pathText: string,
-    line: number | null,
-    column: number | null
-  ) => void
+  handleFileTap: (handle: string, candidates: readonly ParsedFileLinkLocation[]) => void
   handleNativeChatFileTap: (pathText: string) => void
 } {
   const {
@@ -96,9 +92,10 @@ export function useMobileFileTapHandlers<T extends FileTapSessionTab>(
   ])
 
   const handleFileTap = useCallback(
-    (handle: string, pathText: string, line: number | null, column: number | null) => {
+    (handle: string, candidates: readonly ParsedFileLinkLocation[]) => {
       const current = optionsRef.current
-      if (handle !== current.activeHandleRef.current || !current.client) {
+      const first = candidates[0]
+      if (handle !== current.activeHandleRef.current || !current.client || !first) {
         return
       }
       const activationSeq = ++activationSeqRef.current
@@ -108,10 +105,9 @@ export function useMobileFileTapHandlers<T extends FileTapSessionTab>(
         worktreeId: current.worktreeId,
         worktreeName: current.worktreeName,
         terminalHandle: handle,
-        pathText,
+        ...first,
         cwd: current.terminalCwdRef.current.get(handle) ?? null,
-        line,
-        column,
+        candidates,
         pushPreviewRoute: (href) => routerRef.current.push(href),
         openBrowser: current.openBrowser,
         triggerOpenFeedback: triggerSelection,

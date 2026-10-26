@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   TERMINAL_FILE_LINK_TAP_CONFORMANCE_CASES,
   columnForTerminalFileLinkTap
-} from '../../../shared/terminal-file-link-conformance'
+} from './terminal-file-link-conformance'
 import {
   extractTerminalFileLinkCandidates,
   extractTerminalFileLinks,

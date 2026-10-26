@@ -1,6 +1,10 @@
-import type { IBufferLine } from '@xterm/xterm'
 import { TERMINAL_HTTP_URL_MAX_LENGTH } from './terminal-http-link-limits'
-import { translateLineWithColumns, type WrappedLogicalLine } from './wrapped-terminal-link-ranges'
+import {
+  translateLineWithColumns,
+  type TerminalLinkBuffer,
+  type TerminalLinkBufferLine,
+  type WrappedLogicalLine
+} from './wrapped-terminal-link-ranges'
 
 const HTTP_SCHEME_PATTERN = /https?:\/\//i
 const HTTP_SCHEME_START_PATTERN = /^https?:\/\//i
@@ -27,7 +31,7 @@ type TrimmedTranslatedLine = {
   hasWrittenRightPadding: boolean
 }
 
-function trimRightTranslatedLine(line: IBufferLine): TrimmedTranslatedLine | null {
+function trimRightTranslatedLine(line: TerminalLinkBufferLine): TrimmedTranslatedLine | null {
   const translated = translateLineWithColumns(line)
   let endIndex = translated.text.length
   while (endIndex > 0 && /\s/.test(translated.text[endIndex - 1])) {
@@ -43,7 +47,7 @@ function trimRightTranslatedLine(line: IBufferLine): TrimmedTranslatedLine | nul
     lineLength: line.length,
     padding: translated.text.match(/^ */)?.[0].length ?? 0,
     hasWrittenRightPadding:
-      typeof line.getCell !== 'function' || line.getCell(line.length - 1)?.getChars() === ' '
+      typeof line.getCell !== 'function' || line.getCell(line.length - 1)?.getChars?.() === ' '
   }
 }
 
@@ -94,7 +98,8 @@ function rowsCanContinueAtTerminalEdge(
     return false
   }
   // A cursor-positioned label is not continuation evidence even after an edge-ending URL.
-  const nextColumnAfterText = nextRow.columns.at(-1)
+  // oxlint-disable-next-line unicorn/prefer-at -- the phone's terminal WebView (Chrome 74) has no Array#at
+  const nextColumnAfterText: number | undefined = nextRow.columns[nextRow.columns.length - 1]
   const nextRowText = nextRow.text.slice(padding)
   const nextRowReachesEdge =
     nextColumnAfterText !== undefined && nextColumnAfterText >= nextRow.lineLength - rightPadding
@@ -105,7 +110,8 @@ function rowsCanContinueAtTerminalEdge(
   if (isLabelRow || HTTP_SCHEME_START_PATTERN.test(nextRowText) || nextRow.padding !== padding) {
     return false
   }
-  const columnAfterText = row.columns.at(-1)
+  // oxlint-disable-next-line unicorn/prefer-at -- the phone's terminal WebView (Chrome 74) has no Array#at
+  const columnAfterText: number | undefined = row.columns[row.columns.length - 1]
   const rightEdge = row.lineLength - rightPadding
   if (
     columnAfterText === undefined ||
@@ -118,7 +124,7 @@ function rowsCanContinueAtTerminalEdge(
 }
 
 export function buildEdgeWrappedHttpLogicalLineCandidates(
-  buffer: { getLine(y: number): IBufferLine | undefined },
+  buffer: TerminalLinkBuffer,
   bufferLineNumber: number
 ): WrappedLogicalLine[] {
   // Without xterm wrap metadata, accept cursor-positioned continuation only when preceding rows reach the edge.
@@ -155,7 +161,9 @@ export function buildEdgeWrappedHttpLogicalLineCandidates(
     if (!start) {
       continue
     }
-    const rightPadding = start.columns.at(-1) === start.lineLength ? 0 : start.padding
+    const rightPadding =
+      // oxlint-disable-next-line unicorn/prefer-at -- the phone's terminal WebView (Chrome 74) has no Array#at
+      start.columns[start.columns.length - 1] === start.lineLength ? 0 : start.padding
     const continuationPadding = getTranslatedLine(startY + 1)?.padding ?? start.padding
     if (
       continuationPadding !== 0 &&
@@ -213,7 +221,8 @@ export function buildEdgeWrappedHttpLogicalLineCandidates(
         break
       }
     }
-    if (!exceedsLengthLimit && rows.length > 1 && rows.at(-1)!.y >= currentY) {
+    // oxlint-disable-next-line unicorn/prefer-at -- the phone's terminal WebView (Chrome 74) has no Array#at
+    if (!exceedsLengthLimit && rows.length > 1 && rows[rows.length - 1].y >= currentY) {
       candidates.push({
         text,
         rows,

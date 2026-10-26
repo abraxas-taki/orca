@@ -1,9 +1,12 @@
-import type { IBufferLine } from '@xterm/xterm'
 import {
   TERMINAL_HTTP_URL_MAX_HARD_WRAPPED_ROWS,
   TERMINAL_HTTP_URL_MAX_LENGTH
 } from './terminal-http-link-limits'
-import { translateLineWithColumns, type WrappedLogicalLine } from './wrapped-terminal-link-ranges'
+import {
+  translateLineWithColumns,
+  type TerminalLinkBuffer,
+  type WrappedLogicalLine
+} from './wrapped-terminal-link-ranges'
 
 const HTTP_SCHEME_PATTERN = /https?:\/\//i
 const HTTP_SCHEME_START_PATTERN = /^https?:\/\//i
@@ -50,7 +53,7 @@ function findOverlayFragmentStart(
 }
 
 function buildCandidateFromStart(
-  buffer: { getLine(y: number): IBufferLine | undefined },
+  buffer: TerminalLinkBuffer,
   startY: number,
   currentY: number,
   translatedLines: Map<number, TranslatedLine>
@@ -159,7 +162,9 @@ function buildCandidateFromStart(
     rows.splice(1)
     text = rows[0]?.text ?? ''
   }
-  if (rows.at(-1)?.y === undefined || rows.at(-1)!.y < currentY) {
+  // oxlint-disable-next-line unicorn/prefer-at -- the phone's terminal WebView (Chrome 74) has no Array#at
+  const lastRow: WrappedLogicalLine['rows'][number] | undefined = rows[rows.length - 1]
+  if (lastRow?.y === undefined || lastRow.y < currentY) {
     return null
   }
   return {
@@ -170,7 +175,7 @@ function buildCandidateFromStart(
 }
 
 export function buildHardWrappedHttpLogicalLineCandidates(
-  buffer: { getLine(y: number): IBufferLine | undefined },
+  buffer: TerminalLinkBuffer,
   bufferLineNumber: number
 ): WrappedLogicalLine[] {
   const currentY = bufferLineNumber - 1

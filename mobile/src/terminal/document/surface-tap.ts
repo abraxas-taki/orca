@@ -5,9 +5,13 @@ import {
   getMouseTrackingMode,
   isClickMouseTrackingMode
 } from './mouse-input-encoding'
-import { oscLinkAtViewportPoint, resolveTerminalFileUrlTap } from './osc-link-tap'
-import { filePathAtViewportPoint } from './path-tap'
-import { fileUrlAtViewportPoint, urlAtViewportPoint } from './url-tap'
+import { oscLinkAtViewportPoint } from './osc-link-tap'
+import { viewportToCell } from './viewport-cell'
+import type { ParsedFileLinkLocation } from '../../../../src/shared/file-link-location'
+import {
+  findTerminalFileLinksAtBufferPosition,
+  findTerminalHttpLinkAtBufferPosition
+} from '../../../../src/shared/terminal-link-buffer-hit-testing'
 
 export function notifyTerminalSurfaceTap(
   scope: TerminalDocumentScope,
@@ -17,41 +21,31 @@ export function notifyTerminalSurfaceTap(
 ) {
   const tappedOscLink = oscLinkAtViewportPoint(scope, originX, originY)
   if (tappedOscLink && tappedOscLink.kind === 'file') {
-    notify(scope, {
-      type: 'terminal-file-tap',
-      pathText: tappedOscLink.fileTap.pathText,
-      line: tappedOscLink.fileTap.line,
-      column: tappedOscLink.fileTap.column
-    })
+    notify(scope, { type: 'terminal-file-tap', candidates: [tappedOscLink.fileTap] })
     return
   }
-  const tappedFileUrl = fileUrlAtViewportPoint(scope, originX, originY)
-  const tappedFileUrlPath = tappedFileUrl ? resolveTerminalFileUrlTap(tappedFileUrl) : null
-  if (tappedFileUrlPath) {
-    notify(scope, {
-      type: 'terminal-file-tap',
-      pathText: tappedFileUrlPath.pathText,
-      line: tappedFileUrlPath.line,
-      column: tappedFileUrlPath.column
-    })
-    return
-  }
+  const cell = viewportToCell(scope, originX, originY)
+  const term = scope.term
+  // Desktop's link detectors take 1-based cells and rebuild rows that wrap.
+  const position = cell && term ? { x: cell.col + 1, y: cell.row + 1 } : null
   const tappedUrl =
     tappedOscLink && tappedOscLink.kind === 'url'
       ? tappedOscLink.url
-      : urlAtViewportPoint(scope, originX, originY)
+      : position && term
+        ? findTerminalHttpLinkAtBufferPosition(term.buffer.active, position, term.cols)
+        : null
   if (tappedUrl) {
     notify(scope, { type: 'open-url', url: tappedUrl })
     return
   }
-  const tappedPath = filePathAtViewportPoint(scope, originX, originY)
-  if (tappedPath) {
-    notify(scope, {
-      type: 'terminal-file-tap',
-      pathText: tappedPath.pathText,
-      line: tappedPath.line,
-      column: tappedPath.column
-    })
+  const fileCandidates =
+    position && term
+      ? uniqueFileTapCandidates(
+          findTerminalFileLinksAtBufferPosition(term.buffer.active, position, term.cols)
+        )
+      : []
+  if (fileCandidates.length > 0) {
+    notify(scope, { type: 'terminal-file-tap', candidates: fileCandidates })
     return
   }
   const clickInput = buildMouseClickInput(scope, originX, originY)
@@ -67,4 +61,17 @@ export function notifyTerminalSurfaceTap(
   ) {
     notify(scope, { type: 'terminal-tap' })
   }
+}
+
+function uniqueFileTapCandidates(links: readonly ParsedFileLinkLocation[]) {
+  const seen = new Set<string>()
+  const candidates: ParsedFileLinkLocation[] = []
+  for (const { pathText, line, column } of links) {
+    const key = `${pathText}:${line}:${column}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      candidates.push({ pathText, line, column })
+    }
+  }
+  return candidates
 }
