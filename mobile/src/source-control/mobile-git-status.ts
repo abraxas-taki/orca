@@ -49,19 +49,6 @@ const SECTION_TITLES: Record<SourceControlDisplaySectionId, string> = {
   staged: 'Staged Changes'
 }
 
-export const MOBILE_CONFLICT_KIND_LABELS: Record<
-  NonNullable<MobileGitStatusEntry['conflictKind']>,
-  string
-> = {
-  both_modified: 'both modified',
-  both_added: 'both added',
-  deleted_by_us: 'deleted by us',
-  deleted_by_them: 'deleted by them',
-  added_by_us: 'added by us',
-  added_by_them: 'added by them',
-  both_deleted: 'both deleted'
-}
-
 // Desktop's sections: conflicts pinned on top, then the user's group order, sorted like desktop.
 export function buildMobileSourceControlSections<TEntry extends MobileGitStatusEntry>(
   entries: readonly TEntry[],

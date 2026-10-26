@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { ChevronRight, FileText, Minus, Plus, Trash2 } from 'lucide-react-native'
 import { colors } from '../theme/mobile-theme'
 import { STATUS_LABELS } from '../../../src/shared/git-status-labels'
-import { MOBILE_CONFLICT_KIND_LABELS } from './mobile-git-status'
+import { CONFLICT_KIND_LABELS } from '../../../src/shared/source-control-conflict-prompts'
 import { formatMobileBranchEntryMeta } from './mobile-branch-entry-format'
 import {
   statusColor,
@@ -69,9 +69,7 @@ export function makeRenderFileRow(state: RowState) {
             </Text>
           ) : item.conflictStatus === 'unresolved' ? (
             <Text style={styles.fileMeta} numberOfLines={1}>
-              {item.conflictKind
-                ? MOBILE_CONFLICT_KIND_LABELS[item.conflictKind]
-                : 'Unresolved conflict'}
+              {item.conflictKind ? CONFLICT_KIND_LABELS[item.conflictKind] : 'Unresolved conflict'}
             </Text>
           ) : null}
         </View>

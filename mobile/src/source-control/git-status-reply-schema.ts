@@ -20,6 +20,13 @@ const GIT_CONFLICT_OPERATION = ['merge', 'rebase', 'cherry-pick', 'unknown'] as 
 
 const gitConflictOperationSchema = z.enum(GIT_CONFLICT_OPERATION)
 
+// Desktop's stage/discard rules refuse submodule-internal rows and gitlink-only dirtiness.
+const gitSubmoduleStatusSchema = z.looseObject({
+  commitChanged: z.boolean(),
+  trackedChanges: z.boolean().catch(false),
+  untrackedChanges: z.boolean().catch(false)
+})
+
 // Unknown area withholds stage/unstage/commit, but retain the row for unresolved-conflict gating.
 // Path and status are read unguarded; other fields have consumer fallbacks.
 const gitStatusEntrySchema = z.looseObject({
@@ -30,15 +37,7 @@ const gitStatusEntrySchema = z.looseObject({
   conflictKind: openEnum(GIT_CONFLICT_KIND, undefined).optional(),
   conflictStatus: openEnum(GIT_CONFLICT_STATUS, undefined).optional(),
   conflictStatusSource: openEnum(GIT_CONFLICT_SOURCE, undefined).optional(),
-  // Desktop's stage/discard rules refuse submodule-internal rows and gitlink-only dirtiness.
-  submodule: salvagedOptional(
-    'submodule',
-    z.looseObject({
-      commitChanged: z.boolean(),
-      trackedChanges: z.boolean().catch(false),
-      untrackedChanges: z.boolean().catch(false)
-    })
-  ),
+  submodule: salvagedOptional('submodule', gitSubmoduleStatusSchema),
   submoduleRoot: salvagedOptional('submoduleRoot', z.string()),
   added: z.number().optional(),
   removed: z.number().optional()
@@ -106,6 +105,8 @@ const projectedEntrySchema = z.object({
   oldPath: salvagedOptional('oldPath', z.string()),
   conflictStatus: salvagedOptional('conflictStatus', z.enum(GIT_CONFLICT_STATUS)),
   conflictStatusSource: salvagedOptional('conflictStatusSource', z.enum(GIT_CONFLICT_SOURCE)),
+  submodule: salvagedOptional('submodule', gitSubmoduleStatusSchema),
+  submoduleRoot: salvagedOptional('submoduleRoot', z.string()),
   added: salvagedOptional('added', z.number().finite()),
   removed: salvagedOptional('removed', z.number().finite())
 })
@@ -129,6 +130,8 @@ export const gitStatusProjectionSchema: z.ZodType<MobileGitStatusProjection | nu
       conflictKind: undefined,
       conflictStatus: entry.conflictStatus,
       conflictStatusSource: entry.conflictStatusSource,
+      submodule: entry.submodule,
+      submoduleRoot: entry.submoduleRoot,
       added: entry.added,
       removed: entry.removed
     })),

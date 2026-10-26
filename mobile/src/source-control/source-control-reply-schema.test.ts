@@ -69,7 +69,9 @@ describe('source-control reply schemas', () => {
       'oldPath',
       'path',
       'removed',
-      'status'
+      'status',
+      'submodule',
+      'submoduleRoot'
     ])
   })
 
