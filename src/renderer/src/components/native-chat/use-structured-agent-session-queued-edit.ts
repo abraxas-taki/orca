@@ -11,9 +11,11 @@ import type {
 import type { AgentJournalSubmission } from '../../../../shared/agent-session-journal-types'
 import { agentSessionSendBodyFingerprint } from '../../../../shared/structured-agent-session-send-mutation'
 import {
+  queuedCardOnScreen,
   queuedEditDirty,
   queuedEditInput,
   queuedEditSaveHeld,
+  queuedEditStanding,
   queuedMessageEditableText,
   queuedMessageWithEdit
 } from '../../../../shared/queued-message-edit'
@@ -32,10 +34,6 @@ import {
   type QueuedEditLease
 } from './structured-agent-session-queued-edit-lease'
 import type { QueuedMessageCard } from '../../../../shared/structured-agent-session-queued-cards'
-import {
-  queuedCardOnScreen,
-  queuedEditStanding
-} from './structured-agent-session-queued-edit-standing'
 import type { StructuredAgentSessionWrite } from './use-structured-agent-session-mutate'
 
 export type QueuedEditTransport = {
