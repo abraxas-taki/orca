@@ -74,8 +74,8 @@ export function useMobileNativeChatSkills(args: {
   const scan = scans.client === client ? scans.byKey.get(key) : undefined
 
   const loadNativeChatSkills = useCallback(() => {
-    // Like desktop, a failed scan (an SSH workspace) stays failed until the connection changes.
-    if (!client || !supported || scan) {
+    // The phone has no Retry button, so the next menu opening retries a failed scan.
+    if (!client || !supported || (scan && scan.status !== 'error')) {
       return
     }
     const settle = (next: Scan): void =>

@@ -18,7 +18,7 @@ import {
 import type { PendingNativeChatImage } from './mobile-native-chat-image-attachment'
 import type { MobileComposerStructuredCatalog } from './mobile-native-chat-composer-menu'
 import { useMobileNativeChatComposerMenu } from './use-mobile-native-chat-composer-menu'
-import { recordMobileNativeChatPickedSkill } from './mobile-native-chat-draft-store'
+import { recordMobileNativeChatPickedSkills } from './mobile-native-chat-draft-store'
 import { keepHeldPressThroughLongPress } from '../../held-press-long-press'
 import { mobileNativeChatComposerShowsStop } from './mobile-native-chat-composer-layout'
 import { MobileNativeChatStopButton } from '../../MobileNativeChatStopButton'
@@ -125,7 +125,7 @@ export function MobileNativeChatComposer({
     onNeedSkills,
     onSlashMenuOpen: structured?.onSlashMenuOpen,
     // The surface id is the draft key the structured send reads picks back from.
-    onPickSkill: (skill) => recordMobileNativeChatPickedSkill(sendSurfaceId, value, skill),
+    onPickSkill: (skill) => recordMobileNativeChatPickedSkills(sendSurfaceId, [skill]),
     focusField: () => fieldRef.current?.focus()
   })
   const sendingRef = useRef(false)

@@ -7,7 +7,7 @@ import type { StructuredMobileSendAttachment } from './use-mobile-structured-sen
 import type { AgentJournalSkillRef } from '../../../src/shared/agent-session-journal-types'
 import {
   readMobileNativeChatPickedSkills,
-  restoreMobileNativeChatPickedSkills
+  recordMobileNativeChatPickedSkills
 } from './native-chat/composer/mobile-native-chat-draft-store'
 
 export function useMobileStructuredNativeChatSendBridge(args: {
@@ -69,7 +69,7 @@ export function useMobileStructuredNativeChatSendBridge(args: {
       // Accepted messages remain host-owned; restore commands whose reply was lost.
       if (outcome === 'rejected' || (outcome === 'unknown' && isHostCommand)) {
         restoreRejectedDraft(origin, text)
-        restoreMobileNativeChatPickedSkills(origin.draftKey, skills)
+        recordMobileNativeChatPickedSkills(origin.draftKey, skills)
       }
       return outcome
     },

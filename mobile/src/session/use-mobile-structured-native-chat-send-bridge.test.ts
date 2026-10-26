@@ -6,7 +6,7 @@ import type { MobileNativeChatSendOutcome } from './native-chat/mobile-native-ch
 import type { MobileNativeChatSendOrigin } from './native-chat/mobile-native-chat-pending-echo'
 import { useMobileStructuredNativeChatSendBridge } from './use-mobile-structured-native-chat-send-bridge'
 import {
-  restoreMobileNativeChatPickedSkills,
+  recordMobileNativeChatPickedSkills,
   resetMobileNativeChatDraftStoreForTests
 } from './native-chat/composer/mobile-native-chat-draft-store'
 
@@ -58,7 +58,7 @@ describe('useMobileStructuredNativeChatSendBridge', () => {
 
   it('sends the skills picked into the draft', async () => {
     const review = { name: 'review', path: '/skills/review/SKILL.md' }
-    restoreMobileNativeChatPickedSkills(ORIGIN.draftKey, [review])
+    recordMobileNativeChatPickedSkills(ORIGIN.draftKey, [review])
     sendStructured.mockResolvedValue('accepted')
     mount('codex')
 

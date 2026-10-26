@@ -16,20 +16,10 @@ export const mobileNativeChatLaunchDraftSeeds = new Map<
   MobileNativeChatLaunchDraftSeed | null
 >()
 
-// Skills picked from the menu into a draft; a send carries those still named in its text.
+// Skills picked from the menu into a draft; edits drop those the text no longer names, as deleting a desktop chip does.
 const pickedSkills = new Map<string, AgentJournalSkillRef[]>()
 
-// A pick forgets earlier picks whose token the draft no longer names, as deleting a desktop chip does.
-export function recordMobileNativeChatPickedSkill(
-  draftKey: string,
-  draftBeforePick: string,
-  skill: AgentJournalSkillRef
-): void {
-  const kept = pickedSkillsInText(draftBeforePick, pickedSkills.get(draftKey) ?? [])
-  pickedSkills.set(draftKey, [...kept.filter((held) => held.path !== skill.path), skill])
-}
-
-export function restoreMobileNativeChatPickedSkills(
+export function recordMobileNativeChatPickedSkills(
   draftKey: string,
   skills: readonly AgentJournalSkillRef[]
 ): void {
@@ -57,8 +47,9 @@ function writeDraft(draftKey: string, update: SetStateAction<string>, userEdit: 
     return
   }
   drafts.set(draftKey, { text: next, editGeneration: (current?.editGeneration ?? 0) + 1 })
-  if (next === '') {
-    pickedSkills.delete(draftKey)
+  const picked = pickedSkills.get(draftKey)
+  if (picked) {
+    pickedSkills.set(draftKey, pickedSkillsInText(next, picked))
   }
   if (next === text) {
     return
