@@ -7,8 +7,6 @@ import type { WslOrcadConnectIntent } from './wsl-orcad-connection-status'
 /** `stopped` and `unreachable` rest on a confirmed running list; `unavailable` could not read it. */
 export type WslHostReachability = 'available' | 'unreachable' | 'stopped' | 'unavailable'
 
-export type WslDistroPresence = 'running' | 'stopped' | 'unregistered' | 'unverifiable'
-
 /** The WSL side the service drives: C3 holder, C5 connections, C6 liveness (or an e2e fake). */
 export type WslHostConnector = {
   listDistros(): Promise<WslHostDistroCandidate[]>
@@ -28,8 +26,8 @@ export type WslHostConnector = {
   disconnect(distro: string): Promise<void>
   /** Ends the host's terminals, orcad and its terminal daemon; never boots a stopped distro. */
   stopServer(distro: string, environmentId: string): Promise<WslHostServerStop>
-  /** Registry and `--list --running` only, so it never boots the distro. */
-  distroPresence(distro: string, distroId?: string): Promise<WslDistroPresence>
+  /** By name or, after a rename, by GUID; null when the registry can't be read. Never boots. */
+  isDistroRegistered(distro: string, distroId?: string): Promise<boolean | null>
   releaseHolder(distro: string): Promise<void>
   /** Startup: keeps the holders an earlier run left and releases those `isWanted` refuses. */
   adoptHolders(isWanted: (distro: string) => boolean): Promise<void>

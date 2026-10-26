@@ -9,11 +9,12 @@ import {
 } from '../../shared/runtime-environment-store'
 import { getEnvironmentStorePath } from '../../shared/runtime-environment-store-file'
 import { findWslHostDeployment } from '../../shared/runtime-environment-wsl-host-store'
+import { getWslHostDeploymentStorePath } from '../../shared/wsl-host-deployment-store'
 import { getPreferredPairingOffer } from '../../shared/runtime-environments'
 import type { WslHostServerStop, WslHostStatus } from '../../shared/wsl-host-types'
 import { OrcadHostUnsupportedError } from '../orcad/orcad-host-unavailable'
 import type { WslHostDistroCandidate } from './wsl-host-distro-list'
-import { WslHostService, type WslDistroPresence, type WslHostConnector } from './wsl-host-service'
+import { WslHostService, type WslHostConnector } from './wsl-host-service'
 import { wakeRememberedWslHosts } from './wsl-host-early-wake'
 import { WslOrcadLaunchDeferredError } from './wsl-orcad-connection-errors'
 import type { WslOrcadConnection } from './wsl-orcad-connection'
@@ -72,8 +73,8 @@ function makeConnector(distros: WslHostDistroCandidate[]) {
         stopped: true
       })
     ),
-    distroPresence: vi.fn(
-      async (_distro: string, _distroId?: string): Promise<WslDistroPresence> => 'running'
+    isDistroRegistered: vi.fn(
+      async (_distro: string, _distroId?: string): Promise<boolean | null> => true
     ),
     releaseHolder: vi.fn(async (_distro: string) => {}),
     adoptHolders: vi.fn(async (_isWanted: (distro: string) => boolean) => {}),
@@ -444,26 +445,19 @@ describe('WslHostService', () => {
     expect(listEnvironments(userDataPath)).toHaveLength(1)
   })
 
-  it('never boots a stopped distro to retry a pending stop', async () => {
+  it('finishes a pending Remove on a stopped distro, which proves the stop, without booting it', async () => {
     const connector = makeConnector([UBUNTU])
     connector.stopServer.mockResolvedValueOnce({ stopped: false, reason: 'busy', verdict: 'live' })
     const service = makeService(connector)
     await service.add({ distro: 'Ubuntu' })
     await service.remove('wsl:ubuntu')
-    connector.distroPresence.mockResolvedValue('stopped')
     connector.connect.mockClear()
+    // What the cold probe answers for a stopped distro.
+    connector.stopServer.mockResolvedValueOnce({ stopped: true })
 
-    await expect(service.remove('wsl:ubuntu')).resolves.toEqual({
-      stopped: false,
-      verdict: 'unverifiable',
-      reason: 'Start Ubuntu to finish removing it.',
-      kept: true
-    })
-    expect(connector.stopServer).toHaveBeenCalledTimes(1)
+    await expect(service.remove('wsl:ubuntu')).resolves.toEqual({ stopped: true })
     expect(connector.connect).not.toHaveBeenCalled()
-    expect(findWslHostDeployment(userDataPath, 'wsl:ubuntu')?.pendingStop?.reason).toBe(
-      'Start Ubuntu to finish removing it.'
-    )
+    expect(listEnvironments(userDataPath)).toEqual([])
   })
 
   it('finishes removing a host whose distro is gone, which runs nothing', async () => {
@@ -472,11 +466,23 @@ describe('WslHostService', () => {
     const service = makeService(connector)
     await service.add({ distro: 'Ubuntu' })
     await service.remove('wsl:ubuntu')
-    connector.distroPresence.mockResolvedValue('unregistered')
+    connector.isDistroRegistered.mockResolvedValue(false)
 
     await expect(service.remove('wsl:ubuntu')).resolves.toEqual({ stopped: true })
-    expect(connector.distroPresence).toHaveBeenLastCalledWith('Ubuntu', UBUNTU_ID)
+    expect(connector.isDistroRegistered).toHaveBeenLastCalledWith('Ubuntu', UBUNTU_ID)
+    expect(connector.stopServer).toHaveBeenCalledTimes(1)
     expect(listEnvironments(userDataPath)).toEqual([])
+  })
+
+  it('stops, rather than drops, a host whose registry could not be read', async () => {
+    const connector = makeConnector([UBUNTU])
+    connector.stopServer.mockResolvedValue({ stopped: false, reason: 'busy', verdict: 'live' })
+    const service = makeService(connector)
+    await service.add({ distro: 'Ubuntu' })
+    connector.isDistroRegistered.mockResolvedValue(null)
+
+    await expect(service.remove('wsl:ubuntu')).resolves.toMatchObject({ kept: true })
+    expect(listEnvironments(userDataPath)).toHaveLength(1)
   })
 
   it('re-adding or connecting a pending host keeps it and withdraws the removal', async () => {
@@ -495,8 +501,27 @@ describe('WslHostService', () => {
     expect(findWslHostDeployment(userDataPath, 'wsl:ubuntu')?.pendingStop).toBeUndefined()
 
     await service.remove('wsl:ubuntu')
-    await service.connect('wsl:ubuntu')
+    // Only the user's own Connect withdraws it; any other caller is refused.
+    await expect(service.connect('wsl:ubuntu')).rejects.toThrow('didn’t finish removing')
+    expect(findWslHostDeployment(userDataPath, 'wsl:ubuntu')?.pendingStop).toBeDefined()
+    await service.connect('wsl:ubuntu', { withdrawPendingRemoval: true })
     expect(findWslHostDeployment(userDataPath, 'wsl:ubuntu')?.pendingStop).toBeUndefined()
+  })
+
+  it('re-adding a pending host on a stopped distro asks to start it, as any add does', async () => {
+    const connector = makeConnector([{ ...UBUNTU, state: 'stopped' }])
+    connector.stopServer.mockResolvedValue({ stopped: false, reason: 'busy', verdict: 'live' })
+    const service = makeService(connector)
+    await service.add({ distro: 'Ubuntu', startIfStopped: true })
+    await service.remove('wsl:ubuntu')
+    connector.connect.mockClear()
+
+    await expect(service.add({ distro: 'Ubuntu' })).resolves.toMatchObject({
+      ok: false,
+      kind: 'distro-stopped'
+    })
+    expect(connector.connect).not.toHaveBeenCalled()
+    expect(findWslHostDeployment(userDataPath, 'wsl:ubuntu')?.pendingStop).toBeDefined()
   })
 
   it('shows an unfinished removal from launch', async () => {
@@ -891,6 +916,27 @@ describe('WslHostService', () => {
     expect(isWanted('ubuntu')).toBe(true)
     // A failed add or remove left a holder for a distro that is no longer a host.
     expect(isWanted('Debian')).toBe(false)
+  })
+
+  it('keeps every startup holder when the host records cannot all be read', async () => {
+    const connector = makeConnector([UBUNTU])
+    const service = makeService(connector)
+    await service.add({ distro: 'Ubuntu' })
+    writeFileSync(getWslHostDeploymentStorePath(userDataPath), '{not json')
+    await service.start()
+    const [isWanted] = connector.adoptHolders.mock.calls[0]
+    expect(isWanted('Debian')).toBe(true)
+  })
+
+  it('does not keep the holder of a host whose Remove is pending', async () => {
+    const connector = makeConnector([UBUNTU])
+    connector.stopServer.mockResolvedValueOnce({ stopped: false, reason: 'busy', verdict: 'live' })
+    const service = makeService(connector)
+    await service.add({ distro: 'Ubuntu' })
+    await service.remove('wsl:ubuntu')
+    await service.start()
+    const [isWanted] = connector.adoptHolders.mock.calls[0]
+    expect(isWanted('Ubuntu')).toBe(false)
   })
 
   it('releases every startup holder while WSL hosts are off', async () => {

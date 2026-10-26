@@ -227,10 +227,13 @@ export function registerWslHostHandlers(args: WslHostHandlerArgs): void {
   ipcMain.handle(
     'wslHosts:connect',
     (_event, request: { environmentId: string; intent?: unknown }) =>
-      wsl.connect(
-        request.environmentId,
-        request.intent === 'update' || request.intent === 'force' ? { intent: request.intent } : {}
-      )
+      // The Settings Connect is the user's own: it keeps a host whose Remove didn't finish.
+      wsl.connect(request.environmentId, {
+        withdrawPendingRemoval: true,
+        ...(request.intent === 'update' || request.intent === 'force'
+          ? { intent: request.intent }
+          : {})
+      })
   )
   ipcMain.handle('wslHosts:getCapability', (): WslHostCapability => ({
     serverFiles: wsl.hasServerFiles()

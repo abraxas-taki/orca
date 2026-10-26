@@ -7,7 +7,7 @@ import { resolveEnvironmentPairingOffer } from '../../shared/runtime-environment
 import { findWslHostDeployment } from '../../shared/runtime-environment-wsl-host-store'
 import { createWslDistroHolder, type WslDistroHolder } from './wsl-distro-holder'
 import { listWslHostDistros } from './wsl-host-distro-list'
-import { readWslDistroRegistrations } from './wsl-distro-registry-id'
+import { isWslDistroRegistered } from './wsl-distro-registry-id'
 import type { WslHostConnector, WslHostReachability } from './wsl-host-service'
 import { readWslDistroOrcadPublicKey } from './wsl-host-ssh-orcad-conflict'
 import {
@@ -183,27 +183,7 @@ export function createWslHostConnector(options: {
         decommission: decommissionWslHostOrcad(target, createWslOrcadHostTransport({ target }))
       })
     },
-    distroPresence: async (distro, distroId) => {
-      const [registrations, running] = await Promise.all([
-        readWslDistroRegistrations(),
-        readConfirmedRunningWslDistros()
-      ])
-      if (!registrations) {
-        return 'unverifiable'
-      }
-      const key = wslDistroHolderKey(distro)
-      const registered = registrations.find(
-        (registration) => wslDistroHolderKey(registration.distro) === key
-      )
-      // A reinstall under the same name is another distro; the one this host ran is gone.
-      if (!registered || (distroId && registered.id !== distroId)) {
-        return 'unregistered'
-      }
-      if (running.status === 'unavailable') {
-        return 'unverifiable'
-      }
-      return confirmsRunning(running, key) ? 'running' : 'stopped'
-    },
+    isDistroRegistered: (distro, distroId) => isWslDistroRegistered(distro, distroId),
     releaseHolder: async (distro) => {
       await holder.release(distro)
     },

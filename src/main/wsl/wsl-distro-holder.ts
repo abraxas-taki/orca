@@ -216,7 +216,8 @@ export function createWslDistroHolder(dependencies: WslDistroHolderDependencies)
       try {
         await waitForDistroRunning(distro, () => observed.exit)
       } catch (error) {
-        await stopRecordedHolder(record)
+        // This process spawned it moments ago, so its pid is ours even without a start time.
+        await stopRecordedHolder(record, { spawnedHere: true })
         throw error
       }
       const { onHolderExit } = dependencies
@@ -229,9 +230,14 @@ export function createWslDistroHolder(dependencies: WslDistroHolderDependencies)
     }
   }
 
-  async function stopRecordedHolder(record: WslDistroHolderRecord): Promise<WslDistroHolderState> {
+  async function stopRecordedHolder(
+    record: WslDistroHolderRecord,
+    { spawnedHere = false } = {}
+  ): Promise<WslDistroHolderState> {
     let state = classifyWslDistroHolderProcess(record, await queryProcess(record.pid))
-    if (state === 'live') {
+    // A command line alone can't tell our holder from a reused pid running the same argv.
+    const provenOurs = spawnedHere || record.creationTimeMs !== null
+    if (state === 'live' && provenOurs) {
       try {
         // WSL 2.7.10 relaunches a same-argv child; killing the recorded parent ends both.
         killProcess(record.pid)
@@ -251,7 +257,7 @@ export function createWslDistroHolder(dependencies: WslDistroHolderDependencies)
     if (state === 'exited') {
       await removeWslDistroHolderRecord(userDataPath, record.distro)
     }
-    return state
+    return state === 'live' && !provenOurs ? 'unverifiable' : state
   }
 
   async function unverifiableTooLongWhileRunning(distro: string): Promise<boolean> {
@@ -316,9 +322,7 @@ export function createWslDistroHolder(dependencies: WslDistroHolderDependencies)
       )
     },
 
-    release(distro) {
-      return releaseRecorded(distro)
-    },
+    release: (distro) => releaseRecorded(distro),
 
     async releaseAll() {
       const distros = await listWslDistroHolderRecordDistros(userDataPath)

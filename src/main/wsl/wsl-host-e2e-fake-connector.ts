@@ -113,7 +113,7 @@ export function createFakeWslHostConnector(
         })
       })
     },
-    distroPresence: async () => 'running',
+    isDistroRegistered: async () => true,
     releaseHolder: async () => {},
     adoptHolders: async () => {},
     dispose: async () => {

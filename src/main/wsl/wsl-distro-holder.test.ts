@@ -202,6 +202,14 @@ describe('createWslDistroHolder', () => {
     expect(await recordFiles()).toEqual([])
   })
 
+  it('never kills a holder whose record has no start time to rule out pid reuse', async () => {
+    host.processes.set(77, { commandLine: HOLDER_COMMAND('Alpine'), startedAtMs: 5_000 })
+    await writeRecord(record({ creationTimeMs: null }))
+    expect(await makeHolder().releaseAll()).toEqual([{ distro: 'alpine', state: 'unverifiable' }])
+    expect(host.killed).toEqual([])
+    expect(await recordFiles()).toHaveLength(1)
+  })
+
   it('keeps a holder and its record when release cannot verify it', async () => {
     host.processes.set(77, { commandLine: HOLDER_COMMAND('Alpine'), startedAtMs: 5_000 })
     await writeRecord(record())
