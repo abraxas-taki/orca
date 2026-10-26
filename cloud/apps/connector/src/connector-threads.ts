@@ -62,7 +62,7 @@ export class ConnectorThreads {
     for (const event of events) {
       if (event.kind === 'snapshot') {
         // Not working never means done: an open turn the snapshot doesn't show working (or doesn't
-        // list; it lists every linked conversation) is unverifiable, and an unlisted one has no prompt.
+        // list; it lists recently active linked conversations) is unverifiable, and an unlisted one has no prompt.
         const notIn = (ids: string[]) =>
           ids.length > 0 ? ` AND external_id NOT IN (${ids.map(() => '?').join(', ')})` : ''
         const working = event.conversations
@@ -90,6 +90,25 @@ export class ConnectorThreads {
               entry.conversation.externalId
             ]
           )
+          // A newer turn than the cloud knows: older starts and ends still queued behind this snapshot
+          // then change nothing. Its own end, if it ended, follows and settles it. The same turn seen
+          // working again (say, an answered approval) is working, but an ended turn never reopens.
+          if (entry.turnId !== undefined) {
+            const resumed = entry.working ? " OR (open_turn_id = ? AND turn_state = 'unverifiable')" : ''
+            await transaction.query(
+              `UPDATE connector_threads SET open_turn_id = ?, turn_state = ?, turn_stop_reason = NULL
+               WHERE ${ON_BOUND_PANE} AND (open_turn_id IS NULL OR open_turn_id < ?${resumed})`,
+              [
+                entry.turnId,
+                entry.working ? 'working' : 'unverifiable',
+                hostId,
+                entry.conversation.externalId,
+                entry.paneKey,
+                entry.turnId,
+                ...(entry.working ? [entry.turnId] : [])
+              ]
+            )
+          }
         }
         continue
       }

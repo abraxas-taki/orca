@@ -12,6 +12,7 @@ import {
 } from './agent-launch-warnings'
 import {
   argvLaunchPrompt,
+  launchPromptCreateInputs,
   deliverTerminalLaunchPrompt,
   HANDED_TO_TERMINAL,
   promptReceipt,
@@ -39,11 +40,7 @@ import {
   type AgentLaunchStructuredSurface,
   type AgentLaunchWorkspaceFactory
 } from './agent-launch-surface-factories'
-import type {
-  AgentLaunchExecution,
-  AgentLaunchPublishedSurface,
-  AgentLaunchSurfaceExecution
-} from './agent-launch-execution'
+import type { AgentLaunchExecution, AgentLaunchSurfaceExecution } from './agent-launch-execution'
 import {
   beginCreatedWorkspaceLaunch,
   recoverCreatedWorkspace
@@ -188,10 +185,7 @@ export async function executeAgentLaunch(
   }
 }
 
-function published(
-  execution: AgentLaunchExecution,
-  surface: AgentLaunchPublishedSurface
-): AgentLaunchPublishedSurface {
+function published(execution: AgentLaunchExecution, surface: AgentLaunchResult): AgentLaunchResult {
   warnStructuredLaunchDowngrade(execution.intent.agent, surface.receipt)
   execution.onSurfacePublished?.(surface)
   return surface
@@ -235,7 +229,7 @@ async function resolveWorkspace(
     : rest
 }
 
-/** Keep the structured surface’s creation fence for prompt delivery. */
+/** Keep the structured create receipt for prompt settlement. */
 export type CreatedSurface = {
   outcome: AgentLaunchResult['outcome']
   warning?: string
@@ -258,6 +252,7 @@ async function createSurface(
       ...(intent.chatOptions ? { chatOptions: intent.chatOptions } : {}),
       ...(intent.sessionId ? { sessionId: intent.sessionId } : {}),
       ...(reservedTabId ? { tabId: reservedTabId } : {}),
+      ...launchPromptCreateInputs(intent, execution.signal),
       ...(intent.prompt ? {} : { withoutPrompt: true as const })
     })
     return {

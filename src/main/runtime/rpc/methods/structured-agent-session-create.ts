@@ -1,6 +1,7 @@
 import { seededPermissionMode } from '../../../../shared/native-chat-session-option-defaults'
 // Resolve the host launch identity, then commit an at-rest create or the compatible acquired path.
 
+import { assertAgentPromptRequestActive } from '../../orca-runtime-core'
 import { AGENT_CHAT_PERMISSION_MODE_OPTION_ID } from '../../../../shared/agent-chat-permission-mode'
 import { refuse, AgentSessionRefusalError } from '../../../../shared/agent-session-wire-refusals'
 import { computeAgentSessionPayloadFingerprint } from '../../../../shared/agent-session-mutation-envelope'
@@ -136,12 +137,7 @@ export async function prepareStructuredAgentSessionCreateForWorktree(args: {
       throw new AgentSessionRefusalError(refusal)
     }
   }
-  const {
-    agent: _resolvedAgent,
-    provider: _resolvedProvider,
-    hostLaunchDirectory,
-    ...resolvedAttach
-  } = resolved
+  const { agent: _agent, provider: _provider, hostLaunchDirectory, ...resolvedAttach } = resolved
   // Fingerprint explicit picks, never replay-varying defaults; explicit options replace saved seeds, while permission default stays chat-owned.
   const overlays = atRest
     ? args.optionsMode !== 'replace-model-selection'
@@ -302,6 +298,8 @@ export async function createStructuredAgentSessionForWorktree(args: {
   tabId?: string
   /** Create without starting the agent; its first message starts it. */
   atRest?: true
+  firstMessage?: StructuredAgentSessionFirstMessage
+  signal?: AbortSignal
 }): Promise<AgentSessionMutationResult<AgentSessionAttachResult>> {
   // An at-rest create's ledger row is keyed by its intent, as a client's create is.
   const envelope = args.atRest
@@ -316,6 +314,7 @@ export async function createStructuredAgentSessionForWorktree(args: {
   if ('refusal' in prepared) {
     return { ok: false, refusal: prepared.refusal }
   }
+  assertAgentPromptRequestActive(args.signal)
   return commitStructuredAgentSessionCreate({
     runtime: args.runtime,
     caller: args.caller,

@@ -51,13 +51,15 @@ import {
 import { hasOwnActionOverride } from './repository-source-control-ai-draft'
 import { getRepositorySourceControlAiActionRecipeSectionId } from './repository-settings-targets'
 import { translate } from '@/i18n/i18n'
-import { SourceControlActionModelPicker } from './SourceControlActionModelPicker'
 import { SourceControlActionOptionField } from './SourceControlActionOptionField'
 import {
   useSourceControlActionAgentInventory,
   useSourceControlActionAgent
 } from './use-source-control-action-agent'
 import { resolveSourceControlActionRecipe } from '../../../../shared/source-control-ai-operation-policy'
+import { shouldShowSourceControlActionArguments } from './source-control-action-arguments-visibility'
+import { chatProviderAgents, useHostStructuredAgentsVersion } from '@/lib/chat-provider-agents'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
 
 type RepositorySourceControlAiActionRowsProps = {
   repoId: string
@@ -109,6 +111,8 @@ export function RepositorySourceControlAiActionRows({
   const rows = sourceControlRepoAgentRows(repo)
   const observation = useAgentMenuObservation(rows.target, true, rows.detectionTarget)
   const canSaveSurface = canSaveSourceControlActionSurface(rows.target)
+  const settings = useAppStore((state) => state.settings)
+  useHostStructuredAgentsVersion()
   const resolveAgent = useSourceControlActionAgent(null, defaultTuiAgent ?? null).resolve
   return (
     <div className="space-y-3">
@@ -135,12 +139,11 @@ export function RepositorySourceControlAiActionRows({
           actionId
         })
         const effectiveAgent = recipe.agentId
+        const selectedAgent =
+          effectiveAgent && !isCustomAgentId(effectiveAgent) ? effectiveAgent : null
         const isLaunchAction = !SOURCE_CONTROL_TEXT_ACTION_ID_SET.has(actionId)
         const actual = isLaunchAction
-          ? sourceControlActionAgentPreview(
-              observation,
-              effectiveAgent && !isCustomAgentId(effectiveAgent) ? effectiveAgent : null
-            )
+          ? sourceControlActionAgentPreview(observation, selectedAgent)
           : resolveAgent(effectiveAgent)
         const pickerAgent =
           effectiveAgent || actual.status === 'pending'
@@ -151,7 +154,6 @@ export function RepositorySourceControlAiActionRows({
                 isLaunchAction ? observation.preferences.defaultTuiAgent : defaultTuiAgent
               )
             : actual.agent
-        // Launch actions pick their model above, so only text actions get a `--model` example.
         const agentArgsPlaceholder =
           hasOverride && agentArgsValue
             ? ''
@@ -234,9 +236,7 @@ export function RepositorySourceControlAiActionRows({
                 </Label>
                 {isLaunchAction ? (
                   <SourceControlActionAgentPickerView
-                    agent={
-                      effectiveAgent && !isCustomAgentId(effectiveAgent) ? effectiveAgent : null
-                    }
+                    agent={selectedAgent}
                     surface={recipe.surface}
                     observation={observation}
                     canSaveSurface={canSaveSurface}
@@ -290,15 +290,12 @@ export function RepositorySourceControlAiActionRows({
                   <p className="text-[11px] text-muted-foreground">{agentSupportText}</p>
                 ) : null}
                 {isLaunchAction ? (
-                  <SourceControlActionModelPicker
-                    agent={pickerAgent}
-                    value={recipe.launchPreferences}
-                    disabled={!hasOverride || actual.status === 'pending'}
-                    onChange={(value) => onActionLaunchPreferencesChange(actionId, value)}
-                  />
-                ) : null}
-                {isLaunchAction ? (
                   <SourceControlActionArguments
+                    showArguments={shouldShowSourceControlActionArguments({
+                      agent: actual.status === 'ready' ? actual.agent : null,
+                      settings,
+                      chatAgents: chatProviderAgents(LOCAL_EXECUTION_HOST_ID, undefined)
+                    })}
                     agent={pickerAgent}
                     value={override?.agentArgs}
                     preferences={recipe.launchPreferences}

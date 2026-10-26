@@ -123,6 +123,9 @@ it.each(
   savedArguments(models, 'full-access')
   render(<AgentsHarness />)
   const input = argumentsInput('Claude')
+  expect(screen.getByRole('button', { name: 'Claude permissions' }).getAttribute('data-size')).toBe(
+    'xs'
+  )
   const remove = () =>
     screen.getByRole('button', { name: /Remove .* and use Claude's own settings/ })
   fireEvent.click(remove())

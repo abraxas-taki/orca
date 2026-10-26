@@ -10,7 +10,7 @@ import {
   ConnectorPendingPromptSchema,
   ConnectorReplyResponseSchema
 } from './event-messages.js'
-import { ConnectorHelloRequestSchema } from './hello-messages.js'
+import { ConnectorHelloRequestSchema, ConnectorHelloResponseSchema } from './hello-messages.js'
 import { CONNECTOR_LIMITS } from './connector-limits.js'
 
 const conversation = { source: 'slack', externalId: 'T1:C9:1792.9:U5' } as const
@@ -175,7 +175,6 @@ describe('hello and replies', () => {
   it('keeps capability entries the cloud does not know', () => {
     const hello = ConnectorHelloRequestSchema.parse({
       v: 1,
-      helloRev: 7,
       contract: 1,
       orcaVersion: '1.4.230',
       platform: 'linux',
@@ -189,6 +188,39 @@ describe('hello and replies', () => {
       ]
     })
     expect(hello.features).toEqual(['answer', 'future-feature'])
+  })
+
+  it('caps a hello at maxHelloProjects projects with short display strings', () => {
+    const project = (name: string) => ({
+      placeId: 'pl_1',
+      name,
+      kind: 'folder',
+      where: { kind: 'local' }
+    })
+    const hello = (projects: unknown[]) =>
+      ConnectorHelloRequestSchema.safeParse({
+        v: 1,
+        contract: 1,
+        orcaVersion: '1.4.230',
+        platform: 'linux',
+        runtime: 'desktop',
+        hostName: 'build-box',
+        agents: ['claude'],
+        promptKinds: [],
+        features: [],
+        projects
+      }).success
+    const longest = 'x'.repeat(CONNECTOR_LIMITS.maxDisplayTextLength)
+    expect(hello(Array.from({ length: CONNECTOR_LIMITS.maxHelloProjects }, () => project(longest)))).toBe(true)
+    expect(hello([project(`${longest}x`)])).toBe(false)
+    expect(
+      hello(Array.from({ length: CONNECTOR_LIMITS.maxHelloProjects + 1 }, () => project('orca')))
+    ).toBe(false)
+  })
+
+  it('answers a hello with the revision the cloud assigned', () => {
+    expect(ConnectorHelloResponseSchema.safeParse({ helloRev: 3 }).success).toBe(true)
+    expect(ConnectorHelloResponseSchema.safeParse({}).success).toBe(false)
   })
 
   it('reads a reply as posted or queued', () => {

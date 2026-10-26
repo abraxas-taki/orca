@@ -145,6 +145,27 @@ export const PR_E2E_SOURCE_ROUTES = [
         ))
   },
   {
+    id: 'ssh.orcad-ssh-failure-reason',
+    specs: ['tests/e2e/ssh-orcad-ssh-failure-reason.spec.ts'],
+    matches: (file) =>
+      MANAGED_SSH_HARNESS.test(file) ||
+      (isProductSource(file) &&
+        /^src\/(?:main\/(?:ipc\/ssh\/(?:ssh-connect-flow|ssh-host-server-)|ssh\/(?:ssh-session-start-failure|ssh-host-server-|connection\/ssh-connection-manager))|renderer\/src\/ssh\/(?:ssh-host-server-status-copy|ssh-connect-failure-toast))/.test(
+          file
+        ))
+  },
+  {
+    id: 'ssh.orcad-identity-file-tokens',
+    specs: ['tests/e2e/ssh-orcad-identity-file-tokens.spec.ts'],
+    matches: (file) =>
+      MANAGED_SSH_HARNESS.test(file) ||
+      /^tests\/e2e\/helpers\/ssh-config-host-picker\.ts$/.test(file) ||
+      (isProductSource(file) &&
+        /^src\/main\/ssh\/(?:config\/(?:ssh-g-config-resolution|ssh-identity-file-tokens|ssh-config-path-expansion)|ssh-auth-resolution|ssh-identity-file-read)\.ts$/.test(
+          file
+        ))
+  },
+  {
     id: 'ssh.orcad-update-anyway',
     specs: ['tests/e2e/ssh-orcad-update-anyway.spec.ts'],
     matches: (file) =>
@@ -283,6 +304,18 @@ export const PR_E2E_SOURCE_ROUTES = [
       ) ||
       (isProductSource(file) &&
         /^src\/(?:main\/(?:ssh|managed-server\/[a-z-]+)\/orcad-managed-|main\/ipc\/(?:ssh\/)?ssh-port-forward|main\/(?:ipc\/(?:(?:ssh\/)?ssh-(?:connect-flow|connection-handlers|host-user-disconnect|session-teardown)|(?:runtime-environments\/)?runtime-environment-(?:connectivity-handlers|manual-disconnect))|ssh\/(?:connection\/ssh-connection-manager|ssh-user-disconnect))\.ts$|renderer\/src\/startup\/(?:ssh-startup-reconnect|startup-ssh-connection-restore)\.ts$|renderer\/src\/runtime\/(?:web-runtime-session|web-session-close-|runtime-terminal-artifact-read\.ts$)|renderer\/src\/components\/terminal-pane\/(?:remote-runtime-|terminal-host-(?:workspace-file|file-link-existence)\.ts$))/.test(
+          file
+        ))
+  },
+  {
+    // A Claude chat a managed host's CLI refuses to start names why (#33768).
+    id: 'ssh.orcad-claude-chat-start-failure',
+    specs: ['tests/e2e/ssh-orcad-claude-chat-start-failure.spec.ts'],
+    matches: (file) =>
+      MANAGED_SSH_HARNESS.test(file) ||
+      file === 'tests/e2e/fixtures/structured-claude-stub.cjs' ||
+      (isProductSource(file) &&
+        /^src\/(?:main\/(?:claude\/claude-(?:stream-json-connection|stream-json-exit-error|structured-session-exit-lifecycle)|native-chat\/agent-session-wire\/structured-agent-session-failure-text)|renderer\/src\/components\/native-chat\/structured-agent-session-delivery-notices)\.ts$/.test(
           file
         ))
   },

@@ -18,6 +18,7 @@ export function SourceControlActionArguments({
   value,
   preferences,
   disabled,
+  showArguments = true,
   onArgsChange,
   onPreferencesChange
 }: {
@@ -25,6 +26,7 @@ export function SourceControlActionArguments({
   value: string | null | undefined
   preferences?: SourceControlActionLaunchPreferences
   disabled?: boolean
+  showArguments?: boolean
   onArgsChange: (value: string, commit?: boolean) => void
   onPreferencesChange: (value: SourceControlActionLaunchPreferences | undefined) => void
 }): React.JSX.Element {
@@ -47,63 +49,70 @@ export function SourceControlActionArguments({
   return (
     <>
       {agent ? (
-        <AgentPermissionMenu
-          agentId={agent}
-          label={label}
-          layout="stacked"
-          disabled={disabled}
-          inheritLabel={translate(
-            'settings.sourceControl.actionPermissions.sameAsAgent',
-            'Same as {{agent}}',
-            { agent: label }
-          )}
-          permission={{
-            chatOwnSupported: true,
-            choices: agentPermissionChoices(agent),
-            choice,
-            source: selected?.permissionMode ? 'agent' : 'all',
-            defaultChoice: inherited,
-            onSelect: select,
-            flag,
-            argsSetPermission: loose
-          }}
-        />
+        <div className="min-w-0 flex-1 basis-48 max-w-sm">
+          <AgentPermissionMenu
+            agentId={agent}
+            label={label}
+            layout="stacked"
+            size="sm"
+            disabled={disabled}
+            inheritLabel={translate(
+              'settings.sourceControl.actionPermissions.sameAsAgent',
+              'Same as {{agent}}',
+              { agent: label }
+            )}
+            permission={{
+              chatOwnSupported: true,
+              choices: agentPermissionChoices(agent),
+              choice,
+              source: selected?.permissionMode ? 'agent' : 'all',
+              defaultChoice: inherited,
+              onSelect: select,
+              flag,
+              argsSetPermission: loose
+            }}
+          />
+        </div>
       ) : null}
-      <AgentDefaultArgsInput
-        defaultArgs=""
-        argsOverride={value ?? ''}
-        disabled={disabled}
-        onDraftChange={(text) => onArgsChange(text)}
-        onSaveArgs={(text) => {
-          // Unedited inherited or cleared arguments must not become an authored empty override.
-          if (value != null || text !== '') {
-            onArgsChange(text, true)
-          }
-        }}
-        permissionChip={
-          flag && !loose
-            ? {
-                label,
-                flag,
-                removeRecipe: (text) =>
-                  agent
-                    ? (liftActionPermissionArgs({ agentId: agent, agentArgs: text }, true)
-                        .agentArgs ?? null)
-                    : null,
-                onRemove: () => select('own')
+      {showArguments ? (
+        <div className="w-full min-w-0">
+          <AgentDefaultArgsInput
+            defaultArgs=""
+            argsOverride={value ?? ''}
+            disabled={disabled}
+            onDraftChange={(text) => onArgsChange(text)}
+            onSaveArgs={(text) => {
+              // Unedited inherited or cleared arguments must not become an authored empty override.
+              if (value != null || text !== '') {
+                onArgsChange(text, true)
               }
-            : undefined
-        }
-        note={
-          loose
-            ? translate(
-                'settings.agents.permissionArgsTerminalOnly',
-                'These arguments may control {{agent}}’s terminal permissions, so Orca adds no flag. Chats use the Permissions choice above.',
-                { agent: label }
-              )
-            : undefined
-        }
-      />
+            }}
+            permissionChip={
+              flag && !loose
+                ? {
+                    label,
+                    flag,
+                    removeRecipe: (text) =>
+                      agent
+                        ? (liftActionPermissionArgs({ agentId: agent, agentArgs: text }, true)
+                            .agentArgs ?? null)
+                        : null,
+                    onRemove: () => select('own')
+                  }
+                : undefined
+            }
+            note={
+              loose
+                ? translate(
+                    'settings.agents.permissionArgsTerminalOnly',
+                    'These arguments may control {{agent}}’s terminal permissions, so Orca adds no flag. Chats use the Permissions choice above.',
+                    { agent: label }
+                  )
+                : undefined
+            }
+          />
+        </div>
+      ) : null}
     </>
   )
 }

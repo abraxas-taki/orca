@@ -1648,7 +1648,6 @@
         "aba792c8b3": "Échec de la fusion de la pull request",
         "dbe5e2448e": "Pull request fusionnée",
         "a27ee5ca1a": "Cela mettra à jour la pull request sur GitHub.",
-        "03d7216d62": "{{value0}} la PR #{{value1}} ?",
         "e9b7cb7d17": "Impossible de {{value0}} la PR",
         "bd3b4492a0": "Pull request rouverte",
         "9f88657c4e": "Pull request fermée",
@@ -2094,6 +2093,16 @@
         "createWorktree": "Créer un worktree",
         "createWorkspace": "Créer un espace de travail"
       },
+      "PullRequestConfirmation": {
+        "closeTitle": "Fermer la PR #{{number}} ?",
+        "mergeLabel": "Créer un commit de merge",
+        "mergeTitle": "Merger la PR #{{number}} avec un commit de merge ?",
+        "rebaseLabel": "Rebaser et merger",
+        "rebaseTitle": "Rebaser et merger la PR #{{number}} ?",
+        "reopenTitle": "Rouvrir la PR #{{number}} ?",
+        "squashLabel": "Squasher et merger",
+        "squashTitle": "Squasher et merger la PR #{{number}} ?"
+      },
       "PullRequestPage": {
         "2560588245": "Échec de la demande de reviewer",
         "3450247584": "Commentaire",
@@ -2167,7 +2176,6 @@
         "aae645d36d": "Échec de la fusion de la pull request",
         "c57873d721": "Pull request fusionnée",
         "a63b3c159c": "Cela mettra à jour la pull request sur GitHub.",
-        "eec3706a6a": "{{value0}} la PR #{{value1}} ?",
         "710e47aa06": "Pull request rouverte",
         "7aa3b5f706": "Pull request fermée",
         "3d77438c92": "Cela rouvrira la pull request sur GitHub.",
@@ -2492,7 +2500,6 @@
         "88f478cdef": "Échec de la fusion de la pull request",
         "a161925adc": "Pull request fusionnée",
         "0506a78337": "Cela mettra à jour la pull request sur GitHub.",
-        "844dc193c7": "{{value0}} la PR #{{value1}} ?",
         "995dd6af9b": "Ouvrir les vérifications de la PR",
         "8a22eb3f7b": "Aucun reviewer correspondant.",
         "67755a83a1": "Tous les autres",
@@ -4471,6 +4478,7 @@
             "memory": {
               "metric": {
                 "workingSetDescription": "Somme des working sets (WS). Les pages partagées peuvent apparaître dans plusieurs processus.",
+                "footprintDescription": "Somme des empreintes mémoire, la valeur affichée par le Moniteur d’activité : la mémoire propre à chaque processus, mémoire graphique comprise. Les pages partagées entre processus ne sont pas comptées deux fois.",
                 "rssDescription": "Somme des tailles résidentes (RSS). Les pages partagées ou aliasées peuvent apparaître dans plusieurs processus.",
                 "privateBytesDescription": "Octets privés additionnés : mémoire engagée par ces processus, comptée si elle est résidente ou paginée. C'est ce que l'hôte facture par rapport à sa limite de validation, de sorte qu'elle continue d'augmenter tandis que l'ensemble de travail ci-dessus diminue sous la pagination."
               }
@@ -5761,7 +5769,9 @@
           "51001182e3": "Répertoire vide",
           "971d85cc84": "S'ouvre comme projet sur cet hôte · {{value0}}",
           "00c4235c10": "Aucun résultat pour « {{value0}} »",
-          "largeInputNoMatches": "Aucun résultat pour cette saisie longue"
+          "largeInputNoMatches": "Aucun résultat pour cette saisie longue",
+          "entriesLabel": "Éléments du dossier",
+          "inputLabel": "Filtre ou chemin"
         },
         "SleepTwinWorkspaceDialog": {
           "title": "Sleep Workspace",
@@ -6257,14 +6267,14 @@
           "sshTargetNotFoundDetail": "Actualisez les espaces de travail ou reconnectez l'hôte, puis réessayez.",
           "sshTargetInvalid": "La configuration de l'hôte SSH est incomplète.",
           "sshTargetInvalidDetail": "Modifiez l'hôte SSH ou reconnectez-le, puis réessayez.",
-          "sshAliasRequired": "VS Code a besoin d'un alias de config SSH pour cet hôte.",
+          "sshAliasRequired": "Cet éditeur a besoin d'un alias de config SSH pour cet hôte.",
           "sshAliasRequiredDetail": "Ajoutez un alias Host pour {{host}}:{{port}} dans votre config SSH locale, reconnectez l'espace de travail, puis réessayez.",
           "remoteEditorUnsupported": "Cette application ne peut pas ouvrir les espaces de travail SSH.",
-          "remoteEditorUnsupportedDetail": "Choisissez VS Code ou utilisez l'application localement.",
+          "remoteEditorUnsupportedDetail": "Choisissez VS Code, Cursor ou Zed, ou utilisez l'application en local.",
           "remotePathInvalid": "Le chemin n'est pas valide pour l'hôte SSH.",
           "remotePathInvalidDetail": "Actualisez l'espace de travail avant de réessayer.",
-          "remoteLaunchFailed": "Impossible d'ouvrir le chemin dans VS Code.",
-          "remoteLaunchFailedDetail": "Vérifiez la commande VS Code configurée sur cette machine.",
+          "remoteLaunchFailed": "Impossible d'ouvrir le chemin dans l'éditeur.",
+          "remoteLaunchFailedDetail": "Vérifiez la commande de l'éditeur configurée sur cette machine.",
           "1417fd8380": "Personnaliser les applications...",
           "8009ab69a6": "Ouvrir dans",
           "bd0e8159f8": "Vérifiez la commande de l'éditeur ou la configuration du gestionnaire de fichiers sur cette machine.",
@@ -6274,7 +6284,7 @@
           "f387af445b": "Le chemin de l'espace de travail n'est pas un chemin local valide.",
           "3ec372b664": "file-manager",
           "wsl": "WSL",
-          "remoteEditorHint": "Seul VS Code peut ouvrir des dossiers sur un hôte SSH.",
+          "remoteEditorHint": "Seuls VS Code, Cursor et Zed peuvent ouvrir des dossiers sur un hôte SSH.",
           "remoteRuntimeEditorHint": "Les applications sur cet ordinateur ne peuvent ouvrir les fichiers de ce serveur que si Orca s’y connecte via SSH."
         },
         "WorktreeTitleInlineRename": {
@@ -9141,6 +9151,8 @@
           "editDescription": "Mettez à jour les détails de connexion de cette machine. Les modifications s'appliquent à la prochaine connexion.",
           "addDescription": "Ajoutez une machine permanente sur laquelle vous pouvez vous connecter en SSH.",
           "editingPrefix": "Modification",
+          "reconnectOnLaunch": "Se reconnecter au lancement",
+          "reconnectOnLaunchHelp": "Si désactivé, Orca laisse cet hôte, et tout serveur Orca joint par son intermédiaire, déconnecté au démarrage jusqu'à ce que vous le connectiez.",
           "allowRemoteCliControl": "Autoriser l'orca CLI de cet hôte à contrôler Orca",
           "allowRemoteCliControlHelp": "Activé par défaut pour les nouveaux hôtes. Permet aux commandes orca exécutées sur cet hôte d'ouvrir et de piloter des onglets du navigateur Orca sur ce bureau, uniquement dans les espaces de travail de cet hôte et uniquement tant qu'il est connecté, et aux terminaux lancés par une ancienne version d'Orca sur cet hôte d'exécuter des commandes d'orchestration (check, inbox, send, ask, reply) pour leur propre travail supervisé. Elles ne peuvent pas lire vos fichiers, votre presse-papiers ni vos cookies. Lorsque cette option est désactivée, elles n'atteignent que le serveur Orca de cet hôte.",
           "addHost": "Ajouter un hôte"
@@ -14508,6 +14520,7 @@
             "prepareSessionResumeFailed": "Impossible de préparer cette session pour la reprise.",
             "sessionDeleted": "Session supprimée",
             "sessionDeleteFailed": "Impossible de supprimer la session",
+            "sessionDeleteCheckingHost": "Vérification de {{value0}}…",
             "resumeInChatConflict": "Un autre chat tient déjà cette conversation.",
             "resumeInChatTranscriptMissing": "L'historique de cette conversation n'a pas pu être chargé, elle ne peut donc pas être reprise dans le chat.",
             "resumeInChatFailed": "Impossible de reprendre cette session dans un nouveau chat.",
@@ -14649,6 +14662,7 @@
             "subagentCountPlural": "{{value0}} sous-agents",
             "delete": "Supprimer",
             "deleteReasonNonLocalHost": "Seules les sessions de cet appareil peuvent être supprimées.",
+            "deleteReasonHostUpdateRequired": "Mettez à jour {{value0}} pour supprimer ses sessions depuis ici.",
             "deleteReasonSyntheticPath": "Cette session ne peut pas être supprimée depuis Orca.",
             "deleteReasonUnsupportedAgent": "{{value0}} sessions ne peuvent pas être supprimées depuis Orca.",
             "resumeInNewNativeChat": "Reprendre dans un nouveau chat",
@@ -14659,6 +14673,7 @@
           "AiVaultSessionDeleteDialog": {
             "title": "Supprimer cette session ?",
             "description": "« {{value0}} » sera supprimée. Une fois supprimée, elle ne pourra plus être reprise depuis la ligne de commande de {{value1}} non plus.",
+            "remoteDescription": "« {{value0}} » sera supprimée de {{value2}}. Une fois supprimée, elle ne pourra plus être reprise depuis la ligne de commande de {{value1}} non plus.",
             "confirm": "Supprimer"
           },
           "FileExplorerNameFilter": {
@@ -18805,6 +18820,7 @@
         "claudeAccountSetupFailed": "Le compte Claude sélectionné n'a pas pu être configuré. Réessayez ou choisissez un autre compte.",
         "agentCommandNotRunnable": "{{agent}} : la Commande dans Paramètres → Agents doit être le chemin ou le nom d'un programme qu'Orca peut trouver, sans arguments ni variables. Modifiez-la ou réinitialisez-la.",
         "runtimeNotInstalled": "{{agent}} n'est pas installé sur l'ordinateur qui exécute ce chat. Installez-le depuis le chat dans une version récente d'Orca.",
+        "fullAccessAsRoot": "{{agent}} n'utilisera pas l'Accès complet tant qu'il s'exécute en tant que root. Choisissez une autre autorisation pour {{agent}} dans Paramètres → Agents pour l'ordinateur qui exécute ce chat, puis démarrez un nouveau chat.",
         "conversationOpenElsewhere": "Codex maintient encore cette conversation ouverte. Réessayez dans un instant ou fermez les autres terminaux Codex.",
         "conversationOpenInTerminal": "{{agent}} exécute déjà cette conversation dans un autre terminal. Quittez {{agent}} là-bas ou fermez ce terminal pour continuer ici.",
         "chooseClaudeAccount": "Choisissez-en un ou ajoutez-en un dans les paramètres Comptes Claude.",
@@ -19048,7 +19064,6 @@
         "permissions": "Autorisations",
         "permissionAsk": "Demander l’approbation",
         "permissionAskDescription": "Demande avant les modifications et commandes que vos réglages n'autorisent pas",
-        "permissionAskCodexDescription": "Modifie des fichiers et exécute des commandes dans cet espace de travail ; demande avant toute autre action",
         "permissionAskSharedDescription": "Demande avant les modifications ou commandes qui ne sont pas déjà autorisées",
         "permissionAcceptEdits": "Accepter les modifications",
         "permissionAcceptEditsDescription": "Approuve les modifications et commandes de fichiers ; demande pour le reste",
@@ -19201,6 +19216,7 @@
         "showTerminal": "Afficher le terminal"
       },
       "resumeInNewChat": {
+        "hostUpdateRequired": "Mettez à jour Orca sur cet hôte pour continuer dans l'interface de chat.",
         "notSavedYet": "{{agent}} n'a pas encore enregistré cette conversation. Réessayez après sa réponse.",
         "cannotResume": "Cette conversation {{agent}} ne peut pas être reprise dans un chat natif.",
         "exitUnconfirmedFromTerminal": "{{agent}} exécute déjà cette conversation dans un autre terminal. Quittez {{agent}} là-bas ou fermez ce terminal, puis ouvrez cette conversation depuis l’historique des sessions.",

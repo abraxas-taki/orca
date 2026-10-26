@@ -14,7 +14,12 @@ export async function queueDelivery(
     threads: ConnectorThreads
     hosts: ConnectorHosts
   },
-  input: { thread: Omit<NewThread, 'accountId'>; deliveryId: string; body: DeliveryBody }
+  input: {
+    thread: Omit<NewThread, 'accountId'>
+    deliveryId: string
+    body: DeliveryBody
+    held?: boolean
+  }
 ): Promise<QueueResult> {
   const { hostId, externalId } = input.thread
   return await deps.database.transaction(async (transaction) => {
@@ -30,7 +35,8 @@ export async function queueDelivery(
       hostId,
       externalId,
       deliveryId: input.deliveryId,
-      body: input.body
+      body: input.body,
+      held: input.held ?? false
     })
   })
 }

@@ -10,6 +10,7 @@ import type {
   AgentLaunchMode
 } from '../../shared/agent-launch-intent'
 import type { StructuredAgentId } from '../../shared/agent-session-provider-handle'
+import type { StructuredAgentSessionFirstMessage } from '../../shared/structured-agent-session-create'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { AgentLaunchParams } from '../../shared/rpc-contract/agent-launch-params'
 import { toAgentLaunchPreferences } from '../../shared/agent-launch-preferences'
@@ -28,6 +29,8 @@ export type AgentLaunchSurfaceFactory = {
     tabId?: string
     /** Keep chat idle until the caller submits its first message. */
     withoutPrompt?: true
+    firstMessage?: StructuredAgentSessionFirstMessage
+    signal?: AbortSignal
   }): Promise<AgentLaunchStructuredSurface>
   createTerminalAgent(args: {
     worktreeId: string
@@ -51,12 +54,6 @@ export type AgentLaunchSurfaceFactory = {
     warning?: string
     promptRodeLaunchCommand?: boolean
   }>
-  /** Return the committed message ID, or null on failure; failed delivery must not fail a running launch. */
-  deliverStructuredPrompt?(args: {
-    sessionId: string
-    fence: number
-    prompt: AgentLaunchPrompt
-  }): Promise<string | null>
   /** Paste into a live PTY; return false on failure without failing the running launch. */
   deliverTerminalPrompt?(args: {
     handle: string
@@ -69,11 +66,12 @@ export type AgentLaunchSurfaceFactory = {
   }): Promise<boolean>
 }
 
-/** Carry the creation lease fence into the prompt envelope without rereading the session. */
+/** The created chat and its committed opening submission. */
 export type AgentLaunchStructuredSurface = {
   sessionId: string
   handle: string
   fence: number
+  firstMessage?: { clientMessageId: string }
   /** Older hosts may omit the host-owned tab ID. */
   tabId?: string
 }

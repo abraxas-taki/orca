@@ -39,7 +39,6 @@ import { TEST_REPO } from '@/store/slices/worktrees-slice-test-fixtures'
 import { clearHostAgentMenuSettingsForTests } from './use-host-agent-launch-preferences'
 import { mutateHostAgentLaunchSettings } from './agent-launch-settings-transport'
 import { getRuntimeAgentInventoryKey } from '@/store/slices/runtime-agent-inventory-key'
-import { getAgentSessionOptionCatalog } from '../../../../shared/agent-session-option-catalog'
 import { resetHostStructuredAgentsForTests } from '@/runtime/host-structured-agents'
 const rpc = vi.hoisted(() => vi.fn())
 vi.mock('@/runtime/runtime-rpc-client', () => ({
@@ -162,7 +161,12 @@ describe('RepositorySourceControlAiActionRows', () => {
       })
       useAppStore.setState({
         repos: [{ ...TEST_REPO, id: 'repo-1' }],
-        settings: { ...settings, defaultTuiAgent: 'claude', sourceControlAi: source },
+        settings: {
+          ...settings,
+          experimentalNativeChat: false,
+          defaultTuiAgent: 'claude',
+          sourceControlAi: source
+        },
         settingsSearchQuery: '',
         localDetectedAgentIdsByContext: {}
       })
@@ -204,14 +208,11 @@ describe('RepositorySourceControlAiActionRows', () => {
       expect(cards).toHaveLength(2)
       expect(ensure).toHaveBeenCalledTimes(2)
       expect(detectAgents).toHaveBeenCalledTimes(1)
-      const pendingContent = cards.map((card) => card.textContent)
       for (const card of cards) {
-        expect(card.textContent?.includes('Model')).toBe(agent === 'codex')
+        expect(card.textContent).not.toContain('Model')
         expect(card.textContent).toContain('Permissions')
         expect(card.textContent).toContain('Ask')
-        if (agent === 'codex') {
-          expect(card.textContent).toContain('saved')
-        }
+        expect(card.querySelector('button[aria-label="saved"]')).toBeNull()
         const controls = Array.from(
           card.querySelectorAll<HTMLButtonElement>(
             'button[role="combobox"].min-w-0, button[aria-haspopup="menu"]'
@@ -219,14 +220,11 @@ describe('RepositorySourceControlAiActionRows', () => {
         )
         expect(controls.length).toBeGreaterThan(0)
         expect(controls.every((control) => control.disabled)).toBe(true)
-        expect(
-          card.querySelector<HTMLTextAreaElement>('textarea[aria-label="Arguments"]')?.value
-        ).toBe('--saved-cli')
+        expect(card.querySelector('textarea[aria-label="Arguments"]')).toBeNull()
       }
       await act(async () => {
         finish([...detected])
       })
-      expect(cards.map((card) => card.textContent)).toEqual(pendingContent)
       for (const card of cards) {
         const controls = Array.from(
           card.querySelectorAll<HTMLButtonElement>(
@@ -235,7 +233,8 @@ describe('RepositorySourceControlAiActionRows', () => {
         )
         expect(controls.length).toBeGreaterThan(0)
         expect(controls.every((control) => !control.disabled)).toBe(true)
-        expect(card.textContent?.includes('Model')).toBe(agent === 'codex')
+        expect(card.textContent).not.toContain('Model')
+        expect(card.textContent).not.toContain('Effort')
         expect(card.textContent).toContain('Permissions')
         expect(card.textContent).toContain('Arguments')
         expect(
@@ -246,6 +245,19 @@ describe('RepositorySourceControlAiActionRows', () => {
             (field) => field.value === 'kept-template'
           )
         ).toBe(true)
+      }
+      for (const experimentalNativeChat of [true, false]) {
+        await act(() =>
+          useAppStore.setState({
+            settings: { ...useAppStore.getState().settings!, experimentalNativeChat }
+          })
+        )
+        for (const card of cards) {
+          const input = card.querySelector<HTMLTextAreaElement>('textarea[aria-label="Arguments"]')
+          expect(input?.value).toBe(
+            experimentalNativeChat && agent !== 'opencode' ? undefined : '--saved-cli'
+          )
+        }
       }
       expect(JSON.stringify(source.actions.fixCommitFailure)).toBe(originalRecipe)
       expect(writeConfig).not.toHaveBeenCalled()
@@ -502,17 +514,14 @@ it.each([1, 10])(
       expect(
         deadlines().every((id) => cleared.mock.calls.some(([clearedId]) => clearedId === id))
       ).toBe(true)
-      const previews = () =>
-        view.getAllByRole('combobox').filter((button) => button.textContent === 'saved-model')
+      const previews = () => view.queryAllByRole('button', { name: 'Codex permissions' })
       expect(previews()).toHaveLength(5 * sections)
       fireEvent.change(view.container.querySelector('textarea')!, { target: { value: 'edited' } })
-      fireEvent.change(view.container.querySelector('input')!, { target: { value: '--edited' } })
-      fireEvent.click(previews()[0])
-      fireEvent.click(
-        view.getByRole('option', {
-          name: getAgentSessionOptionCatalog('codex')!.models[0].label
-        })
-      )
+      fireEvent.change(view.container.querySelector('textarea[aria-label="Arguments"]')!, {
+        target: { value: '--edited' }
+      })
+      fireEvent.pointerDown(previews()[0], { button: 0, ctrlKey: false })
+      fireEvent.click(view.getByRole('menuitemradio', { name: /^Ask/ }))
       expect(edit).toHaveBeenCalledWith(
         'fixCommitFailure',
         expect.objectContaining({ agentId: 'codex' })

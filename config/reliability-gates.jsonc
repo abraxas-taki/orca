@@ -21306,7 +21306,7 @@
       "providers": ["local", "daemon", "ssh", "wsl", "remote-runtime", "mobile"],
       "coveredPlatforms": ["macos"],
       "coveredProviders": ["daemon"],
-      "coverageNotes": "Signed arm64 macOS evidence; other platforms and hosts keep the existing launcher. See docs/reference/macos-daemon-tcc-attribution.md.",
+      "coverageNotes": "Signed arm64 macOS evidence; other platforms and hosts keep the existing launcher.",
       "motivatingLinks": ["https://github.com/stablyai/orca/issues/13921"],
       "invariant": "A packaged macOS daemon runs from the verified signed helper copy for its build, which the updater never touches, and never beside a job that may own the endpoint; the fork fallback still fits the startup gate. A copy is deleted only when lsof proves it unused.",
       "oracle": "Deterministic launch, fallback-deadline, per-build copy, retirement and status tests, plus the signed launcher validation recorded in #25848.",

@@ -27,9 +27,12 @@ import {
   getSourceControlAgentArgsPlaceholder
 } from './source-control-action-recipe-options'
 import { translate } from '@/i18n/i18n'
-import { SourceControlActionModelPicker } from './SourceControlActionModelPicker'
 import { SourceControlActionOptionField } from './SourceControlActionOptionField'
 import { useSourceControlActionAgent } from './use-source-control-action-agent'
+import { shouldShowSourceControlActionArguments } from './source-control-action-arguments-visibility'
+import { chatProviderAgents, useHostStructuredAgentsVersion } from '@/lib/chat-provider-agents'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
+import { useAppStore } from '@/store'
 
 const DEFAULT_AGENT_VALUE = '__default_agent__'
 
@@ -97,6 +100,13 @@ export function SourceControlActionRecipeRow<ActionId extends AiActionId>({
   onSave
 }: SourceControlActionRecipeRowProps<ActionId>): React.JSX.Element {
   const actual = useSourceControlActionAgent(selectedAgent, defaultTuiAgent)
+  const settings = useAppStore((state) => state.settings)
+  useHostStructuredAgentsVersion()
+  const showArguments = shouldShowSourceControlActionArguments({
+    agent: actual.status === 'ready' ? actual.agent : null,
+    settings,
+    chatAgents: chatProviderAgents(LOCAL_EXECUTION_HOST_ID, undefined)
+  })
   const expectedAgent = resolveAgentArgsPlaceholderAgent(selectedAgent, defaultTuiAgent)
   const pickerAgent = selectedAgent || actual.status === 'pending' ? expectedAgent : actual.agent
   const isLaunchAction = !AI_TEXT_ACTION_ID_SET.has(actionId)
@@ -172,18 +182,11 @@ export function SourceControlActionRecipeRow<ActionId extends AiActionId>({
           ) : null}
         </div>
       </div>
-      <div className="mt-3 grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="mt-3 grid min-w-0 grid-cols-1 items-start gap-3">
         {isLaunchAction ? (
-          <div className="grid min-w-0 grid-cols-1 gap-2">
-            {onLaunchPreferencesChange ? (
-              <SourceControlActionModelPicker
-                agent={pickerAgent}
-                value={launchPreferences}
-                disabled={actual.status === 'pending'}
-                onChange={(value) => onLaunchPreferencesChange(actionId, value)}
-              />
-            ) : null}
+          <div className="flex min-w-0 flex-wrap items-start gap-3">
             <SourceControlActionArguments
+              showArguments={showArguments}
               agent={pickerAgent}
               value={draftValue.agentArgs}
               preferences={launchPreferences}

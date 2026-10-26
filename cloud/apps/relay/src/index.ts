@@ -51,6 +51,7 @@ const database = await openRelayDatabaseAtBoot({
   poolMax: config.databasePoolMax,
   applicationName: `orca-relay/${config.role}/${config.cellId}`,
   appliesPostgresSchema: config.role !== 'cell',
+  retiresSlowConnections: config.role !== 'cell',
   readTimeoutMarginOverrideMs: () => cellFlagsApplied?.().readTimeoutMarginMs
 })
 await reconcileCellAdmissionAtStartup(config, new RelayAssignmentStore(database))

@@ -5,6 +5,7 @@ import type { AgentPermissionChoice } from '../../../../shared/tui-agent-permiss
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
+import { Label } from '../ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -177,6 +178,7 @@ export function AgentPermissionMenu({
   permission,
   inheritLabel,
   disabled,
+  size = 'xs',
   layout = 'inline'
 }: {
   agentId: string
@@ -184,6 +186,7 @@ export function AgentPermissionMenu({
   permission: AgentPermissionChoiceRow
   inheritLabel?: string
   disabled?: boolean
+  size?: 'xs' | 'sm'
   layout?: 'inline' | 'stacked'
 }): React.JSX.Element {
   const followAll =
@@ -198,26 +201,27 @@ export function AgentPermissionMenu({
           : 'flex-wrap items-center gap-x-3 gap-y-1'
       )}
     >
-      <span
-        className={cn(
-          'text-xs font-medium',
-          layout === 'stacked' && 'leading-none text-muted-foreground'
-        )}
-      >
-        {translate('settings.agents.rowPermissions', 'Permissions')}
-      </span>
+      {layout === 'stacked' ? (
+        <Label variant="settings">
+          {translate('settings.agents.rowPermissions', 'Permissions')}
+        </Label>
+      ) : (
+        <span className="text-xs font-medium">
+          {translate('settings.agents.rowPermissions', 'Permissions')}
+        </span>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={disabled}>
           <Button
             type="button"
             variant="outline"
-            size="xs"
+            size={size}
             aria-label={translate('settings.agents.rowPermissionsLabel', '{{agent}} permissions', {
               agent: label
             })}
             className={cn('min-w-0 max-w-full', layout === 'stacked' && 'w-full justify-between')}
           >
-            <span className="truncate">
+            <span className="truncate text-xs">
               {permission.source === 'all' ? `${followAll} · ${current}` : current}
             </span>
             <ChevronDown className="size-3 shrink-0" />

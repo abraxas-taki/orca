@@ -120,7 +120,6 @@ it('global owner: bounded controlled edits, failed/same selection and no-op save
     throw new Error('Missing settings')
   }
   useAppStore.setState({
-    detectedAgentIds: ['claude', 'codex'],
     localDetectedAgentIdsByContext: { host: ['claude', 'codex'] },
     repos: Array.from({ length: 32 }, (_, i) => ({
       id: `repo-${i}`,
@@ -131,6 +130,7 @@ it('global owner: bounded controlled edits, failed/same selection and no-op save
     })),
     settings: {
       ...settings,
+      experimentalNativeChat: false,
       sourceControlAi: normalizeSourceControlAiSettings({
         ...getDefaultSourceControlAiSettings(),
         enabled: true,

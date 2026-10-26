@@ -15,7 +15,7 @@ export function SourceControlActionOptionField({
   children: ReactNode
 }): React.JSX.Element {
   return (
-    <div className="min-h-[56.5px] min-w-0 space-y-2">
+    <div className="min-h-[56.5px] min-w-0 flex-1 basis-48 space-y-2">
       <Label variant="settings">{label}</Label>
       {children}
       {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}

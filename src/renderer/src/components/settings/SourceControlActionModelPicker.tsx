@@ -23,6 +23,7 @@ type SourceControlActionModelPickerProps = {
   agent: TuiAgent | null | undefined
   value: SourceControlActionLaunchPreferences | undefined
   disabled?: boolean
+  layout?: 'stacked' | 'contents'
   onChange: (value: SourceControlActionLaunchPreferences | undefined) => void
 }
 
@@ -30,6 +31,7 @@ export function SourceControlActionModelPicker({
   agent,
   value,
   disabled,
+  layout = 'stacked',
   onChange
 }: SourceControlActionModelPickerProps): React.JSX.Element | null {
   const picksModel = sourceControlActionAgentPicksModel(agent)
@@ -59,7 +61,7 @@ export function SourceControlActionModelPicker({
   const options = selected?.model ? sourceControlActionOptions(agent, selected.model) : []
   const defaultLabel = translate('settings.sourceControl.actionModel.effortDefault', 'Default')
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-2">
+    <div className={layout === 'contents' ? 'contents' : 'grid min-w-0 grid-cols-1 gap-2'}>
       {catalog ? (
         <SourceControlActionOptionField
           label={translate('settings.sourceControl.actionModel.model', 'Model')}
