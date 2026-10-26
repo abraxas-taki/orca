@@ -10,7 +10,7 @@ import {
 } from '../../shared/runtime-environment-wsl-host-store'
 import type { WslHostDeploymentRecord } from '../../shared/wsl-host-deployment-store'
 import type { WslHostAddResult, WslHostServerStop } from '../../shared/wsl-host-types'
-import { admitWslHostDistro } from './wsl-host-add-admission'
+import { admitWslHostDistro, wslHostRemovalPendingMessage } from './wsl-host-add-admission'
 import type { WslHostDistroCandidate } from './wsl-host-distro-list'
 import type { WslHostConnector } from './wsl-host-service'
 
@@ -78,4 +78,19 @@ export async function readdPendingWslHost(
   } catch (error) {
     return { ok: false, kind: 'failed', message: errorMessage(error) }
   }
+}
+
+/** A pending host connects only for the user's own Connect or Add, which withdraws its Remove. */
+export function admitConnectToPendingHost(
+  userDataPath: string,
+  record: WslHostDeploymentRecord,
+  withdraw: boolean
+): void {
+  if (!record.pendingStop) {
+    return
+  }
+  if (!withdraw) {
+    throw new Error(wslHostRemovalPendingMessage(record.distro))
+  }
+  setWslHostPendingStop(userDataPath, record.environmentId, null)
 }

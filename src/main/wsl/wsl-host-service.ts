@@ -4,7 +4,6 @@
  * parked: polls and visible work keep it down until the user acts or the distro runs again.
  */
 import { focusReachability } from './wsl-host-focus-reachability'
-import { setWslHostPendingStop } from '../../shared/runtime-environment-wsl-host-store'
 import type { WslHostDeploymentRecord } from '../../shared/wsl-host-deployment-store'
 import type {
   WslHostAddResult,
@@ -24,15 +23,19 @@ import {
   sameWslDistro,
   wslHostNotConnectedMessage,
   wslHostStoppedMessage,
-  wslHostRemovalPendingMessage,
   WSL_HOST_REMOVING_MESSAGE,
   wslHostRunRefusal
 } from './wsl-host-add-admission'
 import type { WslOrcadConnection } from './wsl-orcad-connection'
 import { registerWslHost } from './wsl-host-registration'
+import { WslHostStatusBoard } from './wsl-host-status-board'
 import { withWslHostIds } from './wsl-host-records'
 import { wslHolderKeepPolicy } from './wsl-orphan-holder-release'
-import { readdPendingWslHost, removeWslHostServer } from './wsl-host-removal'
+import {
+  admitConnectToPendingHost,
+  readdPendingWslHost,
+  removeWslHostServer
+} from './wsl-host-removal'
 import type { WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
 import {
   forgetWslHostToWake,
@@ -48,14 +51,13 @@ export type {
 
 export class WslHostService {
   private connector: WslHostConnector | null = null
-  private readonly statuses = new Map<string, WslHostStatus>()
+  private readonly board = new WslHostStatusBoard((status) => this.deps.publish(status))
   private readonly adding = new Map<string, Promise<WslHostAddResult>>()
   private visible = new Set<string>()
   private readonly parked = new Set<string>()
   private readonly removing = new Set<string>()
   // Invalidate in-flight Adds when disabled so they cannot later publish ready hosts.
   private disableGeneration = 0
-  private readonly statusListeners = new Set<() => void>()
 
   constructor(private readonly deps: WslHostServiceDependencies) {}
 
@@ -96,21 +98,12 @@ export class WslHostService {
   }
 
   getStatuses(): WslHostStatus[] {
-    return [...this.statuses.values()]
+    return this.board.list()
   }
 
   /** Hears every change to what `getStatuses` returns. */
   onStatusesChanged(listener: () => void): () => void {
-    this.statusListeners.add(listener)
-    return () => {
-      this.statusListeners.delete(listener)
-    }
-  }
-
-  private notifyStatusesChanged(): void {
-    for (const listener of this.statusListeners) {
-      listener()
-    }
+    return this.board.onChanged(listener)
   }
 
   async listDistros(): Promise<WslHostDistro[]> {
@@ -169,8 +162,7 @@ export class WslHostService {
     }
     this.visible.delete(environmentId)
     this.parked.delete(environmentId)
-    this.statuses.delete(environmentId)
-    this.notifyStatusesChanged()
+    this.board.delete(environmentId)
     await this.deps.removed(environmentId)
     return removal.serverStop
   }
@@ -213,12 +205,7 @@ export class WslHostService {
     if (refusal || this.removing.has(environmentId)) {
       throw new Error(refusal?.message ?? WSL_HOST_REMOVING_MESSAGE)
     }
-    if (record.pendingStop) {
-      if (!withdrawPendingRemoval) {
-        throw new Error(wslHostRemovalPendingMessage(record.distro))
-      }
-      setWslHostPendingStop(this.deps.userDataPath(), environmentId, null)
-    }
+    admitConnectToPendingHost(this.deps.userDataPath(), record, withdrawPendingRemoval)
     this.wsl.forgetPairingFailures?.(environmentId)
     this.parked.delete(environmentId)
     await this.wsl.connect(record.distro, options)
@@ -242,9 +229,8 @@ export class WslHostService {
     if (refusal || this.removing.has(environmentId)) {
       throw new Error(refusal?.message ?? WSL_HOST_REMOVING_MESSAGE)
     }
-    if (record.pendingStop) {
-      throw new Error(wslHostRemovalPendingMessage(record.distro))
-    }
+    // A pending host never reconnects for a runtime call.
+    admitConnectToPendingHost(this.deps.userDataPath(), record, false)
     if (reachability === 'stopped') {
       this.parked.add(environmentId)
     }
@@ -372,10 +358,7 @@ export class WslHostService {
     status: WslOrcadConnectionStatus,
     connection: WslOrcadConnection | null = null
   ): void {
-    const next = toWslHostStatus(record, status, connection)
-    this.statuses.set(record.environmentId, next)
-    this.deps.publish(next)
-    this.notifyStatusesChanged()
+    this.board.set(toWslHostStatus(record, status, connection))
   }
 
   private records(): WslHostDeploymentRecord[] {

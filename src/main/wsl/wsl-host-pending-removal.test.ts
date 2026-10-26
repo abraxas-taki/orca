@@ -256,4 +256,18 @@ describe('WslHostService pending removal', () => {
     await service.connect('wsl:ubuntu', { withdrawPendingRemoval: true })
     expect(wakeRememberedWslHosts(userDataPath, vi.fn())).toEqual([])
   })
+
+  it('a due automation never boots a host whose Remove is pending', async () => {
+    const connector = makeConnector([UBUNTU])
+    connector.stopServer.mockResolvedValueOnce({ stopped: false, reason: 'busy', verdict: 'live' })
+    const service = makeService(connector)
+    await service.add({ distro: 'Ubuntu' })
+    await service.remove('wsl:ubuntu')
+    connector.connect.mockClear()
+    connector.reachability.mockClear()
+
+    await service.wakeForAutomation('wsl:ubuntu')
+    expect(connector.reachability).not.toHaveBeenCalled()
+    expect(connector.connect).not.toHaveBeenCalled()
+  })
 })
