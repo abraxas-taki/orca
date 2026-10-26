@@ -1,16 +1,21 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
-import { nativeChatPromptDismissalMatches } from '../../../src/shared/native-chat-prompt-dismiss-key'
+import type { InteractivePromptCard } from '../../../src/shared/native-chat-interactive-prompt'
+import {
+  nativeChatCardDismissKey,
+  nativeChatPromptDismissalMatches,
+  nativeChatPromptOccurrenceKey
+} from '../../../src/shared/native-chat-prompt-dismiss-key'
 import {
   mobileNativeChatPromptDismissals as dismissals,
   type MobileNativeChatPromptDismissal
 } from './mobile-native-chat-prompt-dismissals'
 
-type DetectedPrompt = { sessionKey: string | null; content: string | null; startedAt: number | null }
+type DetectedPrompt = { sessionKey: string | null; occurrenceKey: string | null }
 
 // Keep terminal-card dismissals per tab until observed prompts supersede them.
 export function useMobileNativeChatPromptDismiss({
   kind,
-  content,
+  card,
   startedAt,
   scopeKey,
   sessionKey,
@@ -18,8 +23,8 @@ export function useMobileNativeChatPromptDismiss({
 }: {
   /** Ask and permission cards keep separate answers for the same tab. */
   kind: 'ask' | 'prompt'
-  /** The card's shared dismiss key; null means no card. */
-  content: string | null
+  card: InteractivePromptCard
+  /** The host wait's start for a status-backed card; null for a transcript-only one. */
   startedAt: number | null
   scopeKey: string | null
   sessionKey: string | null
@@ -32,15 +37,16 @@ export function useMobileNativeChatPromptDismiss({
   expandPrompt: () => void
 } {
   const storeKey = JSON.stringify([kind, scopeKey])
+  const content = nativeChatCardDismissKey(card)
+  // A question keeps its occurrence across the status-to-transcript handoff; an approval's ends with its wait.
+  const occurrenceKey = nativeChatPromptOccurrenceKey(card, startedAt)
   const detectedByScopeRef = useRef(new Map<string | null, DetectedPrompt>())
   const observation = useMemo(() => {
     const previous = detectedByScopeRef.current.get(scopeKey)
-    return previous?.sessionKey === sessionKey &&
-      previous.content === content &&
-      previous.startedAt === startedAt
+    return previous?.sessionKey === sessionKey && previous.occurrenceKey === occurrenceKey
       ? previous
-      : { sessionKey, content, startedAt }
-  }, [sessionKey, content, startedAt, scopeKey])
+      : { sessionKey, occurrenceKey }
+  }, [sessionKey, occurrenceKey, scopeKey])
   const dismissed = useSyncExternalStore(dismissals.subscribe, () => dismissals.read(storeKey))
   const matches =
     dismissed?.sessionKey === sessionKey &&

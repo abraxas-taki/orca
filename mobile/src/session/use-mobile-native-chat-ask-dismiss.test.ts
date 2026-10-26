@@ -89,6 +89,16 @@ describe('useMobileNativeChatAskDismiss', () => {
     expect(state?.showAsk).toBe(true)
   })
 
+  it('accepts an answer that settles after the status handed the prompt to the transcript', async () => {
+    await mount({ prompt: first, startedAt: 10 })
+    const acceptedDismiss = state!.dismissAsk
+
+    await update({ prompt: first, startedAt: null })
+    act(() => acceptedDismiss())
+
+    expect(state?.showAsk).toBe(false)
+  })
+
   it('keeps an answered status-backed prompt hidden once only the transcript still holds it', async () => {
     await mount({ prompt: first, startedAt: 10 })
     act(() => state?.dismissAsk())

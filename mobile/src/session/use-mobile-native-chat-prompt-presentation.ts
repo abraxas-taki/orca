@@ -1,8 +1,5 @@
 import { useCallback } from 'react'
-import {
-  nativeChatCardDismissKey,
-  nativeChatPromptOccurrenceKey
-} from '../../../src/shared/native-chat-prompt-dismiss-key'
+import { nativeChatPromptOccurrenceKey } from '../../../src/shared/native-chat-prompt-dismiss-key'
 import type { MobileChatPermission } from './mobile-native-chat-permission'
 import { useMobileNativeChatPromptDismiss } from './use-mobile-native-chat-prompt-dismiss'
 
@@ -28,7 +25,7 @@ export function useMobileNativeChatPromptPresentation({
   const { showPrompt, collapsed, dismissPrompt, collapsePrompt, expandPrompt } =
     useMobileNativeChatPromptDismiss({
       kind: 'prompt',
-      content: nativeChatCardDismissKey(card),
+      card,
       startedAt: waitStartedAt,
       scopeKey,
       sessionKey,

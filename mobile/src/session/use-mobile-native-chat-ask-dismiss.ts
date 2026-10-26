@@ -19,7 +19,11 @@ export function useMobileNativeChatAskDismiss(args: {
   collapseAsk: () => void
 } {
   const askKey = useMemo(() => nativeChatAskDismissKey(args.ask), [args.ask])
-  const dismiss = useMobileNativeChatPromptDismiss({ ...args, kind: 'ask', content: askKey })
+  const dismiss = useMobileNativeChatPromptDismiss({
+    ...args,
+    kind: 'ask',
+    card: args.ask ? { kind: 'question', prompt: args.ask } : null
+  })
   return {
     askKey,
     showAsk: dismiss.showPrompt,
