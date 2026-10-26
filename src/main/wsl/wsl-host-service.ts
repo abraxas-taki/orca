@@ -5,7 +5,7 @@
  */
 import { errorMessage } from '../../shared/error-message'
 import { focusReachability } from './wsl-host-focus-reachability'
-import { removeWslHostEnvironment } from '../../shared/runtime-environment-wsl-host-store'
+import { setWslHostPendingStop } from '../../shared/runtime-environment-wsl-host-store'
 import type { WslHostDeploymentRecord } from '../../shared/wsl-host-deployment-store'
 import type {
   WslHostAddResult,
@@ -25,11 +25,13 @@ import {
   sameWslDistro,
   wslHostNotConnectedMessage,
   wslHostStoppedMessage,
+  wslHostRemovalPendingMessage,
   WSL_HOST_REMOVING_MESSAGE,
   wslHostRunRefusal
 } from './wsl-host-add-admission'
 import type { WslOrcadConnection } from './wsl-orcad-connection'
 import { registerWslHost } from './wsl-host-registration'
+import { removeWslHostServer, type WslHostRemoval } from './wsl-host-removal'
 import type { WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
 import {
   forgetWslHostToWake,
@@ -37,7 +39,13 @@ import {
   rememberWslHostsToWake
 } from './wsl-host-early-wake'
 
-export type { WslHostConnector, WslHostReachability } from './wsl-host-connector-contract'
+export type {
+  WslDistroPresence,
+  WslHostConnector,
+  WslHostReachability
+} from './wsl-host-connector-contract'
+
+export type WslDistroPresence = 'running' | 'stopped' | 'unregistered' | 'unverifiable'
 
 export type WslHostServiceDependencies = {
   userDataPath: () => string
@@ -135,6 +143,19 @@ export class WslHostService {
     if (pending) {
       return pending
     }
+    const unfinishedRemoval = this.recordForDistro(args.distro)
+    if (unfinishedRemoval?.pendingStop) {
+      // Adding it again keeps the host its unfinished Remove left listed.
+      const { environmentId } = unfinishedRemoval
+      return this.connect(environmentId).then(
+        (): WslHostAddResult => ({ ok: true, environmentId }),
+        (error: unknown): WslHostAddResult => ({
+          ok: false,
+          kind: 'failed',
+          message: errorMessage(error)
+        })
+      )
+    }
     const operation = registerWslHost(
       {
         deps: this.deps,
@@ -158,29 +179,26 @@ export class WslHostService {
     }
     // Block reconnect from visible work, liveness and calls before stopping.
     this.removing.add(environmentId)
-    const connector = this.connector
-    let serverStop: WslHostServerStop = { stopped: true }
+    let removal: WslHostRemoval
     try {
-      if (connector) {
-        serverStop = await connector
-          .stopServer(record.distro, environmentId)
-          .catch((error: unknown) => ({ stopped: false, reason: errorMessage(error) }))
-        await connector.disconnect(record.distro)
-        // Without its holder the distro idles out.
-        await connector.releaseHolder(record.distro)
+      removal = await removeWslHostServer(this.deps.userDataPath(), this.connector, record)
+      if (removal.removed) {
+        forgetWslHostToWake(this.deps.userDataPath(), record.distro)
+        this.visible.delete(environmentId)
+        this.parked.delete(environmentId)
       }
-      removeWslHostEnvironment(this.deps.userDataPath(), environmentId)
-      forgetWslHostToWake(this.deps.userDataPath(), record.distro)
-      this.visible.delete(environmentId)
-      this.parked.delete(environmentId)
     } finally {
       // Failed removal must leave the host usable and allow another removal attempt.
       this.removing.delete(environmentId)
     }
+    if (!removal.removed) {
+      this.setStatus(this.recordForEnvironment(environmentId) ?? record, { state: 'closed' })
+      return removal.serverStop
+    }
     this.statuses.delete(environmentId)
     this.notifyStatusesChanged()
     await this.deps.removed(environmentId)
-    return serverStop
+    return removal.serverStop
   }
 
   /** Disable closes connections/watches and releases holders; reenable resumes only hosts needed by visible work. */
@@ -215,6 +233,10 @@ export class WslHostService {
     if (refusal || this.removing.has(environmentId)) {
       throw new Error(refusal?.message ?? WSL_HOST_REMOVING_MESSAGE)
     }
+    if (record.pendingStop) {
+      // Connecting keeps the host: its unfinished Remove is withdrawn.
+      setWslHostPendingStop(this.deps.userDataPath(), environmentId, null)
+    }
     this.wsl.forgetPairingFailures?.(environmentId)
     this.parked.delete(environmentId)
     await this.wsl.connect(record.distro, options)
@@ -237,6 +259,9 @@ export class WslHostService {
     const refusal = wslHostRunRefusal(this.deps)
     if (refusal || this.removing.has(environmentId)) {
       throw new Error(refusal?.message ?? WSL_HOST_REMOVING_MESSAGE)
+    }
+    if (record.pendingStop) {
+      throw new Error(wslHostRemovalPendingMessage(record.distro))
     }
     if (reachability === 'stopped') {
       this.parked.add(environmentId)
@@ -280,8 +305,14 @@ export class WslHostService {
     }
   }
 
+  /** A host whose Remove is pending is never woken, by focus or by a due automation. */
   private mayWake(record: WslHostDeploymentRecord): boolean {
-    return Boolean(this.connector) && this.canRun() && !this.removing.has(record.environmentId)
+    return (
+      !record.pendingStop &&
+      Boolean(this.connector) &&
+      this.canRun() &&
+      !this.removing.has(record.environmentId)
+    )
   }
 
   /** A focus entry or a due automation: lifts a park and may boot the distro. */
@@ -315,7 +346,9 @@ export class WslHostService {
     const record = this.recordForDistro(distro)
     // Liveness needs visible demand, an enabled gate and no removal in progress.
     const id = record?.environmentId
-    return id ? this.canRun() && this.visible.has(id) && !this.removing.has(id) : false
+    return id && !record.pendingStop
+      ? this.canRun() && this.visible.has(id) && !this.removing.has(id)
+      : false
   }
 
   /**
@@ -326,6 +359,12 @@ export class WslHostService {
   async start(): Promise<void> {
     if (!this.connector) {
       return
+    }
+    // An unfinished Remove shows as such from launch; nothing reconnects it.
+    for (const record of this.records()) {
+      if (record.pendingStop) {
+        this.setStatus(record, { state: 'closed' })
+      }
     }
     const canRun = this.canRun()
     await this.connector.adoptHolders((distro) => canRun && this.isKnownDistro(distro))
