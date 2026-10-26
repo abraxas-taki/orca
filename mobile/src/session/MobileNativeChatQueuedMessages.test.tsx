@@ -38,10 +38,13 @@ vi.mock('../components/ActionSheetModal', () => ({ ActionSheetModal: 'ActionShee
 function card(
   overrides: Partial<MobileQueuedMessageCard> & { messageId: string }
 ): MobileQueuedMessageCard {
+  const text = overrides.text ?? `text of ${overrides.messageId}`
   return {
-    text: `text of ${overrides.messageId}`,
+    position: 1,
+    text,
+    line: text,
     state: 'waiting',
-    paused: false,
+    hold: overrides.state === 'returned' ? 'returned' : 'turn',
     needsAttention: false,
     caption: null,
     attribution: null,
@@ -297,7 +300,7 @@ describe('MobileNativeChatQueuedMessages', () => {
       cards: [
         card({
           messageId: 'failed',
-          paused: true,
+          hold: 'paused',
           needsAttention: true,
           caption: "Couldn't send — tap Send to retry"
         }),

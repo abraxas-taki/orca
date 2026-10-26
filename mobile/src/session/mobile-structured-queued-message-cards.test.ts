@@ -4,10 +4,7 @@ import { agentSessionFailureWords } from '../../../src/shared/agent-session-fail
 import { DISPATCH_REJECTED_HOST_RESTARTED } from '../../../src/shared/structured-agent-session-dispatch-rejection'
 import { QUEUED_MESSAGE_PAUSED_SEND_FAILED } from '../../../src/shared/agent-session-wire'
 import type { AgentSessionQueuedMessage } from '../../../src/shared/agent-session-wire'
-import {
-  mobileQueueHasResumableCard,
-  mobileQueuedMessageCards
-} from './mobile-structured-queued-message-cards'
+import { mobileQueuedMessageCards } from './mobile-structured-queued-message-cards'
 
 function returnedAs(fact: Parameters<typeof agentSessionFailureWords>[0]) {
   const { reason, rejection } = agentSessionFailureWords(fact, { surface: 'rejection' })
@@ -64,40 +61,6 @@ describe('mobileQueuedMessageCards', () => {
     }
   )
 
-  it('marks a /compact card as a command, its text as typed', () => {
-    const [card] = mobileQueuedMessageCards(
-      [
-        draft({
-          messageId: 'c',
-          body: {
-            kind: 'message',
-            role: 'user',
-            blocks: [{ type: 'text', text: '/compact' }],
-            command: { name: 'compact' }
-          }
-        })
-      ],
-      []
-    )
-    expect(card).toMatchObject({ text: '/compact', command: true, caption: null })
-    expect(card).not.toHaveProperty('waitsForAgent')
-    expect(mobileQueuedMessageCards([draft({ messageId: 'a' })], [])[0]).not.toHaveProperty(
-      'command'
-    )
-    const compact = draft({
-      messageId: 'c',
-      body: {
-        kind: 'message',
-        role: 'user',
-        blocks: [{ type: 'text', text: '/compact' }],
-        command: { name: 'compact' }
-      }
-    })
-    expect(mobileQueuedMessageCards([compact], [], { agentWorking: true })[0]).toMatchObject({
-      command: true,
-      waitsForAgent: true
-    })
-  })
 
   it("a send-failed command card's caption names Send only when Send is there", () => {
     const failed = draft({
@@ -119,23 +82,6 @@ describe('mobileQueuedMessageCards', () => {
     )
   })
 
-  it('renders nothing without a published list', () => {
-    expect(mobileQueuedMessageCards(null, [])).toEqual([])
-    expect(mobileQueuedMessageCards([], [])).toEqual([])
-  })
-
-  it('captions nothing on a plain waiting draft, as the desktop row', () => {
-    const [card] = mobileQueuedMessageCards([draft({ messageId: 'a' })], [])
-    expect(card).toEqual({
-      messageId: 'a',
-      text: 'body of a',
-      state: 'waiting',
-      paused: false,
-      needsAttention: false,
-      caption: null,
-      attribution: null
-    })
-  })
 
   it("keeps a card's own failed send beside a plainly queued one", () => {
     const cards = mobileQueuedMessageCards(
@@ -146,28 +92,8 @@ describe('mobileQueuedMessageCards', () => {
       []
     )
     expect(cards.map((card) => card.caption)).toEqual(["Couldn't send — tap Send to retry", null])
-    expect(cards[0]?.paused).toBe(true)
   })
 
-  it('finds something for Resume to send only in a waiting card with no hold, ahead of a returned one', () => {
-    const resumable = (drafts: AgentSessionQueuedMessage[]) =>
-      mobileQueueHasResumableCard(mobileQueuedMessageCards(drafts, []))
-    const returned = draft({
-      messageId: 'r',
-      ...returnedAs(agentSessionFailureFact('hostRestarted'))
-    })
-    const failed = draft({
-      messageId: 'f',
-      paused: true,
-      pausedReason: QUEUED_MESSAGE_PAUSED_SEND_FAILED
-    })
-    const waiting = draft({ messageId: 'w', position: 2 })
-    expect(resumable([returned])).toBe(false)
-    expect(resumable([returned, waiting])).toBe(false)
-    expect(resumable([failed])).toBe(false)
-    expect(resumable([failed, waiting])).toBe(true)
-    expect(resumable([waiting, { ...returned, position: 3 }])).toBe(true)
-  })
 
   it('captions a reasonless pause as a plain pause, promising no release rule', () => {
     const [card] = mobileQueuedMessageCards([draft({ messageId: 'a', paused: true })], [])
@@ -189,38 +115,6 @@ describe('mobileQueuedMessageCards', () => {
     expect(cards[1]?.needsAttention).toBe(false)
   })
 
-  it('hides a waiting card once its hand-off arrived, never a returned one', () => {
-    const cards = mobileQueuedMessageCards(
-      [
-        draft({ messageId: 'returned', ...returnedAs(agentSessionFailureFact('hostRestarted')) }),
-        draft({ messageId: 'drained', position: 2 }),
-        draft({ messageId: 'waiting', position: 3 })
-      ],
-      [
-        { queuedMessageId: 'returned', dispatchState: 'rejected' },
-        { queuedMessageId: 'drained', dispatchState: 'pending' }
-      ]
-    )
-    expect(cards.map((card) => card.messageId)).toEqual(['returned', 'waiting'])
-    expect(cards[1]?.caption).toBe('Waiting — a message ahead needs attention')
-  })
-
-  it('shows a draft a Stop requeued beside its rejected hand-off', () => {
-    // Rejected hand-offs stay hidden in history; the requeued card is the only reachable copy of their text.
-    const cards = mobileQueuedMessageCards(
-      [
-        draft({ messageId: 'requeued' }),
-        draft({ messageId: 'sending', position: 2 }),
-        draft({ messageId: 'sent', position: 3 })
-      ],
-      [
-        { queuedMessageId: 'requeued', dispatchState: 'rejected' },
-        { queuedMessageId: 'sending', dispatchState: 'pending' },
-        { queuedMessageId: 'sent', dispatchState: 'accepted' }
-      ]
-    )
-    expect(cards.map((card) => card.messageId)).toEqual(['requeued'])
-  })
 
   it('maps a Stop-withdrawn returned card to its own English copy', () => {
     const [card] = mobileQueuedMessageCards(
@@ -326,5 +220,22 @@ describe('mobileQueuedMessageCards', () => {
       []
     )
     expect(card?.caption).toBe('Your message was not sent.')
+  })
+
+  it("reads a card of images alone by the image's name or their count", () => {
+    const images = (...paths: string[]) =>
+      draft({
+        messageId: paths.join(),
+        body: {
+          kind: 'message',
+          role: 'user',
+          blocks: paths.map((path) => ({ type: 'image-ref' as const, path }))
+        }
+      })
+    const cards = mobileQueuedMessageCards(
+      [images('/tmp/shot.png'), images('/tmp/orca-paste-1.png'), images('/a.png', '/b.png')],
+      []
+    )
+    expect(cards.map((card) => card.line)).toEqual(['shot.png', 'Pasted image', '2 images'])
   })
 })

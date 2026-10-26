@@ -31,7 +31,7 @@ import {
   startQueuedEditLease,
   type QueuedEditLease
 } from './structured-agent-session-queued-edit-lease'
-import type { QueuedMessageCard } from './structured-agent-session-queued-cards'
+import type { QueuedMessageCard } from '../../../../shared/structured-agent-session-queued-cards'
 import {
   queuedCardOnScreen,
   queuedEditStanding

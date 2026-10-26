@@ -36,10 +36,8 @@ import { useStructuredAgentSessionContextUsage } from './use-structured-agent-se
 import { useStructuredAgentSessionRailOutline } from './use-structured-agent-session-rail-outline'
 import { useStructuredAgentSessionQueuedMessages } from './use-structured-agent-session-queued-messages'
 import { structuredConversationCommandRunner } from './structured-conversation-command-send'
-import {
-  commandCardWaiting,
-  pendingSendsOutsideQueuedCards
-} from './structured-agent-session-queued-cards'
+import { commandCardWaiting } from '../../../../shared/structured-agent-session-queued-cards'
+import { pendingSendsOutsideQueuedCards } from './structured-agent-session-sending-queued-cards'
 import { hostStatesTurnScopes } from '../../../../shared/native-chat-turn-membership'
 import { pendingPromptsAllUnanswerableHere } from '../../../../shared/agent-session-approval-subject'
 import { withNativeChatCutTurnNotices } from '../../../../shared/native-chat-cut-turn-notice'

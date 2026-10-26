@@ -1,18 +1,19 @@
 // Derive hold labels on the client; the wire carries queue state, not presentation wording.
 
-import type { UnreadAgentSessionFailureFact } from '../../../../shared/agent-session-failure'
-import type { AgentJournalSubmission } from '../../../../shared/agent-session-journal-types'
-import type { NativeChatImageRefBlock } from '../../../../shared/native-chat-types'
-import type {
-  AgentSessionQueuedMessage,
-  AgentSessionQueuePause
-} from '../../../../shared/agent-session-wire'
+import type { UnreadAgentSessionFailureFact } from './agent-session-failure'
+import type { AgentJournalSubmission } from './agent-session-journal-types'
+import type { NativeChatImageRefBlock } from './native-chat-types'
+import type { AgentSessionQueuedMessage, AgentSessionQueuePause } from './agent-session-wire'
 import {
   readAgentMessageSource,
   type AgentMessageSource
-} from '../../../../shared/agent-session/agent-session-message-source'
-import type { StructuredAgentSessionPendingSend } from './structured-agent-session-pending-sends'
-import { handedOffQueuedMessageIds } from '../../../../shared/structured-agent-session-draft-hand-off'
+} from './agent-session/agent-session-message-source'
+import { handedOffQueuedMessageIds } from './structured-agent-session-draft-hand-off'
+import {
+  NATIVE_CHAT_IMAGE_LABEL_ENGLISH,
+  nativeChatImageLabel,
+  type NativeChatImageLabelCopy
+} from './native-chat-image-label'
 
 export type QueuedMessageCardHold =
   /** Plainly queued, also behind an open question: the question already says the agent waits. */
@@ -44,11 +45,11 @@ export type QueuedMessageCard = {
   from?: AgentMessageSource
 }
 
-function queuedMessageCardText(body: AgentSessionQueuedMessage['body']): string {
+export function queuedMessageCardText(body: AgentSessionQueuedMessage['body']): string {
   return body.blocks.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('\n')
 }
 
-function queuedMessageCardImages(
+export function queuedMessageCardImages(
   body: AgentSessionQueuedMessage['body']
 ): Pick<QueuedMessageCard, 'images'> {
   const images = body.blocks.flatMap((block) => (block.type === 'image-ref' ? [block] : []))
@@ -135,50 +136,16 @@ export function newestSteerableQueuedMessageCard(
   return newest && !newest.command && newest.hold !== 'sending' ? newest : null
 }
 
-export function sendingQueuedMessageCards(
-  entries: readonly StructuredAgentSessionPendingSend[]
-): QueuedMessageCard[] {
-  return entries.map((entry, index) => ({
-    messageId: entry.clientMessageId,
-    // After every card the host holds, in send order.
-    position: Number.MAX_SAFE_INTEGER - entries.length + index,
-    text: queuedMessageCardText(entry.body),
-    ...queuedMessageCardImages(entry.body),
-    state: 'waiting',
-    hold: 'sending'
-  }))
-}
-
-/** Host-owned cards and active queue requests stay out of transcript echoes; recorded sends remain until their row arrives. */
-export function pendingSendsOutsideQueuedCards<
-  Send extends { clientMessageId: string; delivery?: 'queue-if-active' }
->(pending: readonly Send[], heldIds: readonly string[], isWorking: boolean): readonly Send[] {
-  const held = new Set(heldIds)
-  const next = pending.filter(
-    (entry) =>
-      !held.has(entry.clientMessageId) && !(isWorking && entry.delivery === 'queue-if-active')
-  )
-  return next.length === pending.length ? pending : next
-}
-
-export function pendingQueueSendsOnTheirWay(
-  pending: readonly StructuredAgentSessionPendingSend[],
-  heldIds: readonly string[],
-  isWorking: boolean,
-  submissions: readonly AgentJournalSubmission[]
-): StructuredAgentSessionPendingSend[] {
-  if (!isWorking) {
-    return []
+/** The card's line: its text, or for a card of images alone, the image's name or their count. */
+export function queuedMessageCardLine(
+  card: Pick<QueuedMessageCard, 'text' | 'images'>,
+  copy: NativeChatImageLabelCopy = NATIVE_CHAT_IMAGE_LABEL_ENGLISH
+): string {
+  const images = card.images ?? []
+  if (card.text.trim() || images.length === 0) {
+    return card.text
   }
-  const recorded = new Set([
-    ...heldIds,
-    ...handedOffQueuedMessageIds(submissions),
-    ...submissions.map((submission) => submission.clientMessageId)
-  ])
-  return pending.filter(
-    (entry) =>
-      entry.phase === 'sending' &&
-      entry.delivery === 'queue-if-active' &&
-      !recorded.has(entry.clientMessageId)
-  )
+  return images.length === 1
+    ? nativeChatImageLabel(images[0], copy)
+    : copy.imageCount(images.length)
 }

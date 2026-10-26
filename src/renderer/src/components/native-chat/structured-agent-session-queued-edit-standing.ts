@@ -3,7 +3,7 @@
 import type { AgentJournalSubmission } from '../../../../shared/agent-session-journal-types'
 import type { AgentSessionQueuedMessage } from '../../../../shared/agent-session-wire'
 import { agentSessionSendBodyFingerprint } from '../../../../shared/structured-agent-session-send-mutation'
-import type { QueuedMessageCard } from './structured-agent-session-queued-cards'
+import type { QueuedMessageCard } from '../../../../shared/structured-agent-session-queued-cards'
 
 /** Sent means handed off with this body; holds/differs describe the current card, gone its removal; null queue proves nothing. */
 export type QueuedEditStanding = 'sent' | 'gone' | 'holds' | 'differs'
