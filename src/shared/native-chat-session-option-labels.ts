@@ -66,6 +66,22 @@ function levelId(
   return Object.hasOwn(ids, value) ? ids[value] : undefined
 }
 
+/** The selected choice, named by its raw value when the list no longer offers it. */
+export function selectedNativeChatChoice(
+  descriptor: SessionOptionDescriptor
+): SessionOptionSelectChoice | null {
+  if (descriptor.kind.type !== 'select' || !descriptor.kind.currentValue) {
+    return null
+  }
+  const current = descriptor.kind.currentValue
+  return (
+    descriptor.kind.choices.find((choice) => choice.value === current) ?? {
+      value: current,
+      label: current
+    }
+  )
+}
+
 export function nativeChatSessionOptionLabel(
   descriptor: SessionOptionDescriptor,
   say: NativeChatSessionOptionSay
@@ -139,20 +155,8 @@ export function nativeChatModelPillLabel(
   say: NativeChatSessionOptionSay
 ): string {
   // The tooltip names the category; default sources still identify a model, while unknown sources do not.
-  if (
-    descriptor.valueSource === 'unknown' ||
-    descriptor.kind.type !== 'select' ||
-    !descriptor.kind.currentValue
-  ) {
-    return say('model')
-  }
-  return nativeChatSessionChoiceLabel(
-    descriptor.kind.choices.find((choice) => choice.value === descriptor.kind.currentValue) ?? {
-      value: descriptor.kind.currentValue,
-      label: descriptor.kind.currentValue
-    },
-    say
-  )
+  const choice = descriptor.valueSource === 'unknown' ? null : selectedNativeChatChoice(descriptor)
+  return choice ? nativeChatSessionChoiceLabel(choice, say) : say('model')
 }
 
 export function nativeChatOptionsPillTitle(
@@ -174,21 +178,12 @@ export function nativeChatOptionValuesLabel(
     if (descriptor.valueSource === 'unknown' || isDefaultServiceTier(descriptor)) {
       continue
     }
-    if (descriptor.kind.type === 'select' && descriptor.kind.currentValue) {
-      const choice = descriptor.kind.choices.find(
-        (candidate) => candidate.value === descriptor.kind.currentValue
-      )
+    const choice = selectedNativeChatChoice(descriptor)
+    if (choice) {
       labels.push(
         (descriptor.id === 'effort'
           ? nativeChatSessionChoiceShortLabel
-          : nativeChatSessionChoiceLabel)(
-          choice ?? {
-            value: descriptor.kind.currentValue,
-            label: descriptor.kind.currentValue
-          },
-          say,
-          descriptor.id
-        )
+          : nativeChatSessionChoiceLabel)(choice, say, descriptor.id)
       )
     } else if (descriptor.kind.type === 'boolean' && descriptor.kind.currentValue === true) {
       labels.push(

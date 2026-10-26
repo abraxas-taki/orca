@@ -8,7 +8,7 @@ import { matchNativeChatCatalogModelId } from '../../../../shared/native-chat-se
 import { retireMissingModelMutation } from '../../../../shared/native-chat-discovered-catalog-models'
 import type { SessionOptionDescriptor } from '../../../../shared/native-chat-session-options'
 import { useAppStore } from '../../store'
-import { translate } from '@/i18n/i18n'
+import { sayNativeChatSessionOptionTranslated } from './native-chat-session-option-labels-text'
 import {
   createNativeChatPtySessionOptions,
   type NativeChatPtySessionOptionsSurface
@@ -102,7 +102,7 @@ export function useNativeChatSessionOptions(args: {
       // Version-neutral family seeds keep the picker available while host discovery runs or fails.
       ...(discoveryContext ? { initialModels: discoveredModels ?? undefined } : {}),
       mode: targetPtyId ? 'live' : 'draft',
-      modelLabel: translate('components.native-chat.composer.model', 'Model'),
+      modelLabel: sayNativeChatSessionOptionTranslated('model'),
       reportedValues,
       dispatchCommand,
       canSwitchOmpModel,
