@@ -660,7 +660,8 @@ describe('buildSections', () => {
       [
         worktree({ worktreeId: 'none', linkedPR: null }),
         worktree({ worktreeId: 'open', linkedPR: { number: 1, state: 'open' } }),
-        worktree({ worktreeId: 'merged', linkedPR: { number: 2, state: 'merged' } })
+        worktree({ worktreeId: 'merged', linkedPR: { number: 2, state: 'merged' } }),
+        worktree({ worktreeId: 'uncached', linkedPR: { number: 3, state: 'unknown' } })
       ],
       'name',
       { ...NO_WORKSPACE_ROW_FILTERS },
@@ -673,6 +674,7 @@ describe('buildSections', () => {
       { key: 'pr:in-review', title: 'In review' },
       { key: 'pr:in-progress', title: 'In progress' }
     ])
+    expect(sections.at(-1)?.data.map((row) => row.worktreeId)).toEqual(['none', 'uncached'])
   })
 
   it('groups by desktop workspace status labels and order', () => {

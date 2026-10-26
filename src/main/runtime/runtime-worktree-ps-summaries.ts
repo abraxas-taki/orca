@@ -6,6 +6,7 @@ import { folderWorkspaceToWorktree } from '../../shared/folder-workspace-worktre
 import { getWorkspaceAttachments } from '../../shared/workspace-attachments'
 import { getWorkspaceRowKindFacts } from '../../shared/worktree/workspace-kinds'
 import { readWorkspaceReviewPR } from '../../shared/sidebar-list/workspace-review-facts'
+import { UNCACHED_LINKED_PR_STATE } from '../../shared/runtime-worktree-contracts'
 import type { RuntimeStore } from './runtime-store-contract'
 import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 
@@ -21,7 +22,7 @@ export function buildRuntimeWorktreePsSummaries(args: {
     const meta =
       args.store?.getWorktreeMeta?.(worktree.id) ?? args.store?.getAllWorktreeMeta()[worktree.id]
     const repo = repoById.get(worktree.repoId)
-    // Why: the desktop's PR lanes read the same host-scoped cache entry; a bare linked number stays in linkedItems.
+    // Why: read the cache entry the desktop's PR lanes read; an uncached link keeps its badge as state 'unknown'.
     const cachedPR = ghCache ? readWorkspaceReviewPR(worktree, repo, ghCache.pr) : null
     const linkedPR: RuntimeWorktreePsSummary['linkedPR'] = cachedPR
       ? {
@@ -31,7 +32,9 @@ export function buildRuntimeWorktreePsSummaries(args: {
           url: cachedPR.url,
           checksStatus: cachedPR.checksStatus
         }
-      : null
+      : meta?.linkedPR != null
+        ? { number: meta.linkedPR, state: UNCACHED_LINKED_PR_STATE }
+        : null
     const lineage = worktree.lineage
     summaries.set(worktree.id, {
       workspaceKind: 'git',

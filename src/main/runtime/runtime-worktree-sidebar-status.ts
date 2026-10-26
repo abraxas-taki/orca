@@ -9,8 +9,9 @@ import {
 
 /** The desktop sidebar dot: host status stands in for the title heuristic under fresh agent verdicts. */
 export function resolveRuntimeWorktreeSidebarStatus(
-  summary: Pick<RuntimeWorktreePsSummary, 'status' | 'workingMode' | 'agents'>,
-  now: number
+  summary: Pick<RuntimeWorktreePsSummary, 'status' | 'agents'>,
+  now: number,
+  hasUnsuppressedWorkingTitle: boolean
 ): WorktreeStatus {
   const flags: AgentPaneActivityFlags = {
     hasPermission: false,
@@ -26,9 +27,8 @@ export function resolveRuntimeWorktreeSidebarStatus(
       applyAgentPaneActivityFlags(flags, row)
     }
   }
+  // Why: desktop ignores titles of panes with a fresh agent row; working rows return through the flags.
   const heuristic =
-    summary.status === 'working' && summary.workingMode === 'monitoring'
-      ? 'monitoring'
-      : summary.status
+    summary.status === 'working' && !hasUnsuppressedWorkingTitle ? 'active' : summary.status
   return rankWorktreeStatus(heuristic, flags)
 }

@@ -1,3 +1,4 @@
+import { UNCACHED_LINKED_PR_STATE } from '../../../src/shared/runtime-worktree-contracts'
 import {
   buildWorktreeOccurrencePlan,
   type WorktreeOccurrenceSection
@@ -263,7 +264,11 @@ export function buildMobileWorkspacePlan(
       } else if (groupMode === 'pr-status') {
         const byGroup = new Map<string, Worktree[]>()
         for (const w of canonicalGroupWorktrees) {
-          const key = getPRGroupKeyForState(w.linkedPR?.state)
+          // Like desktop, a linked PR the host never fetched has no review fact yet.
+          const key =
+            w.linkedPR && w.linkedPR.state !== UNCACHED_LINKED_PR_STATE
+              ? getPRGroupKeyForState(w.linkedPR.state)
+              : 'in-progress'
           const list = byGroup.get(key)
           if (list) {
             list.push(w)

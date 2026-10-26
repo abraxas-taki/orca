@@ -35,7 +35,11 @@ describe('resolveRuntimeWorktreeSidebarStatus', () => {
     ['success', 'done']
   ] as const)('reads a finished %s turn as the desktop dot %s', (outcome, expected) => {
     expect(
-      resolveRuntimeWorktreeSidebarStatus({ status: 'active', agents: [doneRow(outcome)] }, NOW)
+      resolveRuntimeWorktreeSidebarStatus(
+        { status: 'active', agents: [doneRow(outcome)] },
+        NOW,
+        true
+      )
     ).toBe(expected)
   })
 
@@ -43,7 +47,8 @@ describe('resolveRuntimeWorktreeSidebarStatus', () => {
     expect(
       resolveRuntimeWorktreeSidebarStatus(
         { status: 'permission', agents: [doneRow('failure')] },
-        NOW
+        NOW,
+        true
       )
     ).toBe('permission')
   })
@@ -55,8 +60,15 @@ describe('resolveRuntimeWorktreeSidebarStatus', () => {
           status: 'active',
           agents: [doneRow('failure', NOW - AGENT_STATUS_STALE_AFTER_MS - 1)]
         },
-        NOW
+        NOW,
+        true
       )
     ).toBe('active')
+  })
+
+  it('lets a finished turn show through its own pane’s lingering working title', () => {
+    const summary = { status: 'working' as const, agents: [doneRow('success')] }
+    expect(resolveRuntimeWorktreeSidebarStatus(summary, NOW, false)).toBe('done')
+    expect(resolveRuntimeWorktreeSidebarStatus(summary, NOW, true)).toBe('working')
   })
 })

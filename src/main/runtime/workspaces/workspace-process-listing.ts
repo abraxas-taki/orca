@@ -17,7 +17,6 @@ import {
 import { applyRuntimeWorktreePsUnverifiableTerminals } from '../runtime-worktree-ps-unverifiable-terminals'
 import { attachRuntimeWorktreeAgentRows } from '../runtime-worktree-agent-rows'
 import { compareWorktreePs } from '../runtime-worktree-status-projection'
-import { resolveRuntimeWorktreeSidebarStatus } from '../runtime-worktree-sidebar-status'
 import type { Repo } from '../../../shared/repo-types'
 import type { StructuredAgentId } from '../../../shared/agent-session-provider-handle'
 import type { GlobalSettings } from '../../../shared/global-settings-types'
@@ -131,10 +130,6 @@ export abstract class OrcaRuntimeWithGetWorktreePs extends OrcaRuntimeWithWorktr
       getSummary
     })
 
-    const now = Date.now()
-    for (const summary of summaries.values()) {
-      summary.sidebarStatus = resolveRuntimeWorktreeSidebarStatus(summary, now)
-    }
     const sorted = [...summaries.values()].sort(compareWorktreePs)
     // Apply per-host pagination so hosts sorting last cannot disappear behind a global cap (#18104).
     return buildWorktreeListingPage(

@@ -82,7 +82,7 @@ export type RuntimeWorktreePsSummary = {
   createdAt?: number
   creatorProvenance?: Worktree['creatorProvenance']
   linkedIssue: number | null
-  /** The cached PR the desktop's PR lanes read; older hosts also sent a bare linked number as state 'unknown'. */
+  /** The cached PR the desktop's PR lanes read, else a linked number with state UNCACHED_LINKED_PR_STATE. Old hosts omit title/url/checks. */
   linkedPR: {
     number: number
     state: string
@@ -152,6 +152,9 @@ export type RuntimeGitCheckoutResult = {
   ok: true
   branch: string
 }
+
+/** A linked PR the host has no cached state for: it shows a badge but, like desktop, sits in the In progress lane. */
+export const UNCACHED_LINKED_PR_STATE = 'unknown'
 
 export type RuntimeWorktreeStatus = 'active' | 'working' | 'permission' | 'done' | 'inactive'
 

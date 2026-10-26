@@ -2,6 +2,7 @@ import { isFreshNonDoneAgentStatus } from '../../shared/agent-status-types'
 import { isAgentStatusFresh } from '../../shared/agent-status-freshness'
 import type { RuntimeWorktreeAgentRow, RuntimeWorktreePsSummary } from '../../shared/runtime-types'
 import { mergeWorktreeSummaryStatus } from './runtime-worktree-status-projection'
+import { resolveRuntimeWorktreeSidebarStatus } from './runtime-worktree-sidebar-status'
 import type { RuntimeWorktreePsSummaryLookup } from './runtime-worktree-summary-paths'
 import type { RuntimeWorkingTerminalEvidence } from './runtime-worktree-ps-activity'
 import type { RuntimeWorktreeAgentSource } from './runtime-worktree-agent-source'
@@ -106,6 +107,22 @@ export function attachRuntimeWorktreeAgentRows(args: {
         hasForegroundWorkingAgent || hasIndependentWorkingTerminal ? undefined : 'monitoring'
       )
     }
+  }
+  for (const summary of args.summaries.values()) {
+    const freshSources = summary.agents.flatMap((row) => {
+      const source = isAgentStatusFresh(row, now) ? rowSources.get(row.paneKey) : undefined
+      return source ? [source] : []
+    })
+    const hasUnsuppressedWorkingTitle = (
+      args.workingTerminalEvidenceByWorktreeId.get(summary.worktreeId) ?? []
+    ).some((evidence) =>
+      freshSources.every((source) => !workingTerminalEvidenceMatchesSource(evidence, source))
+    )
+    summary.sidebarStatus = resolveRuntimeWorktreeSidebarStatus(
+      summary,
+      now,
+      hasUnsuppressedWorkingTitle
+    )
   }
 }
 
