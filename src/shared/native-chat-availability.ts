@@ -1,12 +1,10 @@
-import type { Tab } from '../../../../shared/tab-types'
-import type { TuiAgent } from '../../../../shared/tui-agent'
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { Tab } from './tab-types'
+import type { TuiAgent } from './tui-agent'
+import type { AgentType } from './agent-status-types'
 import {
   isNativeChatSupportedAgent,
   nativeChatRequiresLocalTranscript
-} from '@/lib/native-chat-supported-agent'
-
-export { isNativeChatSupportedAgent }
+} from './native-chat-agent-support'
 
 /** Resolve launched/detected identity from the tab and status before applying this pure toggle policy. */
 export type NativeChatAvailabilityInput = {
@@ -23,6 +21,26 @@ export type NativeChatAvailabilityInput = {
   isChatViewMode?: boolean
 }
 
+/** The first identity claim in detected/launch/resolved order; an unsupported claim is not skipped. */
+export function nativeChatAvailabilityAgent(input: {
+  detectedAgent?: string | null
+  launchAgent?: string | null
+  resolvedAgent?: string | null
+}): string | null {
+  return input.detectedAgent ?? input.launchAgent ?? input.resolvedAgent ?? null
+}
+
+/** Whether chat can open on this agent where the reader can (or cannot) read its transcript. */
+export function isNativeChatAgentAvailable(
+  agent: string | null | undefined,
+  transcriptIsLocalReadable: boolean
+): boolean {
+  if (nativeChatRequiresLocalTranscript(agent) && !transcriptIsLocalReadable) {
+    return false
+  }
+  return isNativeChatSupportedAgent(agent)
+}
+
 /** Existing chat views may return to terminal; entry requires supported, readable agent identity in detected/launch/resolved order. */
 export function canToggleNativeChat(input: NativeChatAvailabilityInput): boolean {
   if (input.contentType !== 'terminal') {
@@ -31,12 +49,8 @@ export function canToggleNativeChat(input: NativeChatAvailabilityInput): boolean
   if (input.isChatViewMode === true) {
     return true
   }
-  const agent = input.detectedAgent ?? input.launchAgent ?? input.resolvedAgent
-  if (
-    nativeChatRequiresLocalTranscript(agent) &&
-    input.nativeChatTranscriptIsLocalReadable !== true
-  ) {
-    return false
-  }
-  return isNativeChatSupportedAgent(agent)
+  return isNativeChatAgentAvailable(
+    nativeChatAvailabilityAgent(input),
+    input.nativeChatTranscriptIsLocalReadable === true
+  )
 }

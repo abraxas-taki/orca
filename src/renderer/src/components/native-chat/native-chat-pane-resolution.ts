@@ -1,6 +1,6 @@
 import type { AgentStatusEntry, AgentType } from '../../../../shared/agent-status-types'
 import type { TuiAgent } from '../../../../shared/tui-agent'
-import { isNativeChatSupportedAgent } from './native-chat-availability'
+import { isNativeChatSupportedAgent } from '@/lib/native-chat-supported-agent'
 
 export type NativeChatPaneResolutionInput = {
   /** Composite `${tabId}:${leafId}` key of the active leaf. */

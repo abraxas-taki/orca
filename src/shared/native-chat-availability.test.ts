@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { canToggleNativeChat } from './native-chat-availability'
-import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcript-readability'
+import { isNativeChatTranscriptLocalReadable } from './native-chat-transcript-readability'
 
 describe('canToggleNativeChat', () => {
   it('allows a terminal launched with a supported coding agent', () => {
