@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState, type MutableRefObject } from 'react'
+import type { MobileSourceControlSettings } from '../transport/settings-read-operations'
+import { useMobileSourceControlSettings } from './mobile-source-control-settings'
 import { useFocusEffect } from 'expo-router'
 import { View } from 'react-native'
 import type { RpcClient } from '../transport/rpc-client'
@@ -50,11 +52,17 @@ export type MobileSourceControlLoaders = {
   mountedRef: MutableRefObject<boolean>
   setRootRef: (node: View | null) => void
   loadStatus: (options?: LoadStatusOptions) => Promise<boolean>
+  settings: MobileSourceControlSettings
 }
 
 export function useMobileSourceControlLoaders(params: Params): MobileSourceControlLoaders {
   const { client, connState, statusIdentityKey, worktreeId, setActionError, onStatusLoadSuccess } =
     params
+  // Desktop's settings decide the compare base here and the list order and diffs upstream.
+  const settings = useMobileSourceControlSettings(client, connState)
+  const compareAgainstUpstream = settings.compareAgainstUpstream
+  // The compare base can be the branch's upstream, so it follows the latest status read.
+  const upstreamNameRef = useRef<string | undefined>(undefined)
   const [screenState, setScreenState] = useState<ScreenState>({ kind: 'loading' })
   const [branchCompareState, setBranchCompareState] = useState<MobileBranchCompareState>({
     kind: 'idle'
@@ -106,7 +114,10 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
 
       setBranchCompareState((prev) => (prev.kind === 'ready' ? prev : { kind: 'loading' }))
       const loaded = await branchCompare.load(scope, WHOLE_WORKTREE, (currency) =>
-        readBranchCompareOutcome(client, worktreeId, currency)
+        readBranchCompareOutcome(client, worktreeId, currency, {
+          compareAgainstUpstream,
+          upstreamName: upstreamNameRef.current
+        })
       )
       // Mount liveness belongs to the view; a current reply still cannot publish after detach.
       if (!loaded || !mountedRef.current) {
@@ -121,7 +132,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
       )
       return outcome.kind === 'ready'
     },
-    [branchCompare, client, connState, statusIdentityKey, worktreeId]
+    [branchCompare, client, compareAgainstUpstream, connState, statusIdentityKey, worktreeId]
   )
 
   const loadStatus = useCallback(
@@ -172,6 +183,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
             if (!refusal) {
               const result = gitStatusHostPayloadRead.interpret(reply)
               setScreenState({ kind: 'ready', status: result })
+              upstreamNameRef.current = result.upstreamStatus?.upstreamName
               void loadBranchCompare({ preserveReadyOnFailure: true })
               if (options?.clearActionErrorOnSuccess !== false) {
                 setActionError(null)
@@ -249,6 +261,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
     setBranchCompareState,
     mountedRef,
     setRootRef,
-    loadStatus
+    loadStatus,
+    settings
   }
 }

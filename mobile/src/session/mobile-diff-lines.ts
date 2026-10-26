@@ -17,16 +17,26 @@ const TRUNCATED_LINE: MobileDiffLine = {
 
 export function buildMobileDiffLines(
   originalContent: string,
-  modifiedContent: string
+  modifiedContent: string,
+  options?: { ignoreTrimWhitespace?: boolean }
 ): { lines: MobileDiffLine[]; truncated: boolean } {
   const originalLines = splitContentLines(originalContent)
   const modifiedLines = splitContentLines(modifiedContent)
+  // Desktop's diff hides leading/trailing-whitespace-only edits unless whitespace is shown.
+  const originalKeys = options?.ignoreTrimWhitespace
+    ? originalLines.map((line) => line.trim())
+    : originalLines
+  const modifiedKeys = options?.ignoreTrimWhitespace
+    ? modifiedLines.map((line) => line.trim())
+    : modifiedLines
+  const same: LineEquality = (originalIndex, modifiedIndex) =>
+    originalKeys[originalIndex] === modifiedKeys[modifiedIndex]
   // Why: the LCS table is quadratic. Large generated files still need a
   // responsive mobile preview, so fall back to prefix/suffix diffing.
   const lines =
     originalLines.length * modifiedLines.length <= MAX_DIFF_CELLS
-      ? buildLcsDiffLines(originalLines, modifiedLines)
-      : buildPrefixSuffixDiffLines(originalLines, modifiedLines)
+      ? buildLcsDiffLines(originalLines, modifiedLines, same)
+      : buildPrefixSuffixDiffLines(originalLines, modifiedLines, same)
 
   return finalizeMobileDiffLines(lines)
 }
@@ -42,15 +52,20 @@ function splitContentLines(content: string): string[] {
   return lines
 }
 
-function buildLcsDiffLines(originalLines: string[], modifiedLines: string[]): MobileDiffLine[] {
+type LineEquality = (originalIndex: number, modifiedIndex: number) => boolean
+
+function buildLcsDiffLines(
+  originalLines: string[],
+  modifiedLines: string[],
+  same: LineEquality
+): MobileDiffLine[] {
   const rowWidth = modifiedLines.length + 1
   const dp = new Uint32Array((originalLines.length + 1) * rowWidth)
   for (let i = originalLines.length - 1; i >= 0; i -= 1) {
     for (let j = modifiedLines.length - 1; j >= 0; j -= 1) {
-      dp[i * rowWidth + j] =
-        originalLines[i] === modifiedLines[j]
-          ? dp[(i + 1) * rowWidth + j + 1] + 1
-          : Math.max(dp[(i + 1) * rowWidth + j], dp[i * rowWidth + j + 1])
+      dp[i * rowWidth + j] = same(i, j)
+        ? dp[(i + 1) * rowWidth + j + 1] + 1
+        : Math.max(dp[(i + 1) * rowWidth + j], dp[i * rowWidth + j + 1])
     }
   }
 
@@ -58,11 +73,11 @@ function buildLcsDiffLines(originalLines: string[], modifiedLines: string[]): Mo
   let originalIndex = 0
   let modifiedIndex = 0
   while (originalIndex < originalLines.length && modifiedIndex < modifiedLines.length) {
-    if (originalLines[originalIndex] === modifiedLines[modifiedIndex]) {
+    if (same(originalIndex, modifiedIndex)) {
       if (
         !appendDiffLine(lines, {
           kind: 'context',
-          text: originalLines[originalIndex] ?? '',
+          text: modifiedLines[modifiedIndex] ?? '',
           oldLineNumber: originalIndex + 1,
           newLineNumber: modifiedIndex + 1
         })
@@ -129,13 +144,14 @@ function buildLcsDiffLines(originalLines: string[], modifiedLines: string[]): Mo
 
 function buildPrefixSuffixDiffLines(
   originalLines: string[],
-  modifiedLines: string[]
+  modifiedLines: string[],
+  same: LineEquality
 ): MobileDiffLine[] {
   let prefixLength = 0
   while (
     prefixLength < originalLines.length &&
     prefixLength < modifiedLines.length &&
-    originalLines[prefixLength] === modifiedLines[prefixLength]
+    same(prefixLength, prefixLength)
   ) {
     prefixLength += 1
   }
@@ -144,8 +160,7 @@ function buildPrefixSuffixDiffLines(
   while (
     suffixLength + prefixLength < originalLines.length &&
     suffixLength + prefixLength < modifiedLines.length &&
-    originalLines[originalLines.length - suffixLength - 1] ===
-      modifiedLines[modifiedLines.length - suffixLength - 1]
+    same(originalLines.length - suffixLength - 1, modifiedLines.length - suffixLength - 1)
   ) {
     suffixLength += 1
   }
@@ -155,7 +170,7 @@ function buildPrefixSuffixDiffLines(
     if (
       !appendDiffLine(lines, {
         kind: 'context',
-        text: originalLines[i] ?? '',
+        text: modifiedLines[i] ?? '',
         oldLineNumber: i + 1,
         newLineNumber: i + 1
       })
@@ -191,7 +206,7 @@ function buildPrefixSuffixDiffLines(
     if (
       !appendDiffLine(lines, {
         kind: 'context',
-        text: originalLines[i] ?? '',
+        text: modifiedLines[modifiedIndex] ?? '',
         oldLineNumber: i + 1,
         newLineNumber: modifiedIndex + 1
       })

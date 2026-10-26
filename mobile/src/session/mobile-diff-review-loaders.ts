@@ -38,6 +38,7 @@ type DiffLoadInput = {
   worktreeId: string
   item: MobileDiffReviewQueueItem
   branchCompare: MobileGitBranchCompareResult | null
+  ignoreTrimWhitespace?: boolean
 }
 
 type PendingFileDiff = {
@@ -168,7 +169,9 @@ export async function loadMobileDiffReviewDiff(input: DiffLoadInput): Promise<Re
   if (result.kind === 'too-large') {
     return { kind: 'too-large', itemKey: item.key, byteLength: result.byteLength }
   }
-  const diff = buildMobileDiffLines(result.originalContent, result.modifiedContent)
+  const diff = buildMobileDiffLines(result.originalContent, result.modifiedContent, {
+    ignoreTrimWhitespace: input.ignoreTrimWhitespace
+  })
   const language = resolveMobileSyntaxLanguage(item.filePath)
   return {
     kind: 'ready',

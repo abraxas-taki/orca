@@ -1,6 +1,8 @@
 import { useCallback, useRef } from 'react'
 import type { RpcFailure } from '../transport/types'
 import { resolveMobileFileTabDoc } from '../files/mobile-file-tab-doc'
+import { shouldIgnoreTrimWhitespace } from '../../../src/shared/diff-whitespace'
+import { useMobileSourceControlSettings } from '../source-control/mobile-source-control-settings'
 import { filePreviewTextRead } from '../files/mobile-file-preview-operations'
 import { markdownTabRead } from './mobile-session-read-operations'
 import {
@@ -21,7 +23,8 @@ import type { FileDocState, MarkdownDocState, MobileSessionTab } from './mobile-
 import type { MobileSessionTabApplicationModel } from './use-mobile-session-tab-application'
 
 export function useMobileSessionDocumentReaders(scope: MobileSessionTabApplicationModel) {
-  const { worktreeId, client, markdownDocsRef, setMarkdownDocs, setFileDocs } = scope
+  const { worktreeId, client, connState, markdownDocsRef, setMarkdownDocs, setFileDocs } = scope
+  const { diffShowWhitespace } = useMobileSourceControlSettings(client, connState)
   const markdownReadSeqRef = useRef(new Map<string, number>())
   const fileReadSeqRef = useRef(new Map<string, number>())
   const readMarkdownTab = useCallback(
@@ -125,7 +128,8 @@ export function useMobileSessionDocumentReaders(scope: MobileSessionTabApplicati
         const doc = await resolveMobileFileTabDoc(client, {
           worktreeId,
           relativePath: tab.relativePath,
-          diffSource: tab.diffSource
+          diffSource: tab.diffSource,
+          ignoreTrimWhitespace: shouldIgnoreTrimWhitespace(diffShowWhitespace)
         })
         publish(doc)
       } catch (err) {
@@ -138,7 +142,7 @@ export function useMobileSessionDocumentReaders(scope: MobileSessionTabApplicati
         publish({ status: 'error', message: previewMessage })
       }
     },
-    [client, worktreeId]
+    [client, diffShowWhitespace, worktreeId]
   )
   return {
     readMarkdownTab,

@@ -1,4 +1,4 @@
-import type { GitUpstreamStatus } from '../../../../../../shared/git-status-types'
+import type { GitUpstreamStatus } from './git-status-types'
 
 export function resolveSourceControlBaseRef(input: {
   worktreeBaseRef?: string | null
