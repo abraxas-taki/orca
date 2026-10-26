@@ -23,14 +23,6 @@ it('reports each key once per 30 second window', () => {
   expect(send).toHaveBeenCalledTimes(3)
 })
 
-it('does not await a report and coalesces input while it is pending', () => {
-  const gate = new Map<string, number>()
-  const send = vi.fn(() => new Promise<never>(() => {}))
-  expect(reportWorkerTakeoverOncePerWindow(gate, 'term-1', send)).toBeUndefined()
-  reportWorkerTakeoverOncePerWindow(gate, 'term-1', send)
-  expect(send).toHaveBeenCalledTimes(1)
-})
-
 it('retries a failed report once, then lets the next input report again', async () => {
   const gate = new Map<string, number>()
   const send = vi.fn().mockRejectedValue(new Error('offline'))

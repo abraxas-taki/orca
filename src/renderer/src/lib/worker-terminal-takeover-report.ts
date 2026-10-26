@@ -23,18 +23,18 @@ function reportTakeover(
   subject: { paneKey: string } | { sessionId: string },
   runtimeEnvironmentId: string | null
 ): void {
-  const target =
-    runtimeEnvironmentId !== null
-      ? ({ kind: 'environment', environmentId: runtimeEnvironmentId } as const)
-      : ({ kind: 'local' } as const)
   // Gate per runtime too, so a pane rebound to another owner reports there.
   reportWorkerTakeoverOncePerWindow(
     lastReportByPaneKey,
     JSON.stringify([runtimeEnvironmentId, subject]),
     () =>
-      callRuntimeRpc(target, 'orchestration.workerTerminalUserInput', subject, {
-        suppressFeatureInteraction: true,
-        reuseRecentCompatibilityFailure: true
-      })
+      callRuntimeRpc(
+        runtimeEnvironmentId !== null
+          ? { kind: 'environment', environmentId: runtimeEnvironmentId }
+          : { kind: 'local' },
+        'orchestration.workerTerminalUserInput',
+        subject,
+        { suppressFeatureInteraction: true, reuseRecentCompatibilityFailure: true }
+      )
   )
 }

@@ -5,7 +5,7 @@ import { resolveTerminalMinimumContrastRatio } from '../../../../src/shared/term
 
 const TERMINAL_BACKGROUND_FALLBACK = colors.terminalBg
 
-// Older hosts omit contrast floors; validate unknown wire values before applying an override.
+// Wire fields stay unknown; older hosts omit the contrast floor.
 export type TerminalDocumentThemeMessage =
   | { mode?: unknown; theme?: Record<string, string>; minimumContrastRatio?: unknown }
   | null
@@ -51,7 +51,6 @@ export function applyTerminalTheme(
   const background = scope.terminalTheme.background || TERMINAL_BACKGROUND_FALLBACK
   scope.paintDocumentBackground(background)
   const message = input && typeof input === 'object' ? input : null
-  // Published desktop override wins; otherwise translucent backgrounds composite over the published app surface.
   scope.terminalMinimumContrastRatio = resolveTerminalMinimumContrastRatio(
     background,
     message?.mode === 'light' ? 'light' : 'dark',

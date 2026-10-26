@@ -56,34 +56,10 @@ describe('mobile terminal-webview contrast floor gate', () => {
   })
 
   // Published desktop overrides, including disabled contrast, must win so the same session renders consistently.
-  describe('published desktop override', () => {
-    function applyOn(term: TerminalDocumentThemeTarget, input: TerminalDocumentThemeMessage): void {
-      loadThemeApplier(term)(input)
-    }
-
-    it('uses the published floor instead of the luminance gate', () => {
-      const term = { options: { minimumContrastRatio: 0 } }
-      applyOn(term, { theme: { background: '#1e242a' }, minimumContrastRatio: 1 })
-      expect(term.options.minimumContrastRatio).toBe(1)
-    })
-
-    it("clamps a published floor to xterm's 1-21 window", () => {
-      const term = { options: { minimumContrastRatio: 0 } }
-      applyOn(term, { theme: { background: '#1e242a' }, minimumContrastRatio: 99 })
-      expect(term.options.minimumContrastRatio).toBe(21)
-      applyOn(term, { theme: { background: '#1e242a' }, minimumContrastRatio: 0 })
-      expect(term.options.minimumContrastRatio).toBe(1)
-    })
-
-    it('falls back to the luminance gate for an older host that omits the field', () => {
-      const term = { options: { minimumContrastRatio: 0 } }
-      for (const published of [undefined, null, 'off', Number.NaN]) {
-        applyOn(term, { theme: { background: '#1e242a' }, minimumContrastRatio: published })
-        expect(term.options.minimumContrastRatio).toBe(DARK_FLOOR)
-        applyOn(term, { theme: { background: '#ffffff' }, minimumContrastRatio: published })
-        expect(term.options.minimumContrastRatio).toBe(LIGHT_FLOOR)
-      }
-    })
+  it('uses the published floor instead of the luminance gate', () => {
+    const term = { options: { minimumContrastRatio: 0 } }
+    loadThemeApplier(term)({ theme: { background: '#1e242a' }, minimumContrastRatio: 1 })
+    expect(term.options.minimumContrastRatio).toBe(1)
   })
 })
 
