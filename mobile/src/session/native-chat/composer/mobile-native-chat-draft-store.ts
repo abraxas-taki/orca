@@ -1,5 +1,6 @@
 import { useSyncExternalStore, type SetStateAction } from 'react'
 import type { AgentJournalSkillRef } from '../../../../../src/shared/agent-session-journal-types'
+import { pickedSkillsInText } from '../../../../../src/shared/structured-agent-session-send-mutation'
 import type { MobileNativeChatLaunchDraftSeed } from './use-mobile-native-chat-launch-draft-seed'
 
 // Text and its edit revision outlive the screen, including callbacks from an older mount.
@@ -18,7 +19,17 @@ export const mobileNativeChatLaunchDraftSeeds = new Map<
 // Skills picked from the menu into a draft; a send carries those still named in its text.
 const pickedSkills = new Map<string, AgentJournalSkillRef[]>()
 
-export function recordMobileNativeChatPickedSkills(
+// A pick forgets earlier picks whose token the draft no longer names, as deleting a desktop chip does.
+export function recordMobileNativeChatPickedSkill(
+  draftKey: string,
+  draftBeforePick: string,
+  skill: AgentJournalSkillRef
+): void {
+  const kept = pickedSkillsInText(draftBeforePick, pickedSkills.get(draftKey) ?? [])
+  pickedSkills.set(draftKey, [...kept.filter((held) => held.path !== skill.path), skill])
+}
+
+export function restoreMobileNativeChatPickedSkills(
   draftKey: string,
   skills: readonly AgentJournalSkillRef[]
 ): void {

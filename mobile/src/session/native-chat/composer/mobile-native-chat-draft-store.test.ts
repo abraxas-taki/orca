@@ -2,7 +2,12 @@ import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it } from 'vitest'
 import { useMobileNativeChatDrafts } from './use-mobile-native-chat-drafts'
-import { resetMobileNativeChatDraftStoreForTests } from './mobile-native-chat-draft-store'
+import {
+  readMobileNativeChatPickedSkills,
+  recordMobileNativeChatPickedSkill,
+  resetMobileNativeChatDraftStoreForTests,
+  setMobileNativeChatDraftText
+} from './mobile-native-chat-draft-store'
 
 type DraftState = ReturnType<typeof useMobileNativeChatDrafts>
 
@@ -104,5 +109,21 @@ describe('mobile native-chat draft store', () => {
     act(() => renderer?.unmount())
     await mount('a')
     expect(currentState().composerText).toBe('')
+  })
+})
+
+describe('picked skills', () => {
+  afterEach(() => resetMobileNativeChatDraftStoreForTests())
+
+  it('forgets a pick whose token was deleted, and every pick once the draft empties', () => {
+    const first = { name: 'review', path: '/a/review/SKILL.md' }
+    const second = { name: 'review', path: '/b/review/SKILL.md' }
+    setMobileNativeChatDraftText('draft', 'fix $review then ')
+    recordMobileNativeChatPickedSkill('draft', 'fix $rev', first)
+    recordMobileNativeChatPickedSkill('draft', 'fix it then $rev', second)
+    expect(readMobileNativeChatPickedSkills('draft')).toEqual([second])
+
+    setMobileNativeChatDraftText('draft', '')
+    expect(readMobileNativeChatPickedSkills('draft')).toEqual([])
   })
 })
