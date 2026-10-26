@@ -63,12 +63,15 @@ export function getSetupConfig(
   }
 
   const yamlCommand = getSetupTrustContent(yamlHooks)
-  if (sourcePolicy === 'run-both' && yamlCommand && localSetup) {
-    return {
-      source: 'both',
-      command: `${yamlCommand}\n\n${localSetup}`,
-      kind: getSetupConfigKind(true, hasDefaultTabCommands)
-    }
+  if (sourcePolicy === 'run-both' && localSetup) {
+    // Why: the host still runs the local script here, so the create must still ask about it.
+    return yamlCommand
+      ? {
+          source: 'both',
+          command: `${yamlCommand}\n\n${localSetup}`,
+          kind: getSetupConfigKind(true, hasDefaultTabCommands)
+        }
+      : { source: 'local', command: localSetup, kind: 'setup' }
   }
 
   if (yamlCommand) {

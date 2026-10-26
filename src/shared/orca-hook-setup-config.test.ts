@@ -35,4 +35,18 @@ describe('getSetupConfig', () => {
       )
     ).toBeNull()
   })
+
+  it('keeps the local setup script for run-both repos without shared commands', () => {
+    expect(
+      getSetupConfig(
+        {
+          hookSettings: {
+            commandSourcePolicy: 'run-both',
+            scripts: { setup: 'pnpm install' }
+          }
+        },
+        null
+      )
+    ).toEqual({ source: 'local', command: 'pnpm install', kind: 'setup' })
+  })
 })
