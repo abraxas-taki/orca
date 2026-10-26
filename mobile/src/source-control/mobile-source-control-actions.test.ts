@@ -86,6 +86,26 @@ describe('buildMobileSourceControlActions', () => {
     expect(forcePush?.hint).toBeTruthy()
   })
 
+  it('blocks force pushes when the review pushes to another remote', () => {
+    const actions = buildMobileSourceControlActions(
+      args({
+        decision: decision({
+          upstreamStatus: {
+            hasUpstream: true,
+            ahead: 2,
+            behind: 2,
+            behindCommitsArePatchEquivalent: true
+          }
+        }),
+        forcePushBlockedReason: 'from desktop'
+      })
+    )
+    for (const label of ['Commit & Force Push', 'Force Push']) {
+      const row = actions.find((action) => action.label.startsWith(label))
+      expect(row).toMatchObject({ disabled: true, hint: 'from desktop' })
+    }
+  })
+
   it('disables every row while another git action runs', () => {
     const actions = buildMobileSourceControlActions(args({ busyAction: 'fetch' }))
     expect(actions.every((action) => action.disabled)).toBe(true)

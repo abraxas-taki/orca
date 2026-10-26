@@ -38,6 +38,8 @@ export type MobileSourceControlActionArgs = {
   openingBranchPath: string | null
   prAvailable: boolean
   prHint?: string
+  // Mobile pushes without a review's saved push target, so a force push there could overwrite the wrong branch.
+  forcePushBlockedReason?: string
   handlers: {
     commit: () => void
     commitPush: (forceWithLease: boolean) => void
@@ -71,6 +73,10 @@ export function buildMobileSourceControlActions(
     buildRemoteDropdownItems(ctx)
   const busy =
     args.busyAction !== null || args.openingPath !== null || args.openingBranchPath !== null
+  const blockForce = (item: DropdownItem): DropdownItem =>
+    args.forcePushBlockedReason
+      ? { ...item, disabled: true, title: args.forcePushBlockedReason }
+      : item
   const row = (
     item: DropdownItem,
     iconKey: MobileSourceControlActionIcon,
@@ -89,10 +95,15 @@ export function buildMobileSourceControlActions(
 
   return [
     row(commit, 'commit', 'commit', handlers.commit),
-    row(commitPush, 'push', 'commit-push', () => handlers.commitPush(ctx.shouldForcePushWithLease)),
+    row(
+      ctx.shouldForcePushWithLease ? blockForce(commitPush) : commitPush,
+      'push',
+      'commit-push',
+      () => handlers.commitPush(ctx.shouldForcePushWithLease)
+    ),
     row(commitSync, 'sync', 'commit-sync', handlers.commitSync),
     row(push, 'push', 'push', handlers.push),
-    row(forcePush, 'push', 'force-push', handlers.forcePush),
+    row(blockForce(forcePush), 'push', 'force-push', handlers.forcePush),
     {
       label: 'Create PR',
       iconKey: 'pr',

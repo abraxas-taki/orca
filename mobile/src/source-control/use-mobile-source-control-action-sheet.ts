@@ -44,6 +44,9 @@ export function useMobileSourceControlActionSheet(
         // Create intent may publish or push before review creation.
         prAvailable: upstreamKnown,
         prHint: upstreamKnown ? undefined : 'Checking branch status...',
+        forcePushBlockedReason: review.pushTarget
+          ? "Force push this pull request's branch from desktop"
+          : undefined,
         handlers: {
           commit: () => void runActionSheetCommit(),
           commitPush: (forceWithLease) =>
