@@ -4,6 +4,7 @@
  * parked: polls and visible work keep it down until the user acts or the distro runs again.
  */
 import { errorMessage } from '../../shared/error-message'
+import { focusReachability } from './wsl-host-focus-reachability'
 import { removeWslHostEnvironment } from '../../shared/runtime-environment-wsl-host-store'
 import {
   readWslHostDeployments,
@@ -293,8 +294,7 @@ export class WslHostService {
       return
     }
     this.parked.delete(record.environmentId)
-    void this.connector
-      .reachability(record.distro, record.environmentId)
+    void focusReachability(this.connector, record)
       .then((reachability) =>
         reachability === 'available' ? undefined : this.connector?.connect(record.distro)
       )

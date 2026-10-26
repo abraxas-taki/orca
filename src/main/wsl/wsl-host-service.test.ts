@@ -479,6 +479,39 @@ describe('WslHostService', () => {
     await vi.waitFor(() => expect(connector.connect).toHaveBeenCalledTimes(1))
   })
 
+  it('focus connects without probing WSL while this process has no bridge, but polls still read the running list', async () => {
+    const connector = makeConnector([UBUNTU])
+    const service = makeService(connector)
+    await service.add({ distro: 'Ubuntu' })
+    await connector.disconnect('Ubuntu')
+    connector.reachability.mockClear()
+    connector.connect.mockClear()
+
+    service.focusHost('wsl:ubuntu')
+    await vi.waitFor(() => expect(connector.connect).toHaveBeenCalledTimes(1))
+    expect(connector.reachability).not.toHaveBeenCalled()
+
+    // A poll never takes that shortcut: it reads the running list and refuses a stopped distro.
+    await connector.disconnect('Ubuntu')
+    connector.distro.state = 'stopped'
+    connector.connect.mockClear()
+    await expect(service.ensureForRuntimeCall('wsl:ubuntu')).rejects.toThrow('Ubuntu was stopped')
+    expect(connector.reachability).toHaveBeenCalledWith('Ubuntu', 'wsl:ubuntu')
+    expect(connector.connect).not.toHaveBeenCalled()
+  })
+
+  it('focus with a bridge still asks whether the host answers before connecting again', async () => {
+    const connector = makeConnector([UBUNTU])
+    const service = makeService(connector)
+    await service.add({ distro: 'Ubuntu' })
+    connector.reachability.mockClear()
+    connector.connect.mockClear()
+
+    service.focusHost('wsl:ubuntu')
+    await vi.waitFor(() => expect(connector.reachability).toHaveBeenCalledTimes(1))
+    expect(connector.connect).not.toHaveBeenCalled()
+  })
+
   it('parks a host the moment a poll finds its distro confirmed stopped, never booting it', async () => {
     const connector = makeConnector([UBUNTU])
     const service = makeService(connector)
