@@ -5,6 +5,10 @@ import type { StructuredAgentId } from '../../../src/shared/agent-session-provid
 import type { MobileNativeChatSendOutcome } from './native-chat/mobile-native-chat-send'
 import type { MobileNativeChatSendOrigin } from './native-chat/mobile-native-chat-pending-echo'
 import { useMobileStructuredNativeChatSendBridge } from './use-mobile-structured-native-chat-send-bridge'
+import {
+  recordMobileNativeChatPickedSkills,
+  resetMobileNativeChatDraftStoreForTests
+} from './native-chat/composer/mobile-native-chat-draft-store'
 
 const ORIGIN: MobileNativeChatSendOrigin = {
   draftKey: 'draft',
@@ -49,6 +53,20 @@ describe('useMobileStructuredNativeChatSendBridge', () => {
   afterEach(() => {
     act(() => renderer?.unmount())
     renderer = null
+    resetMobileNativeChatDraftStoreForTests()
+  })
+
+  it('sends the skills picked into the draft', async () => {
+    const review = { name: 'review', path: '/skills/review/SKILL.md' }
+    recordMobileNativeChatPickedSkills(ORIGIN.draftKey, [review])
+    sendStructured.mockResolvedValue('accepted')
+    mount('codex')
+
+    await sendWithOutcome('$review this')
+
+    expect(sendStructured).toHaveBeenCalledWith('$review this', undefined, undefined, undefined, [
+      review
+    ])
   })
 
   // Accepted messages remain host-owned; keep the composer cleared.

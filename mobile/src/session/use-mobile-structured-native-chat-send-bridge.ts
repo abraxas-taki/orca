@@ -4,6 +4,11 @@ import { isStructuredAgentSessionComposerCommand } from '../../../src/shared/str
 import type { MobileNativeChatSendOutcome } from './native-chat/mobile-native-chat-send'
 import type { MobileNativeChatSendOrigin } from './native-chat/mobile-native-chat-pending-echo'
 import type { StructuredMobileSendAttachment } from './use-mobile-structured-send-with-outcome'
+import type { AgentJournalSkillRef } from '../../../src/shared/agent-session-journal-types'
+import {
+  readMobileNativeChatPickedSkills,
+  recordMobileNativeChatPickedSkills
+} from './native-chat/composer/mobile-native-chat-draft-store'
 
 export function useMobileStructuredNativeChatSendBridge(args: {
   agent: StructuredAgentId | undefined
@@ -11,7 +16,8 @@ export function useMobileStructuredNativeChatSendBridge(args: {
     text: string,
     images?: string[],
     deadline?: number,
-    attachments?: readonly StructuredMobileSendAttachment[]
+    attachments?: readonly StructuredMobileSendAttachment[],
+    skills?: readonly AgentJournalSkillRef[]
   ) => Promise<MobileNativeChatSendOutcome>
   captureSendOrigin: (text: string) => MobileNativeChatSendOrigin | null
   clearDraftForSend: (origin: MobileNativeChatSendOrigin, text: string) => void
@@ -47,9 +53,13 @@ export function useMobileStructuredNativeChatSendBridge(args: {
         return 'rejected'
       }
       const isHostCommand = isStructuredAgentSessionComposerCommand(text, agent)
+      // Clearing the draft forgets its picks, so read them first.
+      const skills = readMobileNativeChatPickedSkills(origin.draftKey)
       clearDraftForSend(origin, text)
       const outcome =
-        attachments !== undefined
+        skills.length > 0
+          ? await sendStructured(text, images, deadline, attachments, skills)
+          : attachments !== undefined
           ? await sendStructured(text, images, deadline, attachments)
           : deadline !== undefined
             ? await sendStructured(text, images, deadline)
@@ -59,6 +69,7 @@ export function useMobileStructuredNativeChatSendBridge(args: {
       // Accepted messages remain host-owned; restore commands whose reply was lost.
       if (outcome === 'rejected' || (outcome === 'unknown' && isHostCommand)) {
         restoreRejectedDraft(origin, text)
+        recordMobileNativeChatPickedSkills(origin.draftKey, skills)
       }
       return outcome
     },

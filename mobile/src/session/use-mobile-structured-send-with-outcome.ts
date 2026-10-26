@@ -7,9 +7,12 @@ import { agentSessionVisibleFailureFacts } from '../../../src/shared/agent-sessi
 import { tuiAgentDisplayName } from '../../../src/shared/tui-agent-display-names'
 import { pendingPromptsAllUnanswerableHere } from '../../../src/shared/agent-session-approval-subject'
 import {
+  pickedSkillsInText,
   structuredAgentSessionSendBody,
   type StructuredAgentSessionAttachment
 } from '../../../src/shared/structured-agent-session-send-mutation'
+import type { AgentJournalSkillRef } from '../../../src/shared/agent-session-journal-types'
+import { MAX_SKILL_REFS } from '../../../src/shared/rpc-contract/structured-agent-session-message-params'
 import type { StructuredAgentSessionComposerOptions } from '../../../src/shared/structured-agent-session-composer'
 import type { StructuredAgentSessionState } from '../../../src/shared/structured-agent-session-reducer'
 import { structuredAgentSessionQueueEnabled } from '../../../src/shared/structured-agent-session-queued-cards'
@@ -71,11 +74,14 @@ export function useMobileStructuredSendWithOutcome(args: {
   onSendError: MobileNativeChatSendErrorReporter
   // Older hosts accept neither per-chat model nor effort.
   sendOptions?: () => Readonly<Record<string, string>> | undefined
+  // An older host refuses a send body carrying `skills`; there the `$name` text stands alone.
+  takesSkills?: boolean
 }): (
   text: string,
   images?: string[],
   deadline?: number,
-  attachments?: readonly StructuredMobileSendAttachment[]
+  attachments?: readonly StructuredMobileSendAttachment[],
+  skills?: readonly AgentJournalSkillRef[]
 ) => Promise<MobileNativeChatSendOutcome> {
   const {
     accept,
@@ -94,14 +100,16 @@ export function useMobileStructuredSendWithOutcome(args: {
     sendsOut,
     sessionId,
     stateRef,
-    stopping
+    stopping,
+    takesSkills
   } = args
   return useCallback(
     async (
       text: string,
       images?: string[],
       deadline?: number,
-      attachments?: readonly StructuredMobileSendAttachment[]
+      attachments?: readonly StructuredMobileSendAttachment[],
+      pickedSkills?: readonly AgentJournalSkillRef[]
     ): Promise<MobileNativeChatSendOutcome> => {
       const currentFence = stateRef.current.fence
       if (!client || !sessionId || !enabled || currentFence === null) {
@@ -162,7 +170,14 @@ export function useMobileStructuredSendWithOutcome(args: {
         }
       }
       const wireText = nativeChatTextWithFileReferences(text, files)
-      const body = structuredAgentSessionSendBody(wireText, imageAttachments)
+      const skills = takesSkills ? (pickedSkills ?? []) : []
+      if (pickedSkillsInText(wireText, skills).length > MAX_SKILL_REFS) {
+        onSendError(
+          `Message not sent. Keep at most ${MAX_SKILL_REFS} selected skill files and try again.`
+        )
+        return 'rejected'
+      }
+      const body = structuredAgentSessionSendBody(wireText, imageAttachments, skills)
       if (body.blocks.length === 0) {
         return 'rejected'
       }
@@ -180,6 +195,7 @@ export function useMobileStructuredSendWithOutcome(args: {
         expectedRuntimeFence: currentFence,
         text: wireText,
         attachments: imageAttachments,
+        skills,
         ...(mobileStructuredSendQueues(queueCapable, queueFollowUps, stateRef.current)
           ? { delivery: 'queue-if-active' as const }
           : {}),
@@ -212,7 +228,8 @@ export function useMobileStructuredSendWithOutcome(args: {
       sendsOut,
       sessionId,
       stateRef,
-      stopping
+      stopping,
+      takesSkills
     ]
   )
 }

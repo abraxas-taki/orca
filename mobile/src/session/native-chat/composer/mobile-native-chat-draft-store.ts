@@ -1,4 +1,5 @@
 import { useSyncExternalStore, type SetStateAction } from 'react'
+import type { AgentJournalSkillRef } from '../../../../../src/shared/agent-session-journal-types'
 import type { MobileNativeChatLaunchDraftSeed } from './use-mobile-native-chat-launch-draft-seed'
 
 // Text and its edit revision outlive the screen, including callbacks from an older mount.
@@ -13,6 +14,22 @@ export const mobileNativeChatLaunchDraftSeeds = new Map<
   string,
   MobileNativeChatLaunchDraftSeed | null
 >()
+
+// Skills picked from the menu into a draft; a send carries those still named in its text.
+const pickedSkills = new Map<string, AgentJournalSkillRef[]>()
+
+export function recordMobileNativeChatPickedSkills(
+  draftKey: string,
+  skills: readonly AgentJournalSkillRef[]
+): void {
+  const held = pickedSkills.get(draftKey) ?? []
+  const paths = new Set(held.map((skill) => skill.path))
+  pickedSkills.set(draftKey, [...held, ...skills.filter((skill) => !paths.has(skill.path))])
+}
+
+export function readMobileNativeChatPickedSkills(draftKey: string): AgentJournalSkillRef[] {
+  return pickedSkills.get(draftKey) ?? []
+}
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener)
@@ -29,6 +46,9 @@ function writeDraft(draftKey: string, update: SetStateAction<string>, userEdit: 
     return
   }
   drafts.set(draftKey, { text: next, editGeneration: (current?.editGeneration ?? 0) + 1 })
+  if (next === '') {
+    pickedSkills.delete(draftKey)
+  }
   if (next === text) {
     return
   }
@@ -70,5 +90,6 @@ export function useMobileNativeChatDraft(draftKey: string | null): string {
 
 export function resetMobileNativeChatDraftStoreForTests(): void {
   drafts.clear()
+  pickedSkills.clear()
   mobileNativeChatLaunchDraftSeeds.clear()
 }

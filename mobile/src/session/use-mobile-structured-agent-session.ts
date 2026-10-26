@@ -202,7 +202,8 @@ export function useMobileStructuredAgentSession(
     controller: sendController,
     onSendError,
     queueSendsNext,
-    sendOptions: hostSupport?.sendOptions === true ? options.sendSelection : undefined
+    sendOptions: hostSupport?.sendOptions === true ? options.sendSelection : undefined,
+    takesSkills: hostSupport?.sendSkills === true
   })
   const { items, currentRequests, actionablePromptIds, status } = state
   // Prefer host actionability: ended-agent prompts must receive no answer.
