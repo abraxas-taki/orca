@@ -2,7 +2,7 @@ import type { CommandSpec } from '../args'
 import { GLOBAL_FLAGS } from '../args'
 
 const CONNECTOR_NOTES = [
-  'Development only: drives the connector seam as a `dev` conversation, without Slack. The host refuses it unless its experimentalConnectors setting is on.',
+  'Development only: drives the connector seam as a `dev` conversation, without Orca Cloud. The host refuses it unless its experimentalConnectors setting is on.',
   'A retry with the same --delivery-id and payload returns the first answer instead of delivering again.'
 ]
 
@@ -90,7 +90,7 @@ export const CONNECTOR_COMMAND_SPECS: CommandSpec[] = [
     usage: 'orca connector reply --text <text> [--json]',
     allowedFlags: [...GLOBAL_FLAGS, 'text'],
     notes: [
-      'Run it from an agent a connector message started (Slack today). Orca posts the text to that thread through Orca Cloud; this machine needs no token for the service.',
+      'Run it from an agent a Slack, Discord or Linear message started. Orca posts the text to that thread through Orca Cloud; this machine needs no token for the service.',
       'Experimental: needs the experimentalConnectors setting and a desktop signed in to Orca.'
     ]
   }

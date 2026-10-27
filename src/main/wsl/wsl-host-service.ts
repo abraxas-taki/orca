@@ -5,6 +5,7 @@
  */
 import { errorMessage } from '../../shared/error-message'
 import { focusReachability } from './wsl-host-focus-reachability'
+import { rethrowRetryable, settlingConnectFailure } from './wsl-host-connect-failure'
 import { removeWslHostEnvironment } from '../../shared/runtime-environment-wsl-host-store'
 import type { WslHostDeploymentRecord } from '../../shared/wsl-host-deployment-store'
 import type {
@@ -246,14 +247,13 @@ export class WslHostService {
     }
     // Unconfirmed (running list unreadable, or possibly stale right after an exit) or not
     // visible: refuse rather than risk a boot; liveness publishes the verdict.
-    if (
-      reachability !== 'unreachable' ||
-      !this.visible.has(environmentId) ||
-      connector.isSettling(record.distro)
-    ) {
+    if (reachability !== 'unreachable' || !this.visible.has(environmentId)) {
       throw new Error(wslHostNotConnectedMessage(record.distro))
     }
-    await connector.connect(record.distro, { noBoot: true })
+    if (connector.isSettling(record.distro)) {
+      throw settlingConnectFailure(record.distro)
+    }
+    await connector.connect(record.distro, { noBoot: true }).catch(rethrowRetryable(record.distro))
   }
 
   /**
