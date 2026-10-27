@@ -3635,7 +3635,10 @@
               "failed": {
                 "toast": {
                   "62a0af2cb4": "La copie du presse-papiers du terminal n'a pas pu être confirmée",
-                  "fdd3e7e977": "L'application de terminal a demandé une copie, mais Orca n'a pas pu confirmer qu'elle a bien atteint le presse-papiers système."
+                  "fdd3e7e977": "L'application de terminal a demandé une copie, mais Orca n'a pas pu confirmer qu'elle a bien atteint le presse-papiers système.",
+                  "de286dcfe1": "La copie du terminal nécessite un clic",
+                  "84c938ffa2": "Le navigateur a bloqué une copie depuis l'application du terminal. Cliquez sur Copier pour placer le texte dans votre presse-papiers.",
+                  "a73165c6c5": "Copier"
                 }
               }
             }

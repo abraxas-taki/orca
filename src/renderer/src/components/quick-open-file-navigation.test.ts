@@ -164,10 +164,10 @@ it('opens a paired path outside every workspace through the grant its host issue
       filePath: '/private/tmp/handoff.md',
       relativePath: '/private/tmp/handoff.md',
       runtimeEnvironmentId: 'env-a',
-      terminalArtifactGrantId: 'grant-1',
-      readOnly: true
+      terminalArtifactGrantId: 'grant-1'
     })
   )
+  expect(mocks.open).not.toHaveBeenLastCalledWith(expect.objectContaining({ readOnly: true }))
   mocks.rpc.mockResolvedValue({
     exists: false,
     isDirectory: false,

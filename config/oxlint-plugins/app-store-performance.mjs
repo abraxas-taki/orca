@@ -377,14 +377,15 @@ function noRawProjectCatalogComputedRule(sourceCode) {
   }
 }
 
-// Files that never name a use<Name>Store hook cannot match; returning no visitors skips AST transfer.
+// Skip JS AST deserialization in files that cannot name a store hook.
 const STORE_HOOK_TEXT = /use[A-Z][A-Za-z0-9]*Store/
 
 function bindContext(createVisitors) {
   return (context) => {
     if (
       createVisitors !== noRawProjectCatalogComputedRule &&
-      !STORE_HOOK_TEXT.test(context.sourceCode.text)
+      !STORE_HOOK_TEXT.test(context.sourceCode.text) &&
+      !context.sourceCode.text.includes('\\')
     ) {
       return {}
     }

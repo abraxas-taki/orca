@@ -119,7 +119,11 @@ export function registerRuntimeEnvironmentHandlers(store: Store): void {
   stopPreferenceWatch?.()
   stopPreferenceWatch = watchRuntimeEnvironmentPreference(store, getUserDataPath(), () => {
     // CLI and recipe removals skip the Settings path; drop their session partitions here too.
-    reconcileOrphanedRuntimeSessions(store, getUserDataPath())
+    try {
+      reconcileOrphanedRuntimeSessions(store, getUserDataPath())
+    } catch (error) {
+      console.warn('[runtime-environments] orphaned session reconcile failed:', error)
+    }
     publishRuntimeEnvironmentCatalogChanged()
   })
   for (const pending of pendingSubscriptions.values()) {

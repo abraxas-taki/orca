@@ -14,6 +14,7 @@ import {
   type RuntimeTerminalPathResolution
 } from '../../../../shared/runtime-file-contracts'
 import { HostFileRefusal, hostAbsentRefusal } from './host-file-refusal'
+import { hostSavesGrantedFiles } from '@/runtime/runtime-terminal-artifact-grant'
 
 export type HostWorkspaceFile = {
   kind: 'host'
@@ -35,6 +36,16 @@ export type HostGrantedFile = {
   absolutePath: string
   grantId: string
   isDirectory: false
+  /** Older hosts mint read-only grants for chat-cited files. */
+  readOnly: boolean
+}
+
+/** Editor tab fields for a granted host file: the grant is its only read and write authority; older hosts may grant read-only. */
+export function hostGrantedEditorFields(grant: HostGrantedFile): {
+  terminalArtifactGrantId: string
+  readOnly?: true
+} {
+  return { terminalArtifactGrantId: grant.grantId, ...(grant.readOnly ? { readOnly: true } : {}) }
 }
 
 export const CLIENT_LOCAL_FILE_TARGET: RuntimeClientTarget = { kind: 'local' }
@@ -115,7 +126,8 @@ export async function resolveHostWorkspaceFile(
         kind: 'grant',
         absolutePath: openTarget.absolutePath,
         grantId: openTarget.grantId,
-        isDirectory: false
+        isDirectory: false,
+        readOnly: openTarget.readOnly === true || !(await hostSavesGrantedFiles(environmentId))
       }
     }
     if (resolved.exists) {

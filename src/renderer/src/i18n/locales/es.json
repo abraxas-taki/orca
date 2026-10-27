@@ -3470,7 +3470,10 @@
               "failed": {
                 "toast": {
                   "62a0af2cb4": "No se pudo confirmar la copia del portapapeles del terminal",
-                  "fdd3e7e977": "La app del terminal solicitó una copia, pero Orca no pudo confirmar que llegara al portapapeles del sistema."
+                  "fdd3e7e977": "La app del terminal solicitó una copia, pero Orca no pudo confirmar que llegara al portapapeles del sistema.",
+                  "de286dcfe1": "La copia del terminal necesita un clic",
+                  "84c938ffa2": "El navegador bloqueó una copia de la aplicación del terminal. Haz clic en Copiar para ponerla en tu portapapeles.",
+                  "a73165c6c5": "Copiar"
                 }
               }
             }

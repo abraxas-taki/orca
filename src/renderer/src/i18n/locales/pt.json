@@ -15656,7 +15656,10 @@
               "failed": {
                 "toast": {
                   "62a0af2cb4": "Não foi possível confirmar a cópia para a área de transferência do terminal",
-                  "fdd3e7e977": "O aplicativo de terminal solicitou uma cópia, mas o Orca não conseguiu confirmar que ela chegou à área de transferência do sistema."
+                  "fdd3e7e977": "O aplicativo de terminal solicitou uma cópia, mas o Orca não conseguiu confirmar que ela chegou à área de transferência do sistema.",
+                  "de286dcfe1": "A cópia do terminal precisa de um clique",
+                  "84c938ffa2": "O navegador bloqueou uma cópia do aplicativo do terminal. Clique em Copiar para colocar o texto na sua área de transferência.",
+                  "a73165c6c5": "Copiar"
                 }
               }
             }

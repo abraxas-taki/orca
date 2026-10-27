@@ -3830,7 +3830,10 @@
               "failed": {
                 "toast": {
                   "62a0af2cb4": "Terminal clipboard copy could not be confirmed",
-                  "fdd3e7e977": "The terminal app requested a copy, but Orca could not confirm that it reached the system clipboard."
+                  "fdd3e7e977": "The terminal app requested a copy, but Orca could not confirm that it reached the system clipboard.",
+                  "de286dcfe1": "Terminal copy needs a click",
+                  "84c938ffa2": "The browser blocked a copy from the terminal app. Click Copy to put the text on your clipboard.",
+                  "a73165c6c5": "Copy"
                 }
               }
             }
