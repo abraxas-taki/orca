@@ -306,6 +306,8 @@ export type SshManagedServerStatus =
       serving?: SshManagedServerServingNote
       /** Set on the connect that moved this host's projects, when some were linked instead. */
       linked?: SshManagedServerLinkedProject[]
+      /** Set on the connect that moved this host's automations, when its server kept some off. */
+      automationsLeftDisabled?: number
       /**
        * macOS 15+: the SSH session that started this server proved exited, so its terminals may
        * have lost Local Network access (#25934). Absent when unknown, e.g. an older launch.

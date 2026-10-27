@@ -177,7 +177,8 @@ export class WslOrcadConnectionManager {
     // Taken before any await, so a close during the running-list read still supersedes this.
     const generation = this.generation(key)
     const stillCurrent = (): boolean => this.generation(key) === generation
-    await assertWslDistroMayStart(distro, options.requireRunning, stillCurrent)
+    const requireRunning = options.requireRunning
+    await assertWslDistroMayStart(distro, requireRunning, stillCurrent)
     const environmentId = options.environmentId ?? defaultWslOrcadEnvironmentId(distro)
     const label = options.label ?? distro
     const target = { kind: 'wsl', id: environmentId, distro, label } as const
@@ -190,7 +191,8 @@ export class WslOrcadConnectionManager {
       pairedOffer: this.enrolledOffer(key, environmentId),
       signal: options.signal,
       holder: this.dependencies.holder,
-      createTransport: () => transport
+      createTransport: () => transport,
+      ...(requireRunning ? { requireRunning: () => requireRunning(distro) } : {})
     })
     if (launch.outcome === 'deferred') {
       throw new WslOrcadLaunchDeferredError(launch)

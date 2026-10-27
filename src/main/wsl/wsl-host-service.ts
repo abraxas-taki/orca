@@ -5,11 +5,9 @@
  */
 import { errorMessage } from '../../shared/error-message'
 import { focusReachability } from './wsl-host-focus-reachability'
+import { rethrowRetryable, settlingConnectFailure } from './wsl-host-connect-failure'
 import { removeWslHostEnvironment } from '../../shared/runtime-environment-wsl-host-store'
-import {
-  readWslHostDeployments,
-  type WslHostDeploymentRecord
-} from '../../shared/wsl-host-deployment-store'
+import type { WslHostDeploymentRecord } from '../../shared/wsl-host-deployment-store'
 import type {
   WslHostAddResult,
   WslHostConnectIntent,
@@ -17,9 +15,13 @@ import type {
   WslHostServerStop,
   WslHostStatus
 } from '../../shared/wsl-host-types'
-import type { WslHostDistroCandidate } from './wsl-host-distro-list'
+import type { WslHostConnector } from './wsl-host-connector-contract'
 import { wslDistroHolderKey } from './wsl-distro-holder-record'
-import { persistWslHostConnection, toWslHostStatus } from './wsl-host-connection-record'
+import {
+  persistWslHostConnection,
+  readWslHostRecordsQuietly,
+  toWslHostStatus
+} from './wsl-host-connection-record'
 import {
   sameWslDistro,
   wslHostNotConnectedMessage,
@@ -29,39 +31,14 @@ import {
 } from './wsl-host-add-admission'
 import type { WslOrcadConnection } from './wsl-orcad-connection'
 import { registerWslHost } from './wsl-host-registration'
-import type { WslOrcadConnectIntent, WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
+import type { WslOrcadConnectionStatus } from './wsl-orcad-connection-status'
 import {
   forgetWslHostToWake,
   forgetWslHostsToWake,
   rememberWslHostsToWake
 } from './wsl-host-early-wake'
 
-/** `stopped` and `unreachable` rest on a confirmed running list; `unavailable` could not read it. */
-export type WslHostReachability = 'available' | 'unreachable' | 'stopped' | 'unavailable'
-
-/** The WSL side the service drives: C3 holder, C5 connections, C6 liveness (or an e2e fake). */
-export type WslHostConnector = {
-  listDistros(): Promise<WslHostDistroCandidate[]>
-  /** Runs in the distro, so it boots a stopped one: only after the user chose to. */
-  readOrcadPublicKey(distro: string): Promise<string | null>
-  /** User-initiated; may boot the distro. An intent retries or forces a skipped update. */
-  connect(distro: string, options?: WslOrcadConnectIntent): Promise<WslOrcadConnection>
-  /** Explicit retry must clear pairing-repair failures and spent caps. */
-  forgetPairingFailures?(environmentId: string): void
-  get(distro: string): WslOrcadConnection | null
-  /** Checks the paired server without starting a stopped or unconfirmed distro. */
-  isReachable(distro: string, environmentId: string): Promise<boolean>
-  /** The same check, telling a confirmed-stopped distro from an unconfirmed one. */
-  reachability(distro: string, environmentId: string): Promise<WslHostReachability>
-  /** Liveness is deciding whether the distro stopped; its running list may be stale. */
-  isSettling(distro: string): boolean
-  disconnect(distro: string): Promise<void>
-  /** Ends the host's terminals, orcad and its terminal daemon; never boots a stopped distro. */
-  stopServer(distro: string, environmentId: string): Promise<WslHostServerStop>
-  releaseHolder(distro: string): Promise<void>
-  adoptHolders(): Promise<void>
-  dispose(): Promise<void>
-}
+export type { WslHostConnector, WslHostReachability } from './wsl-host-connector-contract'
 
 export type WslHostServiceDependencies = {
   userDataPath: () => string
@@ -270,14 +247,13 @@ export class WslHostService {
     }
     // Unconfirmed (running list unreadable, or possibly stale right after an exit) or not
     // visible: refuse rather than risk a boot; liveness publishes the verdict.
-    if (
-      reachability !== 'unreachable' ||
-      !this.visible.has(environmentId) ||
-      connector.isSettling(record.distro)
-    ) {
+    if (reachability !== 'unreachable' || !this.visible.has(environmentId)) {
       throw new Error(wslHostNotConnectedMessage(record.distro))
     }
-    await connector.connect(record.distro, { noBoot: true })
+    if (connector.isSettling(record.distro)) {
+      throw settlingConnectFailure(record.distro)
+    }
+    await connector.connect(record.distro, { noBoot: true }).catch(rethrowRetryable(record.distro))
   }
 
   /**
@@ -286,21 +262,43 @@ export class WslHostService {
    */
   focusHost(environmentId: string | null): void {
     const record = environmentId ? this.recordForEnvironment(environmentId) : null
-    const runnable =
-      record && this.connector && this.canRun() && !this.removing.has(record.environmentId)
+    const runnable = record !== null && this.mayWake(record)
     // The next launch starts booting only this distro, early (none when off WSL or not runnable).
-    rememberWslHostsToWake(this.deps.userDataPath(), runnable ? [record.distro] : [])
-    if (!record || !runnable || !this.connector) {
-      return
-    }
-    this.parked.delete(record.environmentId)
-    void focusReachability(this.connector, record)
-      .then((reachability) =>
-        reachability === 'available' ? undefined : this.connector?.connect(record.distro)
-      )
-      .catch((error: unknown) => {
+    rememberWslHostsToWake(this.deps.userDataPath(), record && runnable ? [record.distro] : [])
+    if (record && runnable) {
+      this.wake(record).catch((error: unknown) => {
         console.warn(`[wsl-hosts] Could not connect to ${record.distro}:`, error)
       })
+    }
+  }
+
+  /** E9: an enabled automation came due with the host off; boots the distro once, lifting a park. */
+  async wakeForAutomation(environmentId: string): Promise<void> {
+    const record = this.recordForEnvironment(environmentId)
+    if (record && this.mayWake(record)) {
+      await this.wake(record)
+    }
+  }
+
+  private mayWake(record: WslHostDeploymentRecord): boolean {
+    return Boolean(this.connector) && this.canRun() && !this.removing.has(record.environmentId)
+  }
+
+  /** A focus entry or a due automation: lifts a park and may boot the distro. */
+  private async wake(record: WslHostDeploymentRecord): Promise<void> {
+    this.parked.delete(record.environmentId)
+    // No bridge in this process yet means nothing answers; skip the WSL round trip (#33110).
+    if (this.connector && (await focusReachability(this.connector, record)) !== 'available') {
+      await this.connector.connect(record.distro)
+    }
+  }
+
+  /** Whether the host's server answers through this process now; never starts a stopped distro. */
+  async isConnected(environmentId: string): Promise<boolean> {
+    const record = this.recordForEnvironment(environmentId)
+    return record && this.connector
+      ? (await this.connector.reachability(record.distro, environmentId)) === 'available'
+      : false
   }
 
   /** Whether anything may still be started for this distro (spawn guard). */
@@ -353,12 +351,7 @@ export class WslHostService {
   }
 
   private records(): WslHostDeploymentRecord[] {
-    try {
-      return readWslHostDeployments(this.deps.userDataPath()).deployments
-    } catch (error) {
-      console.warn('[wsl-hosts] Could not read WSL host records:', error)
-      return []
-    }
+    return readWslHostRecordsQuietly(this.deps.userDataPath())
   }
 
   private recordForDistro(distro: string): WslHostDeploymentRecord | null {

@@ -37,11 +37,23 @@ export const ConnectorErrorResponse = z.object({ error: z.string().min(1) })
 // Each hello gets a revision above every earlier one for this machine; polls, acks and events carry it.
 export const ConnectorHelloResponse = z.object({ helloRev: z.number().int().positive() })
 
-const ConnectorConversation = z.object({
-  source: z.literal('slack'),
+/** Where an Orca Cloud conversation comes from. */
+export const CONNECTOR_CLOUD_SOURCES = ['slack', 'discord', 'linear'] as const
+
+export const ConnectorConversation = z.object({
+  source: z.enum(CONNECTOR_CLOUD_SOURCES),
   externalId: z.string().min(1)
 })
 export type ConnectorConversation = z.infer<typeof ConnectorConversation>
+
+/** The conversation as Orca Cloud names it; null for one that never came through the cloud (e.g. `dev`). */
+export function cloudConversation(key: {
+  source: string
+  externalId: string
+}): ConnectorConversation | null {
+  const parsed = ConnectorConversation.safeParse(key)
+  return parsed.success ? parsed.data : null
+}
 
 const DeliveryBase = {
   deliveryId: z.string().min(1),

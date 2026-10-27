@@ -194,6 +194,19 @@ describe('WslOrcadConnectionManager', () => {
     requireRunning.mockResolvedValue(true)
     await expect(manager.ensure('Ubuntu', { requireRunning })).resolves.toBeTruthy()
     expect(deployAndLaunch).toHaveBeenCalledTimes(1)
+    // The deploy gets the same check, so its own second wake can refuse too.
+    const calls: readonly unknown[][] = deployAndLaunch.mock.calls
+    const deployOptions = calls[0]?.[1]
+    const recheck =
+      deployOptions && typeof deployOptions === 'object' && 'requireRunning' in deployOptions
+        ? deployOptions.requireRunning
+        : undefined
+    expect(typeof recheck).toBe('function')
+    requireRunning.mockClear()
+    if (typeof recheck === 'function') {
+      await recheck()
+    }
+    expect(requireRunning).toHaveBeenCalledWith('Ubuntu')
   })
 
   it('a connect that may boot does not ride on an in-flight no-boot one (E9)', async () => {
